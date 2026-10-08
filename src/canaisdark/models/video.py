@@ -9,13 +9,15 @@ from canaisdark.models.channel import utcnow
 
 class VideoStatus(StrEnum):
     DRAFT = "draft"
+    IN_PRODUCTION = "in_production"
+    PUBLISHED = "published"
 
 
 class Video(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     channel_id: int = Field(foreign_key="channel.id", index=True)
     topic: str
-    status: VideoStatus = VideoStatus.DRAFT
+    status: str = VideoStatus.DRAFT.value
     title: str = ""
     description: str = ""
     tags: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))

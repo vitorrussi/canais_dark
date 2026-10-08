@@ -49,7 +49,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("channel_id", sa.Integer(), nullable=False),
         sa.Column("topic", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("status", sa.Enum("DRAFT", name="videostatus"), nullable=False),
+        sa.Column("status", sa.String(), nullable=False),
         sa.Column("title", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("description", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("tags", sa.JSON(), nullable=False),
