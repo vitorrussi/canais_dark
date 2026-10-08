@@ -10,11 +10,11 @@ narração → imagens → render → Shorts → upload. O Claude atua via servi
 **a API do Claude nunca é usada**. Roda em servidor doméstico via Cloudflare Tunnel, 2 usuários.
 
 ## Status
-- Fases 0 (Fundação) e 1 (Canais e vídeos): **concluídas**. Próxima: Fase 2 (MCP + ClaudeTasks) — planejar e aguardar aprovação.
+- Fases 0 (Fundação), 1 (Canais e vídeos) e 2 (MCP + ClaudeTasks): **concluídas**. Próxima: Fase 3 (Jobs + ElevenLabs) — exige chave da API do ElevenLabs e voice_id; avisar o usuário antes de planejar.
 
 ## Stack
 Python 3.12+, uv, FastAPI, SQLModel + SQLite (WAL) + Alembic, pydantic-settings, structlog,
-Typer, Jinja2 + HTMX (UI), SDK `mcp` (Fase 2), ffmpeg (Fase 5), pytest/ruff/mypy.
+Typer, Jinja2 + HTMX (UI), SDK `mcp` 2.x (`MCPServer`), ffmpeg (Fase 5), pytest/ruff/mypy.
 
 ## Comandos
 `uv sync` · `make dev` (porta 8123) · `make test` · `make lint` · `make fmt` · `make migrate` ·
@@ -23,7 +23,8 @@ Typer, Jinja2 + HTMX (UI), SDK `mcp` (Fase 2), ffmpeg (Fase 5), pytest/ruff/mypy
 ## Estrutura
 `src/canaisdark/`: `config.py`, `logging.py`, `db.py`, `models/`, `services/` (lógica),
 `schemas/` (Pydantic), `api/` (REST Bearer; `deps.py` auth), `web/` (Jinja2+HTMX, login por cookie de sessão,
-static vendorizado), `main.py` (`create_app()`), `cli.py`. Previstos: `mcp/`, `worker/`, `integrations/`. Migrações em `migrations/`. Testes em `tests/`.
+static vendorizado), `main.py` (`create_app()`), `cli.py`. `mcp/` (server.py tools, auth.py, context.py), `services/tasks.py`/`scripts.py`/`task_context.py`.
+Previstos: `worker/`, `integrations/`. Migrações em `migrations/`. Testes em `tests/`.
 
 ## Convenções
 - **Regra de ouro:** lógica só em `services/`; REST/MCP/web/worker/CLI são cascas finas.
@@ -37,6 +38,10 @@ static vendorizado), `main.py` (`create_app()`), `cli.py`. Previstos: `mcp/`, `w
 - Fluxo: uma fase por vez → plano → aprovação → implementar → testes → atualizar docs/AGENTS.md.
 
 ## Decisões
+- MCP: ver `docs/mcp-tools.md` e ADR 0003. Tools = cascas finas; erros de domínio → `ToolError`. Nunca bloquear.
+- ClaudeTask: reserva atômica (UPDATE condicional), TTL 30 min, 1 tarefa aberta por (vídeo, tipo). Tipos em inglês (`generate_script`…).
+- Roteiro: sempre versão nova (nunca sobrescreve); aprovação só humana (site/REST), uma versão aprovada por vídeo.
+- Criar vídeo enfileira `generate_script`. Apagar rascunho remove cenas/versões/tarefas antes (FKs).
 - UI: login colando o token de API → cookie de sessão assinado (`SECRET_KEY`, SameSite=Lax; obrigatório fora de dev).
   Mapeamento por Cloudflare Access fica para a Fase 9. Todos os usuários veem tudo (sem ACL).
 - Canal: slug imutável (nome de pasta em `DATA_DIR/<slug>/<video_id>`); arquiva em vez de apagar.

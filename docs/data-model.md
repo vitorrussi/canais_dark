@@ -8,7 +8,12 @@ Implementado:
 - **Video** (F1): channel_id, topic, status (string; `draft` por ora), title, description, tags (JSON),
   language (herda do canal), drive_url, youtube_url, created_by, timestamps.
 
-Planejado (ver `docs/briefing.md` §4): ScriptVersion, Scene, Asset, Timeline, Job, ClaudeTask.
+- **ScriptVersion** (F2): video_id, number, full_text, approved/approved_by/approved_at, author (`claude:<uid>`|`user:<uid>`), task_id.
+- **Scene** (F2): video_id, script_version_id, index, text, notes (prompts/tempos/assets nas Fases 3–4).
+- **ClaudeTask** (F2): type, video_id, instructions, status (`pending|in_progress|done|failed|cancelled`), claimed_by/claimed_at, attempts, result_summary, error, created_by, finished_at.
+- Video ganhou `approved_script_version_id`.
+
+Planejado (ver `docs/briefing.md` §4): Asset, Timeline, Job, ClaudeTask.
 
 ## Decisões
 - **Invalidação** (Fase 3): cada artefato guarda `based_on_version` da etapa anterior; `is_stale`

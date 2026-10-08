@@ -32,3 +32,8 @@ Em `services/video_status.py`, escreva `def _x_state(session, video) -> StageSta
 ## UI
 Templates em `web/templates/`, estáticos vendorizados em `web/static/` (htmx, pico). Rotas em `web/routes.py`
 usam `WebUser` (sessão); REST usa `CurrentUser` (Bearer). Padrão: POST → redirect 303; erro de validação → re-render 422.
+
+## MCP
+Adicionar tool: função em `mcp/server.py` com `@mcp.tool()` + `@safe` (nessa ordem), usando `with _db() as (s, user):`
+e chamando `services/`. Documentar em `docs/mcp-tools.md`. Testes: `tests/test_mcp_tools.py` (chamada direta via
+`server.mcp.call_tool` com `current_user.set(...)`) e `tests/test_mcp_auth.py` (HTTP + auth). Testes async usam `pytest.mark.anyio`.

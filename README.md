@@ -16,3 +16,5 @@ make dev     # UI: http://localhost:8123  (login com o token) · health: /health
 Testes: `make test` · Lint/tipos: `make lint` · Formatar: `make fmt`.
 
 Requisitos: Python ≥ 3.12, uv. (ffmpeg será necessário a partir da Fase 5.)
+
+Conectar o Claude Code: ver `docs/mcp-tools.md`.
