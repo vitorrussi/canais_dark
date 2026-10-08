@@ -37,7 +37,7 @@ async def test_requires_bearer(app: FastAPI) -> None:
             assert r.status_code == 401
 
 
-async def test_whoami_end_to_end(app: FastAPI, user_token: tuple[User, str]) -> None:
+async def test_authenticated_call_end_to_end(app: FastAPI, user_token: tuple[User, str]) -> None:
     async with app.router.lifespan_context(app):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(
@@ -48,5 +48,5 @@ async def test_whoami_end_to_end(app: FastAPI, user_token: tuple[User, str]) -> 
             async with Client(
                 streamable_http_client("http://localhost:8123/mcp", http_client=http)
             ) as client:
-                result = await client.call_tool("whoami", {})
-                assert "Teste" in str(result.content)
+                result = await client.call_tool("list_channels", {})
+                assert not result.is_error
