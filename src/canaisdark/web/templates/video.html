@@ -8,6 +8,58 @@
   {% if video.drive_url %}· <a href="{{ video.drive_url }}">Drive</a>{% endif %}
   {% if video.youtube_url %}· <a href="{{ video.youtube_url }}">YouTube</a>{% endif %}</small></p>
 
+<h3>Tarefas do Claude</h3>
+{% for t in open_tasks %}
+<article>
+  <strong>{{ t.type }}</strong> —
+  {% if t.status == "pending" %}aguardando o Claude{% else %}em andamento por {{ claimers.get(t.claimed_by, "?") }}
+  desde {{ t.claimed_at.strftime("%H:%M") }} (UTC){% endif %}
+  {% if t.instructions %}<br><small>Instruções: {{ t.instructions }}</small>{% endif %}
+  <form method="post" action="/tasks/{{ t.id }}/cancel"><button class="secondary outline">Cancelar</button></form>
+</article>
+{% endfor %}
+{% for t in failed_tasks %}<p class="error">Última tentativa falhou: {{ t.error }}</p>{% endfor %}
+{% if not open_tasks %}
+<details>
+  <summary role="button" class="outline">{{ "Gerar novo roteiro" if versions else "Gerar roteiro" }}</summary>
+  <form method="post" action="/videos/{{ video.id }}/script/generate">
+    <label>Instruções extras (opcional) <textarea name="instructions" rows="2"></textarea></label>
+    <button>Pedir ao Claude</button>
+  </form>
+</details>
+{% endif %}
+<p><small>No Claude, diga: "processa as pendências".</small></p>
+
+<h3>Roteiro</h3>
+{% if selected %}
+<p>
+  {% for ver in versions %}
+    <a href="/videos/{{ video.id }}?v={{ ver.number }}" {% if ver.id == selected.id %}aria-current="page"{% endif %}>v{{ ver.number }}{% if ver.approved %} ✓{% endif %}</a>{% if not loop.last %} · {% endif %}
+  {% endfor %}
+</p>
+<p><small>Versão {{ selected.number }} · {{ selected.author }} · {{ scenes|length }} cenas
+  {% if selected.approved %}· <strong>aprovada</strong>{% endif %}</small></p>
+<ol>
+  {% for sc in scenes %}<li>{{ sc.text }}{% if sc.notes %}<br><small><em>{{ sc.notes }}</em></small>{% endif %}</li>{% endfor %}
+</ol>
+{% if not selected.approved %}
+<form method="post" action="/scripts/{{ selected.id }}/approve">
+  <button>Aprovar roteiro (v{{ selected.number }})</button>
+</form>
+{% endif %}
+{% if not open_tasks %}
+<details>
+  <summary role="button" class="outline">Pedir revisão</summary>
+  <form method="post" action="/videos/{{ video.id }}/script/revision">
+    <label>O que ajustar? <textarea name="notes" rows="3" required></textarea></label>
+    <button>Enviar ao Claude</button>
+  </form>
+</details>
+{% endif %}
+{% else %}
+<p>Nenhum roteiro ainda.</p>
+{% endif %}
+
 <h3>Etapas</h3>
 <table>
   <thead><tr><th>#</th><th>Etapa</th><th>Estado</th></tr></thead>

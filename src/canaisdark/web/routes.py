@@ -5,17 +5,25 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
-from sqlmodel import Session
+from sqlmodel import Session, select
 
-from canaisdark.db import get_session
+from canaisdark.db import get_engine, get_session
 from canaisdark.models import User
 from canaisdark.schemas.channel import ChannelCreate, ChannelUpdate
 from canaisdark.schemas.video import VideoCreate
-from canaisdark.services import channels, users, video_status, videos
+from canaisdark.services import channels, scripts, tasks, users, video_status, videos
 from canaisdark.services.errors import DomainError
 
 BASE = Path(__file__).parent
 templates = Jinja2Templates(directory=BASE / "templates")
+
+
+def _open_task_count() -> int:
+    with Session(get_engine()) as session:
+        return len(tasks.list_tasks(session, open_only=True))
+
+
+templates.env.globals["open_task_count"] = _open_task_count
 router = APIRouter(include_in_schema=False)
 SessionDep = Annotated[Session, Depends(get_session)]
 
@@ -48,9 +56,19 @@ WebUser = Annotated[User, Depends(web_user)]
 def _render(
     request: Request, name: str, user: User | None, status: int = 200, **ctx: object
 ) -> HTMLResponse:
+    flash = request.session.pop("flash", None) if "session" in request.scope else None
     return templates.TemplateResponse(
-        request, name, {"user": user, "state_labels": STATE_LABELS, **ctx}, status_code=status
+        request,
+        name,
+        {"user": user, "state_labels": STATE_LABELS, "flash": flash, **ctx},
+        status_code=status,
     )
+
+
+def _back(request: Request, url: str, error: Exception | None = None) -> RedirectResponse:
+    if error is not None:
+        request.session["flash"] = str(error)
+    return _redirect(url)
 
 
 def _redirect(url: str) -> RedirectResponse:
@@ -216,8 +234,17 @@ def create_video(
 
 
 @router.get("/videos/{video_id}", response_class=HTMLResponse)
-def video_page(request: Request, user: WebUser, session: SessionDep, video_id: int) -> Response:
+def video_page(
+    request: Request, user: WebUser, session: SessionDep, video_id: int, v: int | None = None
+) -> Response:
     video = videos.get_video(session, video_id)
+    versions = scripts.list_versions(session, video_id)
+    selected = next((x for x in versions if x.number == v), None) if v else None
+    if selected is None and versions:
+        selected = next((x for x in versions if x.approved), versions[0])
+    open_tasks = tasks.list_tasks(session, video_id=video_id, open_only=True)
+    failed = [t for t in tasks.list_tasks(session, video_id=video_id, status="failed")][-1:]
+    claimers = {u.id: u.name for u in session.exec(select(User))}
     return _render(
         request,
         "video.html",
@@ -225,7 +252,74 @@ def video_page(request: Request, user: WebUser, session: SessionDep, video_id: i
         video=video,
         channel=channels.get_channel(session, video.channel_id),
         stages=video_status.get_stages(session, video),
+        versions=versions,
+        selected=selected,
+        scenes=scripts.scenes_of(session, selected) if selected else [],
+        open_tasks=open_tasks,
+        failed_tasks=failed,
+        claimers=claimers,
     )
+
+
+@router.post("/videos/{video_id}/script/generate")
+def generate_script(
+    request: Request,
+    user: WebUser,
+    session: SessionDep,
+    video_id: int,
+    instructions: Annotated[str, Form()] = "",
+) -> Response:
+    try:
+        scripts.request_script(session, video_id, instructions.strip(), user)
+    except DomainError as e:
+        return _back(request, f"/videos/{video_id}", e)
+    return _back(request, f"/videos/{video_id}")
+
+
+@router.post("/videos/{video_id}/script/revision")
+def request_revision(
+    request: Request,
+    user: WebUser,
+    session: SessionDep,
+    video_id: int,
+    notes: Annotated[str, Form()] = "",
+) -> Response:
+    try:
+        scripts.request_revision(session, video_id, notes, user)
+    except DomainError as e:
+        return _back(request, f"/videos/{video_id}", e)
+    return _back(request, f"/videos/{video_id}")
+
+
+@router.post("/scripts/{version_id}/approve")
+def approve_script(
+    request: Request, user: WebUser, session: SessionDep, version_id: int
+) -> Response:
+    version = scripts.approve_script(session, version_id, user)
+    return _back(request, f"/videos/{version.video_id}")
+
+
+@router.get("/tasks", response_class=HTMLResponse)
+def tasks_page(request: Request, user: WebUser, session: SessionDep) -> Response:
+    claimers = {u.id: u.name for u in session.exec(select(User))}
+    return _render(
+        request,
+        "tasks.html",
+        user,
+        open_tasks=tasks.list_tasks(session, open_only=True),
+        recent=list(reversed(tasks.list_tasks(session)))[:20],
+        claimers=claimers,
+    )
+
+
+@router.post("/tasks/{task_id}/cancel")
+def cancel_task(request: Request, user: WebUser, session: SessionDep, task_id: int) -> Response:
+    task = tasks.get_task(session, task_id)
+    try:
+        tasks.cancel_task(session, task_id)
+    except DomainError as e:
+        return _back(request, f"/videos/{task.video_id}", e)
+    return _back(request, request.headers.get("referer", f"/videos/{task.video_id}"))
 
 
 @router.post("/videos/{video_id}/delete")

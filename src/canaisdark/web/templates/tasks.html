@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Pendências do Claude{% endblock %}
+{% block content %}
+<h2>Pendências do Claude</h2>
+<p><small>No Claude Code (com o MCP conectado), diga: "processa as pendências".</small></p>
+<h3>Abertas</h3>
+<table>
+  <thead><tr><th>#</th><th>Tipo</th><th>Vídeo</th><th>Estado</th></tr></thead>
+  <tbody>
+  {% for t in open_tasks %}
+    <tr><td>{{ t.id }}</td><td>{{ t.type }}</td><td><a href="/videos/{{ t.video_id }}">#{{ t.video_id }}</a></td>
+        <td>{% if t.status == "pending" %}aguardando{% else %}em andamento ({{ claimers.get(t.claimed_by, "?") }}){% endif %}</td></tr>
+  {% else %}<tr><td colspan="4">Nada pendente.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<h3>Recentes</h3>
+<table>
+  <thead><tr><th>#</th><th>Tipo</th><th>Vídeo</th><th>Status</th><th>Resumo/erro</th></tr></thead>
+  <tbody>
+  {% for t in recent %}
+    <tr><td>{{ t.id }}</td><td>{{ t.type }}</td><td><a href="/videos/{{ t.video_id }}">#{{ t.video_id }}</a></td>
+        <td>{{ t.status }}</td><td>{{ t.result_summary or t.error }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

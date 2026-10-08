@@ -14,6 +14,7 @@
       <ul><li><a href="/"><strong>Estúdio de Canais Dark</strong></a></li></ul>
       {% if user %}
       <ul>
+        <li><a href="/tasks">Pendências do Claude{% set n = open_task_count() %}{% if n %} <span class="badge pending">{{ n }}</span>{% endif %}</a></li>
         <li>{{ user.name }}</li>
         <li><form method="post" action="/logout"><button class="secondary outline">Sair</button></form></li>
       </ul>
@@ -21,6 +22,7 @@
     </nav>
   </header>
   <main class="container">
+    {% if flash %}<article class="error">{{ flash }}</article>{% endif %}
     {% block content %}{% endblock %}
   </main>
 </body>
