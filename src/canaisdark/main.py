@@ -1,14 +1,19 @@
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, text
+from starlette.middleware.sessions import SessionMiddleware
 
 from canaisdark.api.routes import router
 from canaisdark.config import get_settings
 from canaisdark.db import get_session
 from canaisdark.logging import configure_logging
 from canaisdark.services.errors import Conflict, DomainError, InvalidState, NotFound
+from canaisdark.web.routes import BASE as WEB_BASE
+from canaisdark.web.routes import NotLoggedIn
+from canaisdark.web.routes import router as web_router
 
 _STATUS: dict[type[DomainError], int] = {NotFound: 404, Conflict: 409, InvalidState: 422}
 
@@ -16,7 +21,17 @@ _STATUS: dict[type[DomainError], int] = {NotFound: 404, Conflict: 409, InvalidSt
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_level, json_logs=settings.env != "dev")
+    if settings.env != "dev" and settings.secret_key == "dev-insecure-change-me":
+        raise RuntimeError("Defina SECRET_KEY fora do ambiente dev")
     app = FastAPI(title="Estúdio de Canais Dark")
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.secret_key,
+        same_site="lax",
+        https_only=settings.env != "dev",
+        max_age=60 * 60 * 24 * 30,
+    )
+    app.mount("/static", StaticFiles(directory=WEB_BASE / "static"), name="static")
 
     @app.get("/health")
     def health(session: Annotated[Session, Depends(get_session)]) -> dict[str, str]:
@@ -27,5 +42,10 @@ def create_app() -> FastAPI:
     async def domain_error(_: Request, exc: DomainError) -> JSONResponse:
         return JSONResponse({"detail": str(exc)}, status_code=_STATUS.get(type(exc), 400))
 
+    @app.exception_handler(NotLoggedIn)
+    async def not_logged_in(_: Request, __: NotLoggedIn) -> RedirectResponse:
+        return RedirectResponse("/login", status_code=303)
+
     app.include_router(router)
+    app.include_router(web_router)
     return app

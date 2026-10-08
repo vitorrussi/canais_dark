@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Estúdio de Canais Dark{% endblock %}</title>
+  <link rel="stylesheet" href="/static/pico.min.css">
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body hx-boost="true">
+  <header class="container">
+    <nav>
+      <ul><li><a href="/"><strong>Estúdio de Canais Dark</strong></a></li></ul>
+      {% if user %}
+      <ul>
+        <li>{{ user.name }}</li>
+        <li><form method="post" action="/logout"><button class="secondary outline">Sair</button></form></li>
+      </ul>
+      {% endif %}
+    </nav>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

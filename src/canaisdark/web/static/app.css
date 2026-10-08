@@ -1,0 +1,7 @@
+.badge { display:inline-block; padding:.1rem .6rem; border-radius:1rem; font-size:.8rem; background:#e5e7eb; color:#374151; }
+.badge.done { background:#d1fae5; color:#065f46; }
+.badge.in_progress, .badge.pending { background:#dbeafe; color:#1e40af; }
+.badge.stale { background:#fef3c7; color:#92400e; }
+.badge.failed { background:#fee2e2; color:#991b1b; }
+.error { color:#b91c1c; }
+nav form { margin:0; }

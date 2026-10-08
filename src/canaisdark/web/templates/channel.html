@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ channel.name }}{% endblock %}
+{% block content %}
+<p><a href="/">← Canais</a></p>
+<h2>{{ channel.name }} {% if channel.is_archived %}<small>(arquivado)</small>{% endif %}</h2>
+<small>slug: {{ channel.slug }}</small>
+
+<h3>Vídeos</h3>
+{% for v in videos %}
+<article>
+  <a href="/videos/{{ v.id }}"><strong>{{ v.title or v.topic[:80] }}</strong></a>
+  <small>— {{ v.status }} · {{ v.created_at.strftime('%d/%m/%Y') }}</small>
+</article>
+{% else %}
+<p>Nenhum vídeo ainda.</p>
+{% endfor %}
+{% if not channel.is_archived %}
+<details {% if video_error %}open{% endif %}>
+  <summary role="button">Novo vídeo</summary>
+  <form method="post" action="/channels/{{ channel.slug }}/videos">
+    {% if video_error %}<p class="error">{{ video_error }}</p>{% endif %}
+    <label>Tema / conteúdo de entrada <textarea name="topic" rows="4" required></textarea></label>
+    <button>Criar vídeo</button>
+  </form>
+</details>
+{% endif %}
+
+<h3>Configurações do canal</h3>
+<form method="post" action="/channels/{{ channel.slug }}">
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  {% include "_channel_fields.html" %}
+  <button>Salvar</button>
+</form>
+{% if not channel.is_archived %}
+<form method="post" action="/channels/{{ channel.slug }}/archive">
+  <button class="secondary outline">Arquivar canal</button>
+</form>
+{% endif %}
+{% endblock %}

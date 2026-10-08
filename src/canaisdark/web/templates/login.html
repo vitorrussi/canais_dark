@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+  <h2>Entrar</h2>
+  <form method="post" action="/login">
+    <label>Token de API
+      <input type="password" name="token" placeholder="cd_..." required autofocus>
+    </label>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    <button>Entrar</button>
+  </form>
+</article>
+{% endblock %}

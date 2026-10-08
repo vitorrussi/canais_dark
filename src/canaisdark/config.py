@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/canaisdark.db"
     data_dir: Path = Path("./data/files")
     fernet_key: str = ""
+    secret_key: str = "dev-insecure-change-me"
 
 
 @lru_cache

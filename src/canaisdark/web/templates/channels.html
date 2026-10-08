@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Canais</h2>
+{% for c in channels %}
+<article>
+  <a href="/channels/{{ c.slug }}"><strong>{{ c.name }}</strong></a>
+  <small>— {{ c.language }}{% if c.description %} · {{ c.description }}{% endif %}</small>
+</article>
+{% else %}
+<p>Nenhum canal ainda.</p>
+{% endfor %}
+<details {% if error %}open{% endif %}>
+  <summary role="button">Novo canal</summary>
+  <form method="post" action="/channels">
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    {% include "_channel_fields.html" %}
+    <button>Criar canal</button>
+  </form>
+</details>
+{% endblock %}

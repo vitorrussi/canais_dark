@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Vídeo {{ video.id }}{% endblock %}
+{% block content %}
+<p><a href="/channels/{{ channel.slug }}">← {{ channel.name }}</a></p>
+<h2>{{ video.title or "Vídeo #" ~ video.id }}</h2>
+<p><strong>Tema:</strong> {{ video.topic }}</p>
+<p><small>Status: {{ video.status }} · Idioma: {{ video.language }}
+  {% if video.drive_url %}· <a href="{{ video.drive_url }}">Drive</a>{% endif %}
+  {% if video.youtube_url %}· <a href="{{ video.youtube_url }}">YouTube</a>{% endif %}</small></p>
+
+<h3>Etapas</h3>
+<table>
+  <thead><tr><th>#</th><th>Etapa</th><th>Estado</th></tr></thead>
+  <tbody>
+  {% for s in stages %}
+    <tr><td>{{ loop.index }}</td><td>{{ s.label }}</td>
+        <td><span class="badge {{ s.state }}">{{ state_labels[s.state] }}</span></td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if video.status == "draft" %}
+<form method="post" action="/videos/{{ video.id }}/delete">
+  <button class="secondary outline">Apagar rascunho</button>
+</form>
+{% endif %}
+{% endblock %}
