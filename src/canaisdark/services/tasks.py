@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from sqlalchemy import update
-from sqlmodel import Session, col, or_, select
+from sqlmodel import Session, and_, col, or_, select
 
 from canaisdark.models import ClaudeTask, TaskStatus, TaskType, User, Video
 from canaisdark.models.channel import utcnow
