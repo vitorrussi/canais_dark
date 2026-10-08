@@ -1,3 +1,5 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Request
@@ -10,6 +12,7 @@ from canaisdark.api.routes import router
 from canaisdark.config import get_settings
 from canaisdark.db import get_session
 from canaisdark.logging import configure_logging
+from canaisdark.mcp.server import build_mcp_app, mcp
 from canaisdark.services.errors import Conflict, DomainError, InvalidState, NotFound
 from canaisdark.web.routes import BASE as WEB_BASE
 from canaisdark.web.routes import NotLoggedIn
@@ -23,7 +26,13 @@ def create_app() -> FastAPI:
     configure_logging(settings.log_level, json_logs=settings.env != "dev")
     if settings.env != "dev" and settings.secret_key == "dev-insecure-change-me":
         raise RuntimeError("Defina SECRET_KEY fora do ambiente dev")
-    app = FastAPI(title="Estúdio de Canais Dark")
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        async with mcp.session_manager.run():
+            yield
+
+    app = FastAPI(title="Estúdio de Canais Dark", lifespan=lifespan)
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.secret_key,
@@ -48,4 +57,6 @@ def create_app() -> FastAPI:
 
     app.include_router(router)
     app.include_router(web_router)
+    # Último: o app MCP atende apenas /mcp; demais caminhos caem em 404.
+    app.mount("/", build_mcp_app())
     return app

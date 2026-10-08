@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     data_dir: Path = Path("./data/files")
     fernet_key: str = ""
     secret_key: str = "dev-insecure-change-me"
+    # Hosts extras do /mcp (DNS rebinding), separados por vírgula
+    mcp_allowed_hosts: str = ""
 
 
 @lru_cache

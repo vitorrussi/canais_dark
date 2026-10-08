@@ -29,3 +29,8 @@ def client(session: Session) -> TestClient:
 def user_token(session: Session) -> tuple[User, str]:
     user = users.create_user(session, "Teste", "teste@example.com")
     return user, users.issue_token(session, user)
+
+
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"
