@@ -70,4 +70,6 @@ def test_stages_all_not_started(session: Session, user_token: tuple[User, str]) 
     v = videos.create_video(session, cid, VideoCreate(topic="x"), user)
     stages = video_status.get_stages(session, v)
     assert len(stages) == 13
-    assert {s.state for s in stages} == {"not_started"}
+    states = {s.key: s.state for s in stages}
+    assert states["script"] == "pending"  # criar vídeo já enfileira a tarefa de roteiro
+    assert {k for k, v in states.items() if v != "not_started"} == {"script"}
