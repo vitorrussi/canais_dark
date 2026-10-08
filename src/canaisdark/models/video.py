@@ -22,6 +22,7 @@ class Video(SQLModel, table=True):
     description: str = ""
     tags: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
     language: str = "pt-BR"
+    approved_script_version_id: int | None = Field(default=None, index=True)
     drive_url: str = ""
     youtube_url: str = ""
     created_by: int = Field(foreign_key="user.id")
