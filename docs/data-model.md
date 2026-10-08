@@ -13,7 +13,7 @@ Implementado:
 - **ClaudeTask** (F2): type, video_id, instructions, status (`pending|in_progress|done|failed|cancelled`), claimed_by/claimed_at, attempts, result_summary, error, created_by, finished_at.
 - Video ganhou `approved_script_version_id`.
 
-Planejado (ver `docs/briefing.md` §4): Asset, Timeline, Job, ClaudeTask.
+Planejado (ver `docs/briefing.md` §4): Asset, Timeline, Job.
 
 ## Decisões
 - **Invalidação** (Fase 3): cada artefato guarda `based_on_version` da etapa anterior; `is_stale`
