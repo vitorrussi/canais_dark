@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Fase 0 — Fundação
+- [x] Fase 0 — Fundação
 - [ ] Fase 1 — Canais e vídeos
 - [ ] Fase 2 — MCP + tarefas do Claude
 - [ ] Fase 3 — Jobs + ElevenLabs
