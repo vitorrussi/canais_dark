@@ -24,3 +24,11 @@ Integrações externas são sempre mockadas; nenhum teste usa rede.
 ## Commits
 Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`), pequenos e com testes verdes.
 Segredos só em `.env` (ignorado pelo git).
+
+## Adicionar uma etapa ao status do vídeo
+Em `services/video_status.py`, escreva `def _x_state(session, video) -> StageState` e registre em
+`_STATE_CALCULATORS["<key da etapa>"]`. A UI (`video.html`) e `GET /api/videos/{id}/stages` passam a refletir.
+
+## UI
+Templates em `web/templates/`, estáticos vendorizados em `web/static/` (htmx, pico). Rotas em `web/routes.py`
+usam `WebUser` (sessão); REST usa `CurrentUser` (Bearer). Padrão: POST → redirect 303; erro de validação → re-render 422.

@@ -10,7 +10,7 @@ narração → imagens → render → Shorts → upload. O Claude atua via servi
 **a API do Claude nunca é usada**. Roda em servidor doméstico via Cloudflare Tunnel, 2 usuários.
 
 ## Status
-- Fase 0 (Fundação): **concluída**. Próxima: Fase 1 (canais e vídeos) — planejar e aguardar aprovação.
+- Fases 0 (Fundação) e 1 (Canais e vídeos): **concluídas**. Próxima: Fase 2 (MCP + ClaudeTasks) — planejar e aguardar aprovação.
 
 ## Stack
 Python 3.12+, uv, FastAPI, SQLModel + SQLite (WAL) + Alembic, pydantic-settings, structlog,
@@ -22,8 +22,8 @@ Typer, Jinja2 + HTMX (UI), SDK `mcp` (Fase 2), ffmpeg (Fase 5), pytest/ruff/mypy
 
 ## Estrutura
 `src/canaisdark/`: `config.py`, `logging.py`, `db.py`, `models/`, `services/` (lógica),
-`api/` (REST + `deps.py` auth), `main.py` (`create_app()`), `cli.py`. Previstos: `mcp/`, `web/`,
-`worker/`, `integrations/`, `schemas/`. Migrações em `migrations/`. Testes em `tests/`.
+`schemas/` (Pydantic), `api/` (REST Bearer; `deps.py` auth), `web/` (Jinja2+HTMX, login por cookie de sessão,
+static vendorizado), `main.py` (`create_app()`), `cli.py`. Previstos: `mcp/`, `worker/`, `integrations/`. Migrações em `migrations/`. Testes em `tests/`.
 
 ## Convenções
 - **Regra de ouro:** lógica só em `services/`; REST/MCP/web/worker/CLI são cascas finas.
@@ -37,6 +37,12 @@ Typer, Jinja2 + HTMX (UI), SDK `mcp` (Fase 2), ffmpeg (Fase 5), pytest/ruff/mypy
 - Fluxo: uma fase por vez → plano → aprovação → implementar → testes → atualizar docs/AGENTS.md.
 
 ## Decisões
+- UI: login colando o token de API → cookie de sessão assinado (`SECRET_KEY`, SameSite=Lax; obrigatório fora de dev).
+  Mapeamento por Cloudflare Access fica para a Fase 9. Todos os usuários veem tudo (sem ACL).
+- Canal: slug imutável (nome de pasta em `DATA_DIR/<slug>/<video_id>`); arquiva em vez de apagar.
+  Vídeo só é apagado em `draft`. `Video.status` é string (valores de `VideoStatus`) para evitar migração a cada novo estado.
+- Etapas do vídeo: `services/video_status.py` (`STAGES` + `_STATE_CALCULATORS`); cada fase registra o calculador da sua etapa.
+- Erros de domínio (`services/errors.py`) → 404/409/422 no handler de `main.py`.
 Ver `docs/decisions/` (fila no banco, HTMX, MCP SDK oficial stateless). Auth: Bearer `cd_...`
 com hash SHA-256 (`services/users.py`).
 
