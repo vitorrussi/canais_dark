@@ -10,7 +10,7 @@ uv sync
 cp .env.example .env
 make migrate
 uv run canaisdark create-user --name "Seu Nome" --email voce@example.com   # imprime o token
-make dev     # http://localhost:8000/health
+make dev     # http://localhost:8123/health
 ```
 
 Testes: `make test` · Lint/tipos: `make lint` · Formatar: `make fmt`.

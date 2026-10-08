@@ -17,7 +17,7 @@ Python 3.12+, uv, FastAPI, SQLModel + SQLite (WAL) + Alembic, pydantic-settings,
 Typer, Jinja2 + HTMX (UI), SDK `mcp` (Fase 2), ffmpeg (Fase 5), pytest/ruff/mypy.
 
 ## Comandos
-`uv sync` · `make dev` · `make test` · `make lint` · `make fmt` · `make migrate` ·
+`uv sync` · `make dev` (porta 8123) · `make test` · `make lint` · `make fmt` · `make migrate` ·
 `uv run canaisdark create-user --name N --email E` · `uv run canaisdark rotate-token --email E`
 
 ## Estrutura

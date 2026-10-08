@@ -1,7 +1,7 @@
 .PHONY: dev test lint fmt migrate worker
 
 dev:
-	uv run uvicorn canaisdark.main:create_app --reload --factory
+	uv run uvicorn canaisdark.main:create_app --reload --factory --port 8123
 
 test:
 	uv run pytest
