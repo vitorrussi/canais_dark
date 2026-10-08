@@ -79,8 +79,10 @@ def claim_next(session: Session, actor: User, task_type: str | None = None) -> C
         cutoff = now - CLAIM_TTL
         available = or_(
             ClaudeTask.status == TaskStatus.PENDING.value,
-            (ClaudeTask.status == TaskStatus.IN_PROGRESS.value)
-            & (col(ClaudeTask.claimed_at) < cutoff),
+            and_(
+                ClaudeTask.status == TaskStatus.IN_PROGRESS.value,
+                col(ClaudeTask.claimed_at) < cutoff,
+            ),
         )
         stmt = select(ClaudeTask.id).where(available).order_by(col(ClaudeTask.id)).limit(1)
         if task_type:
