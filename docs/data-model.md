@@ -27,3 +27,8 @@ Planejado (ver `docs/briefing.md` §4): Asset, Timeline, Job.
   `connected_by`, `connected_at`, `needs_reconnect`.
 - Ativos novos (sem migração): `metadata` (proposta versionada JSON), `thumbnail` (JPEG, última vale), `upload`
   (`target` long|short, `youtube_video_id`, `url`, `file_asset_id`, `units` de cota). Job `youtube_upload`.
+
+## Fase 8 (Google Drive)
+- **DriveAccount** (`drive_account`): `channel_id` único, `refresh_token_enc` (Fernet), `scopes`, `account_email`,
+  `connected_by`, `connected_at`, `needs_reconnect`. `Video.drive_folder_id` (pasta do vídeo criada pelo app).
+- Ativo `drive_file` (sem migração): {key, drive_file_id, url, sha256, stamp, name, folder, folder_id, synced_at}. Job `drive_sync`.
