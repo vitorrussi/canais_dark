@@ -51,6 +51,16 @@ HOW_TO: dict[str, str] = {
         "aparecer no topo nos primeiros segundos. Salve com save_short_selections(video_id, shorts, task_id) e depois "
         "complete_task(task_id, resumo). Não inicie o render: isso é feito no site."
     ),
+    TaskType.GENERATE_METADATA.value: (
+        "Escreva os metadados do vídeo para o YouTube, no idioma do vídeo, a partir do roteiro APROVADO (`scenes`). "
+        "`title`: até 100 caracteres (ideal 50–70), específico e curioso, sem clickbait enganoso, sem < >, com a palavra-chave "
+        "principal no começo. `description`: 1–2 parágrafos que resumem sem entregar o final, depois capítulos opcionais e "
+        "hashtags (até 3); até 5000 bytes, sem < >. `tags`: 8–15 termos relevantes (sem #; no total até 500 caracteres). "
+        "`thumbnail_ideas`: 2–4 ideias curtas (cena, texto de até 4 palavras, contraste) para a pessoa criar a imagem. "
+        "Respeite o tom e as regras do canal (`channel.script_rules`). Salve com save_metadata(video_id, title, description, "
+        "tags, thumbnail_ideas, task_id) e depois complete_task(task_id, resumo). A pessoa revisa e aplica no site; "
+        "nada é enviado ao YouTube por aqui."
+    ),
 }
 
 
@@ -111,6 +121,23 @@ def build_task_context(session: Session, task: ClaudeTask) -> dict[str, Any]:
             found[1] if found else tl_service.build_default(session, video)
         ).model_dump(mode="json")
     shorts_limits: dict[str, Any] | None = None
+    metadata_ctx: dict[str, Any] | None = None
+    if task.type == TaskType.GENERATE_METADATA.value and video.approved_script_version_id:
+        from canaisdark.services import metadata as metadata_service
+        from canaisdark.services import shorts as shorts_service
+
+        scenes_ctx = [
+            {"index": sc.index, "text": sc.text}
+            for sc in scripts.scenes_of(
+                session, scripts.get_version(session, video.approved_script_version_id)
+            )
+        ]
+        found_shorts = shorts_service.latest_plan(session, video.id or 0)
+        metadata_ctx = {
+            "current": metadata_service.current(video),
+            "limits": {"title_max": 100, "description_max_bytes": 5000, "tags_max_chars": 500},
+            "shorts": [s.title for s in found_shorts[1].shorts] if found_shorts else [],
+        }
     if task.type == TaskType.SELECT_SHORTS.value and video.approved_script_version_id:
         from canaisdark.schemas.shorts import MAX_SECONDS, MAX_SHORTS, MIN_SECONDS
         from canaisdark.services import timeline as tl_service
@@ -135,6 +162,7 @@ def build_task_context(session: Session, task: ClaudeTask) -> dict[str, Any]:
     return {
         "default_timeline": default_timeline,
         "shorts_limits": shorts_limits,
+        "metadata": metadata_ctx,
         "scenes": scenes_ctx,
         "task": {
             "id": task.id,

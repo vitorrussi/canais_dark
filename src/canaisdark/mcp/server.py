@@ -6,6 +6,7 @@ from typing import Any
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.server.transport_security import TransportSecuritySettings
+from pydantic import ValidationError
 from sqlmodel import Session
 
 from canaisdark.config import get_settings, public_host
@@ -13,6 +14,7 @@ from canaisdark.db import get_engine
 from canaisdark.mcp.auth import BearerAuthMiddleware
 from canaisdark.mcp.context import current_user
 from canaisdark.models import TaskType, User, VideoStatus
+from canaisdark.schemas.metadata import MetadataIn
 from canaisdark.schemas.scene import PromptIn
 from canaisdark.schemas.script import SceneIn
 from canaisdark.schemas.shorts import ShortIn
@@ -20,6 +22,7 @@ from canaisdark.schemas.timeline import Timeline
 from canaisdark.services import (
     channels,
     jobs,
+    metadata,
     render,
     scene_prompts,
     scripts,
@@ -448,6 +451,63 @@ def start_shorts(
     with _db() as (s, user):
         job = shorts_render.start(s, video_id, user, quality, index, allow_missing)
         return {"job_id": job.id, "status": job.status, "quality": quality}
+
+
+# ----- Metadados do YouTube -----
+
+
+@mcp.tool()
+@safe
+def get_metadata(video_id: int) -> dict[str, Any]:
+    """Título/descrição/tags atuais do vídeo, a última proposta salva e se ela já foi aplicada."""
+    with _db() as (s, _):
+        video = videos.get_video(s, video_id)
+        found = metadata.latest(s, video_id)
+        return {
+            "current": metadata.current(video),
+            "problems": metadata.problems(video),
+            "proposal": (
+                {
+                    "version": found[0].meta.get("number"),
+                    "applied": bool(found[0].meta.get("applied")),
+                    **found[1].model_dump(),
+                }
+                if found
+                else None
+            ),
+        }
+
+
+@mcp.tool()
+@safe
+def save_metadata(
+    video_id: int,
+    title: str,
+    description: str = "",
+    tags: list[str] | None = None,
+    thumbnail_ideas: list[str] | None = None,
+    task_id: int | None = None,
+) -> dict[str, Any]:
+    """Salva uma NOVA proposta de metadados do YouTube (a pessoa revisa e aplica no site).
+
+    title: até 100 caracteres, sem < >. description: até 5000 bytes. tags: sem #, até 500 caracteres no total.
+    thumbnail_ideas: 2–4 ideias curtas. Nada é enviado ao YouTube por esta ferramenta."""
+    try:
+        data = MetadataIn(
+            title=title,
+            description=description,
+            tags=tags or [],
+            thumbnail_ideas=thumbnail_ideas or [],
+        )
+    except ValidationError as e:
+        detail = "; ".join(
+            f"{'.'.join(str(p) for p in err['loc'])}: {err['msg'].removeprefix('Value error, ')}"
+            for err in e.errors()
+        )
+        raise ToolError(f"Metadados inválidos: {detail}") from e
+    with _db() as (s, user):
+        asset = metadata.save_proposal(s, video_id, data, "claude", f"claude:{user.id}")
+        return {"version": asset.meta["number"], "applied": False, "task_id": task_id}
 
 
 # ----- Prompt (vira slash command no Claude Code) -----
