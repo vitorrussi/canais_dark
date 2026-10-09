@@ -107,3 +107,22 @@ def test_clean_words_drops_whitespace_tokens_from_real_api_shape() -> None:
     assert alignment.map_words_to_scenes(cleaned, ["Abril de 1986."]) == [(0.04, 2.08)]
     srt = subtitles.to_srt(cleaned)
     assert "Abril de 1986." in srt and "  " not in srt
+
+
+def test_shorts_ass_is_big_highlighted_and_shifted() -> None:
+    words = [
+        W("Antes", 9.0, 9.4),
+        W("O", 10.0, 10.2),
+        W("farol", 10.2, 10.8),
+        W("ficava", 10.8, 11.3),
+        W("longe.", 11.3, 12.0),
+        W("Depois", 12.0, 12.5),
+        W("fim", 30.0, 30.5),
+    ]
+    out = subtitles.to_ass_shorts(words, 10.0, 12.5)
+    assert "PlayResX: 1080" in out and "PlayResY: 1920" in out
+    dialogues = [ln for ln in out.splitlines() if ln.startswith("Dialogue")]
+    assert "ANTES" not in out and "FIM" not in out  # só o trecho
+    assert dialogues[0].startswith("Dialogue: 0,0:00:00.00,")  # deslocado para 0
+    assert "{\\c&H0000D4FF&}O{" in dialogues[0] and "FAROL" in dialogues[0]
+    assert "{\\c&H0000D4FF&}FAROL" in dialogues[1]

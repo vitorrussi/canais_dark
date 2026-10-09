@@ -94,3 +94,77 @@ def to_ass(words: list[dict[str, Any]]) -> str:
             f"Dialogue: 0,{_ass_time(start)},{_ass_time(end)},Default,,0,0,0,,{text.replace(chr(10), chr(92) + 'N')}"
         )
     return "\n".join(lines) + "\n"
+
+
+# ----- Shorts: legendas grandes, palavra a palavra, com destaque da palavra falada -----
+
+SHORT_ASS_HEADER = """[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Short,Arial,104,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,9,2,2,70,70,430,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
+SHORT_HIGHLIGHT = "&H0000D4FF&"  # amarelo (BGR)
+SHORT_WORDS_PER_CUE = 3
+SHORT_MAX_CHARS = 24
+
+
+def _short_groups(words: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
+    """Agrupa 2–3 palavras por vez, fechando o grupo em fim de frase ou quando fica longo."""
+    groups: list[list[dict[str, Any]]] = []
+    buf: list[dict[str, Any]] = []
+    for w in words:
+        buf.append(w)
+        text = " ".join(str(x["text"]) for x in buf)
+        ends = str(w["text"]).rstrip("\"')").endswith((".", "!", "?", "…", ",", ";", ":"))
+        if len(buf) >= SHORT_WORDS_PER_CUE or len(text) >= SHORT_MAX_CHARS or ends:
+            groups.append(buf)
+            buf = []
+    if buf:
+        groups.append(buf)
+    return groups
+
+
+def _safe(text: str) -> str:
+    return text.replace("\\", "").replace("{", "(").replace("}", ")").replace("\n", " ")
+
+
+def to_ass_shorts(words: list[dict[str, Any]], start: float, end: float) -> str:
+    """ASS 1080×1920 só do trecho [start, end] da narração, com os tempos já deslocados para 0."""
+    inside = [
+        {
+            **w,
+            "start": max(float(w["start"]), start) - start,
+            "end": min(float(w["end"]), end) - start,
+        }
+        for w in words
+        if float(w["end"]) > start and float(w["start"]) < end and str(w["text"]).strip()
+    ]
+    lines = [SHORT_ASS_HEADER.rstrip("\n")]
+    total = end - start
+    for group in _short_groups(inside):
+        for k, current in enumerate(group):
+            t0 = float(current["start"])
+            nxt = float(group[k + 1]["start"]) if k + 1 < len(group) else float(current["end"])
+            t1 = max(nxt, t0 + 0.08)
+            if k + 1 == len(group):
+                t1 = max(t1, float(current["end"]))
+            pieces = []
+            for j, w in enumerate(group):
+                word = _safe(str(w["text"])).upper()
+                if j == k:
+                    pieces.append(f"{{\\c{SHORT_HIGHLIGHT}}}{word}{{\\c&H00FFFFFF&}}")
+                else:
+                    pieces.append(word)
+            lines.append(
+                f"Dialogue: 0,{_ass_time(t0)},{_ass_time(min(t1, total))},Short,,0,0,0,,"
+                + " ".join(pieces)
+            )
+    return "\n".join(lines) + "\n"
