@@ -151,6 +151,7 @@ mark.hit { background: var(--warn); color: #000; }
 
 /* Diff */
 .diff-row { display: grid; grid-template-columns: 6rem 1fr; gap: .8rem; padding: .7rem 0; border-top: 1px solid var(--border); } .diff-row:first-child { border-top: 0; }
+.diff-row ins, .diff-row del { padding: 0 .2em; }
 .diff-row ins { background: color-mix(in srgb, var(--success) 25%, transparent); text-decoration: none; border-radius: 3px; } .diff-row del { background: color-mix(in srgb, var(--danger) 25%, transparent); border-radius: 3px; }
 .diff-row.added { border-left: 3px solid var(--success); padding-left: .5rem; } .diff-row.removed { border-left: 3px solid var(--danger); padding-left: .5rem; opacity: .85; } .diff-row.changed { border-left: 3px solid var(--warn); padding-left: .5rem; } .diff-row.same { opacity: .55; }
 @media (max-width: 900px) { .tool-hint { display: none; } .editor-toolbar { top: 52px; } }

@@ -25,7 +25,12 @@ Tema próprio em `web/static/app.css` (escuro por padrão, alterna claro/escuro;
 `data-copy`, confirmar via `data-confirm`, presets via `data-fill`, toasts), macros em `web/templates/_macros.html`
 (`ic()` ícones SVG, `field()` campo com ajuda+exemplo). Feedback ao usuário: `_back(request, url, ok=/error=)` → toast.
 Presets de canal em `web/presets.py`. Erros de domínio em páginas HTML renderizam `error.html`.
-Etapas em andamento: 2.2 editor de roteiro, 2.3 baixar/exportar/importar, 2.4 configuração/QoL (ver plano).
+Etapa 2.2 (concluída): editor de roteiro em `/videos/{id}/script/edit` (`web/scripts.py`, `static/script_editor.js`,
+`script_editor.html`): modos cenas/texto corrido, dividir/mesclar/frases/duplicar/mover, localizar-substituir (regex),
+limpeza, desfazer/refazer, rascunho local (localStorage), salvar = NOVA versão (`user:<id>`, opção aprovar). Comparação de versões em
+`/videos/{id}/diff?a=&b=` (`services/script_diff.py`). Texto: `services/script_text.py`. REST: `POST /api/videos/{id}/scripts`.
+Fonte da verdade no JS é o array `scenes`; `window.__editor` expõe a API para depuração/testes manuais no navegador.
+Próximas: 2.3 baixar/exportar/importar, 2.4 configuração/QoL (ver plano).
 
 ## Estrutura
 `src/canaisdark/`: `config.py`, `logging.py`, `db.py`, `models/`, `services/` (lógica),

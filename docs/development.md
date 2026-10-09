@@ -43,3 +43,9 @@ e chamando `services/`. Documentar em `docs/mcp-tools.md`. Testes: `tests/test_m
 - Ícones: `ic("nome")` (adicione o path SVG em `_macros.html`). Estilos só em `app.css`, com variáveis de tema (`--accent`, `--surface`…).
 - Mensagens de sucesso/erro: `_back(request, url, ok="…")` / `error=exc` (viram toast). Erros de validação em re-render: passe `error=`.
 - JS global por delegação (`data-copy`, `data-confirm`, `data-fill`), compatível com `hx-boost`.
+
+## Editor de roteiro (JS)
+`static/script_editor.js` não tem build nem testes automatizados; teste no navegador chamando `window.__editor`
+(ex.: `__editor.act(0,"sentences")`, `__editor.transformAll(__editor.TOOLS.punct,"x")`). O script é carregado dentro do
+bloco `content` (não no `<head>`) porque o `hx-boost` só executa scripts do corpo; ele limpa seus listeners via `window.__editorCleanup`.
+Regras de negócio (limites 1–200 cenas, 5000 caracteres) ficam em `schemas/script.py`/`services/scripts.py` e são repetidas no JS apenas para feedback imediato.
