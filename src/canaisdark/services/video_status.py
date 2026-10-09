@@ -12,6 +12,7 @@ from sqlmodel import Session, col, select
 from canaisdark.models import (
     AssetType,
     ClaudeTask,
+    Job,
     JobStatus,
     JobType,
     ScriptVersion,
@@ -45,7 +46,7 @@ STAGES: list[tuple[str, str]] = [
     ("review", "Revisão humana"),
     ("metadata", "Metadados"),
     ("shorts", "Shorts (opcional)"),
-    ("youtube", "Upload YouTube"),
+    ("youtube", "Upload YouTube (privado)"),
     ("drive", "Google Drive"),
 ]
 
@@ -257,6 +258,41 @@ def _review_state(session: Session, video: Video) -> StageState:
     return StageState.DONE if final.meta.get("approved_by") else StageState.PENDING
 
 
+def _metadata_state(session: Session, video: Video) -> StageState:
+    from canaisdark.services import metadata
+
+    assert video.id is not None
+    task_state = _task_state(_latest_task(session, video, TaskType.GENERATE_METADATA))
+    if task_state in (StageState.PENDING, StageState.IN_PROGRESS):
+        return task_state
+    if not metadata.problems(video):
+        return StageState.DONE
+    if metadata.latest(session, video.id) is not None:
+        return StageState.PENDING  # proposta salva, falta aplicar/completar
+    return task_state or StageState.NOT_STARTED
+
+
+def _youtube_state(session: Session, video: Video) -> StageState:
+    from canaisdark.services import youtube
+
+    assert video.id is not None
+    job = jobs_latest(session, video.id)
+    if (running := _job_state(job.status if job else None)) is not None:
+        return running
+    uploads = [u for u in youtube.list_uploads(session, video.id) if u.meta.get("target") == "long"]
+    if uploads:
+        return StageState.DONE
+    if job and job.status == JobStatus.FAILED.value:
+        return StageState.FAILED
+    return StageState.NOT_STARTED
+
+
+def jobs_latest(session: Session, video_id: int) -> Job | None:
+    from canaisdark.services import jobs
+
+    return jobs.latest_job(session, video_id, JobType.YOUTUBE_UPLOAD)
+
+
 def _shorts_state(session: Session, video: Video) -> StageState:
     """Etapa OPCIONAL: nada depende dela; SKIPPED = dispensada de propósito."""
     from canaisdark.services import jobs, shorts, shorts_render
@@ -290,6 +326,8 @@ _STATE_CALCULATORS: dict[str, Callable[[Session, Video], StageState]] = {
     "render": _render_state,
     "review": _review_state,
     "shorts": _shorts_state,
+    "metadata": _metadata_state,
+    "youtube": _youtube_state,
     "prompts": _prompts_state,
     "assets": _assets_state,
     "script": _script_state,
@@ -306,3 +344,9 @@ def get_stages(session: Session, video: Video) -> list[StageRead]:
         state = calc(session, video) if calc else StageState.NOT_STARTED
         result.append(StageRead(key=key, label=label, state=state.value))
     return result
+
+
+def stage_state(session: Session, video: Video, key: str) -> str:
+    """Estado de uma etapa (valor de StageState) para outros services."""
+    calc = _STATE_CALCULATORS.get(key)
+    return (calc(session, video) if calc else StageState.NOT_STARTED).value

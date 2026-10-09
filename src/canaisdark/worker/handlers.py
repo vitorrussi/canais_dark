@@ -7,6 +7,7 @@ from typing import Any
 from sqlmodel import Session
 
 from canaisdark.integrations.elevenlabs import ElevenLabsLike, GenerationCancelled
+from canaisdark.integrations.youtube import UploadCancelled
 from canaisdark.models import Asset, AssetType, Job, JobType, Scene
 from canaisdark.models.channel import utcnow
 from canaisdark.services import (
@@ -19,6 +20,7 @@ from canaisdark.services import (
     shorts_render,
     subtitles,
     videos,
+    youtube,
 )
 from canaisdark.services.errors import InvalidState
 
@@ -296,6 +298,13 @@ def run_render(session: Session, job: Job, make_client: ClientFactory) -> None:
         raise JobCancelled from e
 
 
+def run_youtube_upload(session: Session, job: Job, make_client: ClientFactory) -> None:
+    try:
+        youtube.run_job(session, job)
+    except UploadCancelled as e:
+        raise JobCancelled from e
+
+
 def run_shorts(session: Session, job: Job, make_client: ClientFactory) -> None:
     try:
         shorts_render.run_job(session, job)
@@ -308,4 +317,5 @@ HANDLERS: dict[str, Callable[[Session, Job, ClientFactory], None]] = {
     JobType.ALIGNMENT.value: run_alignment,
     JobType.RENDER.value: run_render,
     JobType.SHORTS.value: run_shorts,
+    JobType.YOUTUBE_UPLOAD.value: run_youtube_upload,
 }

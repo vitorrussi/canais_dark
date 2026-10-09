@@ -11,6 +11,7 @@ from canaisdark.api import (
     tasks,
     transfer,
     videos,
+    youtube,
 )
 from canaisdark.api.deps import CurrentUser
 
@@ -32,3 +33,4 @@ router.include_router(scenes.router)
 router.include_router(render.router)
 router.include_router(metadata.router)
 router.include_router(shorts.router)
+router.include_router(youtube.router)
