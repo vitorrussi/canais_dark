@@ -164,3 +164,40 @@ def test_map_filenames_duplicates_and_empty() -> None:
     res = scene_assets.map_filenames(["1.png", "01.png"], 3, set())
     assert [r["scene"] for r in res] == [0, None] and "Duas imagens" in res[1]["reason"]
     assert scene_assets.map_filenames([], 3, set()) == []
+
+
+def test_stage_states_for_prompts_and_assets(
+    session: Session, env: dict[str, object], user_token: tuple[User, str]
+) -> None:
+    from canaisdark.schemas.scene import PromptIn
+    from canaisdark.services import tasks, video_status
+
+    def states() -> dict[str, str]:
+        v = videos.get_video(session, env["vid"])  # type: ignore[arg-type]
+        return {x.key: x.state for x in video_status.get_stages(session, v)}
+
+    assert states()["prompts"] == "not_started" and states()["assets"] == "not_started"
+    scene_prompts.request_prompts(session, env["vid"], "", user_token[0])  # type: ignore[arg-type]
+    assert states()["prompts"] == "pending"
+    task = tasks.claim_next(session, user_token[0], "generate_prompts")
+    assert task and states()["prompts"] == "in_progress"
+    scene_prompts.save_prompts(session, env["vid"], [PromptIn(scene_index=0, image_prompt="a")])  # type: ignore[arg-type]
+    assert states()["prompts"] == "in_progress"  # tarefa ainda aberta
+    tasks.complete_task(session, task.id or 0, user_token[0], "parcial")
+    assert states()["prompts"] == "partial"
+    scene_prompts.save_prompts(
+        session,
+        env["vid"],
+        [
+            PromptIn(scene_index=1, image_prompt="b", vertical=True),
+            PromptIn(scene_index=2, image_prompt="c"),
+        ],
+    )  # type: ignore[arg-type]
+    assert states()["prompts"] == "done"
+    scene_assets.save_upload(session, env["vid"], 0, png(1920, 1080), "1.png")  # type: ignore[arg-type]
+    assert states()["assets"] == "partial"
+    scene_assets.save_upload(session, env["vid"], 1, png(1920, 1080), "2.png")  # type: ignore[arg-type]
+    scene_assets.save_upload(session, env["vid"], 2, png(1920, 1080), "3.png")  # type: ignore[arg-type]
+    assert states()["assets"] == "partial"  # a cena 2 pediu versão vertical
+    scene_assets.save_upload(session, env["vid"], 1, png(1080, 1920), "2v.png", "vertical")  # type: ignore[arg-type]
+    assert states()["assets"] == "done"

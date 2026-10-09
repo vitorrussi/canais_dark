@@ -147,7 +147,54 @@ def _alignment_state(session: Session, video: Video) -> StageState:
     return StageState.DONE
 
 
+def _approved_scenes(session: Session, video: Video) -> list:  # type: ignore[type-arg]
+    from canaisdark.services import scripts
+
+    if video.approved_script_version_id is None:
+        return []
+    return scripts.scenes_of(
+        session, scripts.get_version(session, video.approved_script_version_id)
+    )
+
+
+def _prompts_state(session: Session, video: Video) -> StageState:
+    scenes = _approved_scenes(session, video)
+    if not scenes:
+        return StageState.NOT_STARTED
+    have = sum(1 for s in scenes if s.image_prompt.strip())
+    task = _latest_task(session, video, TaskType.GENERATE_PROMPTS)
+    if have == len(scenes):
+        return StageState.DONE
+    if (running := _task_state(task)) in (StageState.PENDING, StageState.IN_PROGRESS):
+        return running
+    if have:
+        return StageState.PARTIAL
+    return StageState.FAILED if running == StageState.FAILED else StageState.NOT_STARTED
+
+
+def _assets_state(session: Session, video: Video) -> StageState:
+    from canaisdark.services import scene_assets
+
+    scenes = _approved_scenes(session, video)
+    if not scenes:
+        return StageState.NOT_STARTED
+    amap = scene_assets.scene_assets(session, [s.id for s in scenes if s.id])
+    needed = have = 0
+    for s in scenes:
+        present = amap.get(s.id or 0, {})
+        needed += 1
+        have += "main" in present
+        if s.wants_vertical:
+            needed += 1
+            have += "vertical" in present
+    if have == 0:
+        return StageState.NOT_STARTED
+    return StageState.DONE if have == needed else StageState.PARTIAL
+
+
 _STATE_CALCULATORS: dict[str, Callable[[Session, Video], StageState]] = {
+    "prompts": _prompts_state,
+    "assets": _assets_state,
     "script": _script_state,
     "script_approval": _script_approval_state,
     "narration": _narration_state,
