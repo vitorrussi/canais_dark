@@ -1,0 +1,22 @@
+{# Campos compartilhados de importação de texto: colar/enviar arquivo, regra de divisão. #}
+<div class="field">
+  <label for="paste">Colar o roteiro</label>
+  <textarea id="paste" name="paste" rows="10" placeholder="Cole aqui o texto. Ex.:&#10;&#10;Abril de 1986. Uma cidade inteira recebeu ordem para partir.&#10;&#10;Eles nunca voltaram."></textarea>
+  <div class="help">Ou envie um arquivo abaixo (o arquivo tem prioridade sobre o texto colado).</div>
+</div>
+<div class="field">
+  <label for="file">Enviar arquivo <span class="tip" tabindex="0" data-tip="Aceita .txt, .md e .json (roteiro ou vídeo exportado por este sistema). Até 2 MB.">?</span></label>
+  <input id="file" type="file" name="file" accept=".txt,.md,.json,text/plain,application/json">
+</div>
+<div class="row">
+  <div class="field">
+    <label for="rule">Como dividir em cenas <span class="tip" tabindex="0" data-tip="‘Detectar’ procura títulos de cena, depois linhas em branco e, por último, frases.">?</span></label>
+    <select id="rule" name="rule">{% for key, label in rules.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select>
+    <div class="help">Não tem certeza? Deixe em “Detectar” e confira a prévia.</div>
+  </div>
+  <div class="field">
+    <label for="max_chars">N (só para “Agrupar frases”)</label>
+    <input id="max_chars" type="number" name="max_chars" value="400" min="50" max="5000">
+    <div class="help">Tamanho máximo, em caracteres, de cada cena.</div>
+  </div>
+</div>

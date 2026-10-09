@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ic %}
+{% block title %}Importar roteiro{% endblock %}
+{% block crumb %}Importar roteiro{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Importar roteiro</h1>
+  <p class="muted">Traga um texto pronto para este vídeo. Ele entra como uma <strong>nova versão</strong>; nada é sobrescrito.</p></div>
+  <div class="actions"><a class="btn secondary" href="/videos/{{ video.id }}">Voltar ao vídeo</a></div></div>
+<div class="layout-2">
+  <form class="card" method="post" action="/videos/{{ video.id }}/script/import" enctype="multipart/form-data">
+    {% include "_import_fields.html" %}
+    <label class="check"><input type="checkbox" name="approve"> Aprovar a versão importada</label>
+    <div class="form-actions">
+      <button type="button" class="secondary" hx-post="/videos/{{ video.id }}/script/import/preview" hx-target="#preview" hx-include="closest form" hx-encoding="multipart/form-data" hx-boost="false">Ver prévia</button>
+      <button>{{ ic("check") }} Importar como nova versão</button>
+    </div>
+  </form>
+  <div id="preview"><div class="card"><p class="muted">A prévia aparece aqui: quantas cenas, palavras e o tempo estimado.</p></div></div>
+</div>
+{% endblock %}

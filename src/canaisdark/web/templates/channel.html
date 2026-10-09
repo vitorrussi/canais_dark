@@ -34,11 +34,22 @@
     {% endfor %}
   </div>
   {% if not channel.is_archived %}
+  <div class="stack">
   <form class="card accent" method="post" action="/channels/{{ channel.slug }}/videos">
     <header><h3>{{ ic("plus") }} Novo vídeo</h3></header>
     {{ field("topic", "Tema / conteúdo de entrada", "", "Descreva o assunto, o ângulo e o que não pode faltar. Quanto mais específico, melhor o roteiro.", "O farol de Flannan Isles: 3 guardiões desapareceram em 1900. Foco no mistério e nas hipóteses, sem sensacionalismo.", kind="textarea", rows=5, required=true) }}
     <button>Criar vídeo e pedir roteiro</button>
   </form>
+  <div class="card">
+    <header><h3>Outras formas</h3></header>
+    <div style="display:flex;flex-direction:column;gap:.5rem;align-items:flex-start">
+      <a class="btn secondary sm" href="/channels/{{ channel.slug }}/videos/manual">{{ ic("edit") }} Já tenho o roteiro</a>
+      <a class="btn secondary sm" href="/import">{{ ic("upload") }} Importar arquivo</a>
+      <a class="btn secondary sm" href="/channels/{{ channel.slug }}/export" hx-boost="false">{{ ic("download") }} Exportar canal + vídeos</a>
+      <a class="btn secondary sm" href="/channels/{{ channel.slug }}/export?videos=0" hx-boost="false">{{ ic("download") }} Exportar só configurações</a>
+    </div>
+  </div>
+  </div>
   {% endif %}
 </div>
 {% else %}

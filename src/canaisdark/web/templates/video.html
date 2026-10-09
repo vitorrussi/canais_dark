@@ -58,6 +58,12 @@
       {% endfor %}
       <div class="form-actions">
         <a class="btn secondary" href="/videos/{{ video.id }}/script/edit?v={{ selected.number }}">{{ ic("edit") }} Editar roteiro</a>
+        <details class="menu"><summary class="btn secondary">{{ ic("download") }} Baixar ▾</summary>
+          <div class="menu-body">
+            <a class="btn ghost sm" href="/scripts/{{ selected.id }}/download?format=txt" hx-boost="false">Texto (.txt)</a>
+            <a class="btn ghost sm" href="/scripts/{{ selected.id }}/download?format=md" hx-boost="false">Markdown (.md)</a>
+            <a class="btn ghost sm" href="/scripts/{{ selected.id }}/download?format=json" hx-boost="false">JSON (.json)</a>
+          </div></details>
         {% if selected.number > 1 %}<a class="btn ghost" href="/videos/{{ video.id }}/diff?a={{ selected.number - 1 }}&b={{ selected.number }}">Comparar com v{{ selected.number - 1 }}</a>{% endif %}
         {% if not selected.approved %}
         <form method="post" action="/scripts/{{ selected.id }}/approve"><button>{{ ic("check") }} Aprovar roteiro (v{{ selected.number }})</button></form>
@@ -89,6 +95,13 @@
           <span class="label">{{ s.label }}</span>{% if s.state != "not_started" %}{{ state_badge(s.state, state_labels) }}{% endif %}</li>
         {% endfor %}
       </ul>
+    </div>
+    <div class="card">
+      <header><h3>Importar e exportar</h3></header>
+      <div class="stack" style="display:flex;flex-direction:column;gap:.5rem;align-items:flex-start">
+        <a class="btn secondary sm" href="/videos/{{ video.id }}/script/import">{{ ic("upload") }} Importar texto como nova versão</a>
+        <a class="btn secondary sm" href="/videos/{{ video.id }}/export" hx-boost="false">{{ ic("download") }} Exportar vídeo (.json)</a>
+      </div>
     </div>
     {% if video.status == "draft" %}
     <div class="card">

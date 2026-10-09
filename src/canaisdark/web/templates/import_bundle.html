@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ic %}
+{% block title %}Importar{% endblock %}
+{% block crumb %}Importar{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Importar canal ou vídeo</h1>
+  <p class="muted">Use um arquivo <code>.json</code> exportado por este sistema (backup, cópia para o sócio, modelo de outro canal). Sempre cria algo <strong>novo</strong>; nada existente é sobrescrito. Mídia (áudio, imagens, vídeos) não é incluída.</p></div></div>
+<form class="card" method="post" action="/import" enctype="multipart/form-data">
+  <div class="field"><label for="file">Arquivo exportado</label>
+    <input id="file" type="file" name="file" accept=".json,application/json" required
+           hx-post="/import/inspect" hx-trigger="change" hx-target="#bundle-info" hx-include="closest form" hx-encoding="multipart/form-data" hx-boost="false"></div>
+  <div id="bundle-info"><p class="muted">Escolha o arquivo para ver o que ele contém.</p></div>
+</form>
+{% endblock %}

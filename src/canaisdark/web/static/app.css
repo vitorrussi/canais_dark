@@ -155,3 +155,5 @@ mark.hit { background: var(--warn); color: #000; }
 .diff-row ins { background: color-mix(in srgb, var(--success) 25%, transparent); text-decoration: none; border-radius: 3px; } .diff-row del { background: color-mix(in srgb, var(--danger) 25%, transparent); border-radius: 3px; }
 .diff-row.added { border-left: 3px solid var(--success); padding-left: .5rem; } .diff-row.removed { border-left: 3px solid var(--danger); padding-left: .5rem; opacity: .85; } .diff-row.changed { border-left: 3px solid var(--warn); padding-left: .5rem; } .diff-row.same { opacity: .55; }
 @media (max-width: 900px) { .tool-hint { display: none; } .editor-toolbar { top: 52px; } }
+.menu-body a.btn { justify-content: flex-start; width: 100%; }
+.stack-inline { display: flex; gap: .5rem; flex-wrap: wrap; }

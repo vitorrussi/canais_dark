@@ -1,0 +1,13 @@
+{% if error %}
+<div class="alert">{{ error }}</div>
+{% else %}
+<div class="card">
+  <header><h3>Prévia</h3></header>
+  <div class="meta" style="margin:0 0 .75rem"><span class="badge info">{{ summary.scenes }} cenas</span><span class="badge">{{ summary.words }} palavras</span><span class="badge">≈ {{ summary.duration }}</span><span class="badge">regra: {{ used_rule }}</span>
+    {% if summary.too_long %}<span class="badge failed">cenas muito longas: {{ summary.too_long|join(", ") }}</span>{% endif %}</div>
+  {% for sc in scenes[:60] %}
+  <div class="scene"><span class="n">{{ loop.index }}</span><div>{{ sc.text[:300] }}{% if sc.text|length > 300 %}…{% endif %}{% if sc.notes %}<div class="note">{{ sc.notes }}</div>{% endif %}</div></div>
+  {% endfor %}
+  {% if scenes|length > 60 %}<p class="muted">… e mais {{ scenes|length - 60 }} cenas.</p>{% endif %}
+</div>
+{% endif %}

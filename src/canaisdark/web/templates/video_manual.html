@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ic, field %}
+{% block title %}Novo vídeo com roteiro pronto{% endblock %}
+{% block crumb %}Novo vídeo com roteiro pronto{% endblock %}
+{% block content %}
+{% set f = form or {} %}
+<div class="page-head"><div><h1>Novo vídeo com roteiro pronto</h1>
+  <p class="muted">Já escreveu o roteiro? Crie o vídeo sem acionar o Claude. Canal: <strong>{{ channel.name }}</strong>.</p></div>
+  <div class="actions"><a class="btn secondary" href="/channels/{{ channel.slug }}">Cancelar</a></div></div>
+<div class="layout-2">
+  <form class="card" method="post" action="/channels/{{ channel.slug }}/videos/manual" enctype="multipart/form-data">
+    {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+    {{ field("title", "Nome / título do vídeo", f.title or "", "Como você quer chamar este vídeo no sistema. Pode mudar depois.", "O desaparecimento de Flannan Isles", required=true) }}
+    {{ field("topic", "Tema (opcional)", f.topic or "", "Se deixar em branco, usamos o título.", "Três guardiões somem em 1900", kind="textarea", rows=2) }}
+    {% include "_import_fields.html" %}
+    <label class="check"><input type="checkbox" name="approve"> Já aprovar o roteiro</label>
+    <div class="field" style="margin-top:1rem">
+      <label class="check"><input type="checkbox" name="ask_claude"> Pedir ao Claude para revisar o roteiro depois de criar</label>
+      <textarea name="claude_notes" rows="2" placeholder="Ex.: melhore o gancho inicial e corte repetições; não mude os fatos"></textarea>
+      <div class="help">Cria uma tarefa para o Claude com essas observações. Sem marcar, o Claude não é acionado.</div>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="secondary" hx-post="/channels/{{ channel.slug }}/videos/manual/preview" hx-target="#preview" hx-include="closest form" hx-encoding="multipart/form-data" hx-boost="false">Ver prévia</button>
+      <button>{{ ic("check") }} Criar vídeo</button>
+    </div>
+  </form>
+  <div id="preview"><div class="card"><p class="muted">A prévia aparece aqui antes de criar o vídeo.</p></div></div>
+</div>
+{% endblock %}

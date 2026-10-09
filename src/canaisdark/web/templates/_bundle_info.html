@@ -1,0 +1,23 @@
+{% from "_macros.html" import ic %}
+{% if error %}<div class="alert">{{ error }}</div>
+{% else %}
+<div class="card accent">
+  <h3>{{ "Canal" if info.kind == "canaisdark.channel" else "Vídeo" }}: {{ info.name }}</h3>
+  <div class="meta">
+    {% if info.kind == "canaisdark.channel" %}<span>{{ info.videos }} vídeo(s)</span>{% endif %}
+    <span>{{ info.scripts }} versão(ões) de roteiro</span>
+  </div>
+  <div class="field" style="margin-top:1rem">
+    <label for="name">{{ "Nome do novo canal" if info.kind == "canaisdark.channel" else "Título do novo vídeo" }} (opcional)</label>
+    <input id="name" name="name" placeholder="{{ info.name }}">
+    <div class="help">{% if info.kind == "canaisdark.channel" %}Deixe em branco para manter o nome (se já existir, entra como “nome (2)”).{% else %}Deixe em branco para manter o título original.{% endif %}</div>
+  </div>
+  {% if info.kind == "canaisdark.channel" %}
+  <label class="check"><input type="checkbox" name="include_videos" checked> Importar também os vídeos e roteiros</label>
+  {% else %}
+  <div class="field"><label for="target_channel">Canal de destino</label>
+    <select id="target_channel" name="target_channel" required><option value="">Escolha…</option>{% for c in channel_list %}<option value="{{ c.slug }}">{{ c.name }}</option>{% endfor %}</select></div>
+  {% endif %}
+  <div class="form-actions"><button>{{ ic("check") }} Importar</button></div>
+</div>
+{% endif %}
