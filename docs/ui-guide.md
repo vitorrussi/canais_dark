@@ -9,8 +9,8 @@
 | **Editor de roteiro** | Cenas ou texto corrido, dividir/mesclar/frases, localizar-substituir (regex), limpeza, desfazer/refazer, rascunho local; salvar = nova versão |
 | **Storyboard** (`/videos/<id>/scenes`) | Prompts por cena (editáveis, copiar completo/9:16, pacote .txt/.md/.json), upload por cena e em lote com miniaturas e avisos |
 | **Timeline** (`/videos/<id>/timeline`) | Movimento, transição e texto na tela por cena, efeitos, JSON avançado; cada salvamento é uma versão nova |
-| **Vídeo** — passos | A página do vídeo segue a ordem do trabalho: Tema → ① Roteiro (com o Claude dentro) → ② Narração → ③ Cenas → ④ Timeline e render (player, aprovar) |
-| **Jobs** (`/jobs`) | Histórico dos jobs de narração/alinhamento/render, cancelar e tentar de novo |
+| **Vídeo** — passos | A página do vídeo segue a ordem do trabalho: Tema → ① Roteiro (com o Claude dentro) → ② Narração → ③ Cenas → ④ Timeline e render (player, aprovar) → ⑤ Shorts 9:16 (opcional, recolhido; dá para dispensar) |
+| **Jobs** (`/jobs`) | Histórico dos jobs de narração/alinhamento/render/Shorts, cancelar e tentar de novo |
 | **Pendências** (`/tasks`) | Tarefas abertas e recentes, prompt “processar tudo” |
 | **Conectar Claude** (`/connect`) | Comando do MCP pronto, gerar novo token (mostrado uma vez), solução de problemas |
 

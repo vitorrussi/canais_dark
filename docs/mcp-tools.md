@@ -42,12 +42,15 @@ Prompt: `process_pending`.
 |---|---|
 | `get_job_status(job_id)` | status, progresso, erro, resultado e fim do log |
 | `list_jobs(video_id?, status?)` | jobs recentes |
+| `get_shorts(video_id)` | seleção de Shorts, se foi dispensada e renders (etapa opcional; ver `docs/shorts.md`) |
+| `save_short_selections(video_id, shorts, task_id?)` | NOVA seleção: `shorts=[{exact_text, title, hook_override?}]`; o servidor localiza o texto na narração e valida 15–59 s |
+| `start_shorts(video_id, quality?, index?, allow_missing?)` | enfileira o render 9:16 (`preview` 720×1280 / `final` 1080×1920) e devolve `job_id` |
 | `start_render(video_id, quality?, subtitles?, allow_missing?)` | enfileira o render (`preview` 720p / `final` 1080p) e devolve `job_id`; sem créditos, só CPU |
 
 Narração/alinhamento só são disparados por pessoas no site (gastam créditos).
 
 ## Planejadas
-`save_metadata`, `save_short_selections` (Fases 6–7); `start_shorts` (Fase 6). Regra: nenhuma tool bloqueia — operações longas criam Job e retornam `job_id`.
+`save_metadata` (Fase 7). Regra: nenhuma tool bloqueia — operações longas criam Job e retornam `job_id`.
 
 ## Auth e extensão
 `mcp/auth.py:BearerAuthMiddleware` valida o token e expõe o usuário em `mcp/context.py:current_user`.
