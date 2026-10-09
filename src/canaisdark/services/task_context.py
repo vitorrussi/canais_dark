@@ -40,6 +40,17 @@ HOW_TO: dict[str, str] = {
         "NÃO mude `music` nem `subtitles` (são escolhas das pessoas). Salve com save_timeline(video_id, timeline, task_id) "
         "(o servidor valida e explica erros) e depois complete_task(task_id, resumo). Não inicie o render: isso é feito no site."
     ),
+    TaskType.SELECT_SHORTS.value: (
+        "Escolha de 2 a 3 trechos da narração para virarem Shorts verticais (etapa OPCIONAL, pedida pela pessoa). "
+        "Cada trecho deve: ser contínuo (frases seguidas, podendo cruzar cenas), fazer sentido sozinho, ter um GANCHO forte "
+        "nas primeiras palavras (pergunta, afirmação surpreendente, dado chocante), terminar em ponto final natural "
+        "(ou com um fecho que instigue a ver o vídeo completo), e durar de 25 a 55 s (cerca de 60 a 140 palavras; use os "
+        "tempos de `scenes`). Não repita nem sobreponha trechos e evite spoilers do final. COPIE `exact_text` EXATAMENTE como "
+        "está em `scenes[].text` (mesmas palavras, na ordem); o servidor localiza o trecho no alinhamento e recusa o que não achar. "
+        "`title` = título curto do Short (até ~60 caracteres); `hook_override` (opcional, até ~80) = texto curto para "
+        "aparecer no topo nos primeiros segundos. Salve com save_short_selections(video_id, shorts, task_id) e depois "
+        "complete_task(task_id, resumo). Não inicie o render: isso é feito no site."
+    ),
 }
 
 
@@ -99,8 +110,31 @@ def build_task_context(session: Session, task: ClaudeTask) -> dict[str, Any]:
         default_timeline = (
             found[1] if found else tl_service.build_default(session, video)
         ).model_dump(mode="json")
+    shorts_limits: dict[str, Any] | None = None
+    if task.type == TaskType.SELECT_SHORTS.value and video.approved_script_version_id:
+        from canaisdark.schemas.shorts import MAX_SECONDS, MAX_SHORTS, MIN_SECONDS
+        from canaisdark.services import timeline as tl_service
+
+        timing = tl_service.collect_timing(session, video)
+        scenes_ctx = [
+            {
+                "index": sp.scene.index,
+                "text": sp.scene.text,
+                "start_s": round(sp.start, 2),
+                "end_s": round(sp.end, 2),
+                "wants_vertical": sp.scene.wants_vertical,
+            }
+            for sp in timing.spans
+        ]
+        shorts_limits = {
+            "min_seconds": MIN_SECONDS,
+            "max_seconds": MAX_SECONDS,
+            "recommended": "2 a 3 Shorts de 25 a 55 s",
+            "max_shorts": MAX_SHORTS,
+        }
     return {
         "default_timeline": default_timeline,
+        "shorts_limits": shorts_limits,
         "scenes": scenes_ctx,
         "task": {
             "id": task.id,

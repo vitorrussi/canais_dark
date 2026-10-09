@@ -15,6 +15,7 @@ from canaisdark.mcp.context import current_user
 from canaisdark.models import TaskType, User, VideoStatus
 from canaisdark.schemas.scene import PromptIn
 from canaisdark.schemas.script import SceneIn
+from canaisdark.schemas.shorts import ShortIn
 from canaisdark.schemas.timeline import Timeline
 from canaisdark.services import (
     channels,
@@ -22,10 +23,14 @@ from canaisdark.services import (
     render,
     scene_prompts,
     scripts,
+    shorts_render,
     task_context,
     tasks,
     video_status,
     videos,
+)
+from canaisdark.services import (
+    shorts as shorts_service,
 )
 from canaisdark.services import (
     timeline as tl_service,
@@ -357,6 +362,91 @@ def start_render(
     preencher cenas sem imagem com fundo escuro, só para testes)."""
     with _db() as (s, user):
         job = render.start(s, video_id, user, quality, subtitles, allow_missing)
+        return {"job_id": job.id, "status": job.status, "quality": quality}
+
+
+# ----- Shorts (etapa OPCIONAL) -----
+
+
+@mcp.tool()
+@safe
+def get_shorts(video_id: int) -> dict[str, Any]:
+    """Shorts do vídeo: seleção atual (trechos, tempos, duração), se foi dispensada e os arquivos já renderizados."""
+    with _db() as (s, _):
+        videos.get_video(s, video_id)
+        found = shorts_service.latest_plan(s, video_id)
+        rendered = shorts_render.best_for(s, video_id)
+        plan = found[1] if found else None
+        return {
+            "version": found[0].meta.get("number") if found else None,
+            "skipped": bool(plan and plan.skipped),
+            "timing": plan.timing if plan else None,
+            "shorts": [
+                {
+                    "index": i,
+                    **sel.model_dump(),
+                    "duration": round(sel.duration, 2),
+                    "render": (
+                        {
+                            "asset_id": r.id,
+                            "kind": r.meta.get("kind"),
+                            "file_url": f"/assets/{r.id}/file",
+                        }
+                        if (r := rendered.get(i))
+                        else None
+                    ),
+                }
+                for i, sel in enumerate(plan.shorts if plan else [])
+            ],
+        }
+
+
+@mcp.tool()
+@safe
+def save_short_selections(
+    video_id: int, shorts: list[ShortIn], task_id: int | None = None
+) -> dict[str, Any]:
+    """Salva NOVA seleção de Shorts (2 a 3 trechos de 25 a 55 s). O servidor localiza cada `exact_text` na narração.
+
+    shorts: [{"exact_text": "<trecho copiado EXATAMENTE do roteiro>", "title": "Título curto",
+    "hook_override": "texto do topo (opcional)"}, ...]. Erros listam o que não foi encontrado/duração fora de
+    15–59 s/sobreposição; corrija e reenvie. Não renderiza: a pessoa decide no site."""
+    with _db() as (s, user):
+        asset, plan = shorts_service.save_selections(
+            s, video_id, shorts, "claude", f"claude:{user.id}"
+        )
+        return {
+            "version": asset.meta["number"],
+            "task_id": task_id,
+            "timing": plan.timing,
+            "shorts": [
+                {
+                    "index": i,
+                    "title": sel.title,
+                    "start_s": sel.start_s,
+                    "end_s": sel.end_s,
+                    "duration": round(sel.duration, 1),
+                    "located": sel.located,
+                }
+                for i, sel in enumerate(plan.shorts)
+            ],
+        }
+
+
+@mcp.tool()
+@safe
+def start_shorts(
+    video_id: int,
+    quality: str = "preview",
+    index: int | None = None,
+    allow_missing: bool = False,
+) -> dict[str, Any]:
+    """Enfileira o render dos Shorts 9:16 e retorna `job_id` (acompanhe com get_job_status).
+
+    quality: "preview" (720×1280) ou "final" (1080×1920). index: 0-based para renderizar só um Short.
+    Exige seleção salva e imagens nas cenas do trecho (allow_missing=true preenche com fundo escuro)."""
+    with _db() as (s, user):
+        job = shorts_render.start(s, video_id, user, quality, index, allow_missing)
         return {"job_id": job.id, "status": job.status, "quality": quality}
 
 
