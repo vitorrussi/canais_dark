@@ -20,4 +20,4 @@ migrate:
 	uv run alembic upgrade head
 
 worker:
-	@echo "Worker ainda não implementado (Fase 3)"
+	uv run canaisdark worker

@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     # ElevenLabs (Fase 3). A chave fica só no .env; nunca é exibida nem gravada no banco.
     elevenlabs_api_key: str = ""
     elevenlabs_max_chars_per_job: int = 2500
+    # Tamanho máximo de cada requisição de TTS (trechos cortados em fronteiras de cena)
+    tts_chunk_chars: int = 2500
     # Interruptor geral do Forced Alignment (false = nunca chama; tempos das cenas são estimados)
     forced_alignment_enabled: bool = True
     worker_poll_seconds: float = 2.0

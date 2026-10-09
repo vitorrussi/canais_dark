@@ -63,3 +63,22 @@ def set_admin(
             typer.echo(str(e), err=True)
             raise typer.Exit(1) from e
         typer.echo(f"{user.name}: administrador = {user.is_admin}")
+
+
+@app.command("worker")
+def worker(
+    once: Annotated[bool, typer.Option("--once", help="Processa os jobs pendentes e sai")] = False,
+) -> None:
+    """Executa o worker de jobs (narração, alinhamento…). Deixe rodando em um terminal/serviço."""
+    from canaisdark.config import get_settings
+    from canaisdark.logging import configure_logging
+    from canaisdark.worker.runner import Worker
+
+    settings = get_settings()
+    configure_logging(settings.log_level, json_logs=settings.env != "dev")
+    w = Worker(poll_seconds=settings.worker_poll_seconds)
+    if once:
+        while w.run_once():
+            pass
+    else:
+        w.run_forever()

@@ -235,3 +235,9 @@ class FakeElevenLabs:
 
     def subscription(self) -> Subscription | None:
         return Subscription(self.used, self.limit)
+
+
+def default_client() -> ElevenLabsClient:
+    from canaisdark.config import get_settings
+
+    return ElevenLabsClient(get_settings().elevenlabs_api_key)
