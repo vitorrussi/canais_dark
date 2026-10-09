@@ -6,6 +6,14 @@
 3. **Copiar prompt completo** (por cena, com o prefixo de estilo do canal) ou **Copiar todos** / **Baixar pacote** (`.txt`, `.md`, `.json`) e gerar as imagens no ChatGPT/Gemini.
 4. **Enviar** as imagens: por cena (clicar/arrastar no slot), ou **em lote** (arrastar vários arquivos). Marque *9:16 (Shorts)* nas cenas que precisam de versão vertical e *cena-chave* nas que terão clipe de vídeo de IA.
 
+## Várias imagens numa mensagem só (prompts em lote)
+No storyboard, o card **“Pedir várias imagens numa só mensagem”** monta **uma mensagem por lote** para colar no Gemini/ChatGPT: instrução de gerar UMA imagem por item, na ordem, 16:9 (ou 9:16), sem texto; o **estilo do canal entra uma vez** no cabeçalho e cada linha é `Cena NN: <prompt da cena>`.
+Opções: cenas por mensagem (5, 8, 10, 12, 20 ou **Todas**), versão 16:9 / 9:16 (só cenas marcadas) e **só cenas sem imagem**. Cenas sem prompt ficam de fora (listadas).
+Chatbots nem sempre cumprem listas enormes numa resposta só: para 60+ cenas, lotes de 8–12 costumam funcionar melhor; se parar no meio, diga “continue”.
+
+## Envio em lote com pré-visualização
+Ao soltar vários arquivos, o sistema mostra **miniaturas e a cena de cada um** antes de enviar. Arquivos **sem número no nome** (ex.: `Gemini_Generated_Image_xyz.png`) são ordenados pelo **horário em que foram criados/baixados** (a ordem em que o Gemini os gerou), e você pode trocar a cena de qualquer um. Duas imagens na mesma cena bloqueiam o envio até corrigir.
+
 ## Prompt final
 `visual_style_prompt do canal` + `, ` + `image_prompt da cena` + `, ` + `wide 16:9 landscape composition` (ou `vertical 9:16 portrait composition`).
 O Claude escreve só o trecho da cena (em inglês). Mudar o estilo do canal atualiza todos os prompts copiados.
