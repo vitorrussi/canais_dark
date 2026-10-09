@@ -10,6 +10,8 @@
 | **Pendências** (`/tasks`) | Tarefas abertas e recentes, prompt “processar tudo” |
 | **Conectar Claude** (`/connect`) | Comando do MCP pronto, gerar novo token (mostrado uma vez), solução de problemas |
 
+| **Usuários** (`/admin/users`, só admin) | Criar pessoas, gerar novo token (mostrado uma vez), desativar/reativar, tornar admin |
+
 ## Atalhos
 `g c` canais · `g p` pendências · `g k` conectar Claude · `/` buscar · `n` novo (canal ou vídeo) · `?` ajuda. No editor: `Ctrl+S` salvar, `Ctrl+Enter` dividir, `Alt+↑/↓` mover, `Ctrl+Z/Y`, `Ctrl+H` localizar.
 
