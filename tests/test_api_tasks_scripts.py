@@ -86,3 +86,25 @@ def test_rest_save_user_script(client: TestClient, auth: dict[str, str]) -> None
         client.post(f"/api/videos/{vid}/scripts", json={"scenes": []}, headers=auth).status_code
         == 422
     )
+
+
+def test_rest_transfer(client: TestClient, auth: dict[str, str]) -> None:
+    cid = client.post("/api/channels", json={"name": "C"}, headers=auth).json()["id"]
+    vid = client.post(f"/api/channels/{cid}/videos", json={"topic": "t"}, headers=auth).json()["id"]
+    r = client.post(
+        f"/api/videos/{vid}/scripts/import-text",
+        json={"text": "A\n\nB", "rule": "blocks"},
+        headers=auth,
+    )
+    assert r.status_code == 201 and r.json()["scene_count"] == 2
+    d = client.get(f"/api/scripts/{r.json()['id']}/download?format=md", headers=auth)
+    assert d.status_code == 200 and "## Cena 1" in d.text
+    exported = client.get(f"/api/videos/{vid}/export", headers=auth).json()
+    assert exported["format"] == "canaisdark.video" and len(exported["scripts"]) == 1
+    imp = client.post(f"/api/channels/{cid}/import-video?title=Copia", json=exported, headers=auth)
+    assert imp.status_code == 201 and imp.json()["title"] == "Copia"
+    chan = client.get(f"/api/channels/{cid}/export", headers=auth).json()
+    assert len(chan["videos"]) == 2
+    new = client.post("/api/import/channel?name=Novo", json=chan, headers=auth)
+    assert new.status_code == 201 and new.json()["slug"] == "novo"
+    assert client.post("/api/import/channel?name=Novo", json=chan, headers=auth).status_code == 409
