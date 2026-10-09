@@ -11,6 +11,7 @@ from canaisdark.models.channel import utcnow
 class JobType(StrEnum):
     TTS = "tts"
     ALIGNMENT = "alignment"
+    RENDER = "render"
 
 
 class JobStatus(StrEnum):

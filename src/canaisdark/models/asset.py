@@ -14,6 +14,9 @@ class AssetType(StrEnum):
     VIDEO_CLIP = "video_clip"
     ALIGNMENT = "alignment"
     SUBTITLE = "subtitle"
+    TIMELINE = "timeline"
+    RENDER = "render"
+    MUSIC = "music"
 
 
 class Asset(SQLModel, table=True):
