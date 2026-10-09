@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ic %}
+{% block title %}Timeline · {{ video.title or "Vídeo #" ~ video.id }}{% endblock %}
+{% block crumb %}Timeline{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Timeline de edição</h1>
+  <div class="meta"><span>{{ video.title or "Vídeo #" ~ video.id }}</span>{% if tl_asset %}<span class="badge">v{{ tl_asset.meta.number }} · {{ tl_asset.meta.source }}</span>{% else %}<span class="badge stale">padrão (não salva)</span>{% endif %}</div></div>
+  <a class="btn secondary" href="/videos/{{ video.id }}">← Voltar ao vídeo</a></div>
+
+{% if problem %}<div class="alert">{{ problem }}</div>
+{% elif tl %}
+<form method="post" action="/videos/{{ video.id }}/timeline">
+  <div class="card step" style="margin-bottom:1rem">
+    <header class="step-head"><h3>Geral</h3></header>
+    <div class="grid cols-2">
+      <div class="field"><label for="fi">Fade-in no começo (s)</label><input id="fi" type="number" name="fade_in_s" value="{{ tl.fade_in_s }}" min="0" max="3" step="0.1"></div>
+      <div class="field"><label for="fo">Fade-out no fim (s)</label><input id="fo" type="number" name="fade_out_s" value="{{ tl.fade_out_s }}" min="0" max="3" step="0.1"></div>
+    </div>
+    <label class="check"><input type="checkbox" name="vignette" {{ "checked" if tl.effects.vignette }}> Vinheta (escurece os cantos)</label>
+    <label class="check"><input type="checkbox" name="grain" {{ "checked" if tl.effects.grain }}> Granulado de filme</label>
+    <label class="check"><input type="checkbox" name="subtitles" {{ "checked" if tl.subtitles.enabled }}> Queimar legendas</label>
+  </div>
+
+  {% for row in rows %}
+  {% set i = row.span.scene.index %}{% set e = row.edit %}
+  <div class="card scene-row" style="margin-bottom:.8rem">
+    <div class="meta" style="margin:0 0 .5rem"><span class="n badge">{{ i + 1 }}</span><span>{{ "%.1f"|format(row.span.start) }}s–{{ "%.1f"|format(row.span.end) }}s</span>{% if not row.asset %}<span class="badge failed">sem imagem</span>{% elif row.asset.type == "video_clip" %}<span class="badge info">clipe</span>{% endif %}</div>
+    <div class="row" style="display:flex;gap:.8rem;align-items:flex-start;flex-wrap:wrap">
+      {% if row.asset and row.asset.meta.thumb %}<img src="/assets/{{ row.asset.id }}/thumb" alt="" style="width:120px;border-radius:.4rem;flex:none">{% endif %}
+      <div style="flex:1;min-width:14rem">
+        <p class="muted" style="margin:0 0 .5rem">{{ row.span.scene.text }}</p>
+        {% if e %}
+        <div class="grid cols-2">
+          <div class="field"><label for="m{{ i }}">Movimento</label><select id="m{{ i }}" name="motion_{{ i }}">{% for k, lab in motions.items() %}<option value="{{ k }}" {{ "selected" if e.motion.kind.value == k }}>{{ lab }}</option>{% endfor %}</select></div>
+          <div class="field"><label for="in{{ i }}">Intensidade (0–0,3)</label><input id="in{{ i }}" type="number" name="intensity_{{ i }}" value="{{ e.motion.intensity }}" min="0" max="0.3" step="0.01"></div>
+          <div class="field"><label for="tk{{ i }}">Transição ao entrar</label><select id="tk{{ i }}" name="trkind_{{ i }}"><option value="crossfade" {{ "selected" if e.transition_in.kind.value == "crossfade" }}>Dissolver</option><option value="cut" {{ "selected" if e.transition_in.kind.value == "cut" }}>Corte seco</option></select></div>
+          <div class="field"><label for="td{{ i }}">Duração (s)</label><input id="td{{ i }}" type="number" name="trdur_{{ i }}" value="{{ e.transition_in.duration }}" min="0" max="2" step="0.1"></div>
+        </div>
+        <div class="field"><label for="tx{{ i }}">Texto na tela (opcional)</label>
+          <div class="row compact"><input id="tx{{ i }}" name="text_{{ i }}" value="{{ row.text.text if row.text }}" maxlength="140" placeholder="Ex.: Ilhas Flannan, 1900">
+            <select name="textpos_{{ i }}" style="width:auto"><option value="center" {{ "selected" if row.text and row.text.position == "center" }}>centro</option><option value="top" {{ "selected" if row.text and row.text.position == "top" }}>topo</option><option value="bottom" {{ "selected" if row.text and row.text.position == "bottom" }}>base</option></select></div></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  <div class="form-actions sticky-save"><button>{{ ic("check") }} Salvar como nova versão</button>
+    <button type="submit" formaction="/videos/{{ video.id }}/timeline/auto" class="secondary" data-confirm="Recalcular a timeline automática? Suas escolhas por cena são mantidas.">Atualizar automática</button></div>
+</form>
+
+<details class="card" style="margin-top:1rem"><summary class="muted" style="cursor:pointer">JSON avançado (o Claude também salva por aqui via MCP)</summary>
+  <form method="post" action="/videos/{{ video.id }}/timeline/json" style="margin-top:.7rem">
+    <div class="field"><textarea name="payload" rows="14" style="font-family:monospace;font-size:.8rem">{{ tl_json }}</textarea>
+      <div class="help">Movimentos: {{ motions.keys()|list|join(", ") }}. Transições: cut, crossfade. Salva como nova versão (nunca sobrescreve).</div></div>
+    <button class="secondary sm">Salvar JSON</button></form>
+  {% if versions %}<p class="help">Versões: {% for a in versions %}v{{ a.meta.number }} ({{ a.meta.source }}){{ ", " if not loop.last }}{% endfor %}</p>{% endif %}
+</details>
+{% endif %}
+{% endblock %}

@@ -91,6 +91,7 @@
     <div class="card step"><header class="step-head"><span class="step-n">3</span><h3>Cenas, prompts e imagens</h3></header>
       <p class="muted">{{ cov.prompts }}/{{ cov.total }} prompts · {{ cov.files }}/{{ cov.needed }} imagens</p>
       <a class="btn secondary" href="/videos/{{ video.id }}/scenes">Abrir storyboard</a></div>
+    {% if rnd %}{% set r = rnd %}{% include "_render_card.html" %}{% endif %}
     {% endif %}
 
   </div>

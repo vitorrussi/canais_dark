@@ -1,0 +1,86 @@
+{% from "_macros.html" import ic %}
+{% set v = r.video %}
+<div class="card step {{ 'accent' if r.active }}" id="render-card" {% if r.active %}hx-get="/videos/{{ v.id }}/render/card" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
+  <header class="step-head"><span class="step-n">4</span><h3>Timeline e render</h3>
+    <div class="actions"><a class="btn secondary sm" href="/videos/{{ v.id }}/timeline">{{ ic("edit") }} Editar timeline</a></div></header>
+
+  {% if not r.ffmpeg %}<div class="alert">O ffmpeg não está instalado: <code>sudo apt install ffmpeg</code>.</div>{% endif %}
+
+  <div class="meta" style="margin:0 0 .75rem">
+    {% if r.tl_asset %}
+    <span class="badge {{ 'stale' if r.tl_stale else 'done' }}" title="Fonte: {{ r.tl_asset.meta.source }}">timeline v{{ r.tl_asset.meta.number }}{{ " · desatualizada" if r.tl_stale }}</span>
+    {% else %}<span class="badge">timeline ainda não salva (será a automática)</span>{% endif %}
+    {% if r.tl %}<span class="badge">{{ r.tl.scenes|length }} cenas</span>{% endif %}
+  </div>
+
+  {% if r.problems %}<div class="alert">{{ r.problems }}</div>{% endif %}
+
+  {% if r.tl %}
+  <details data-collapse-mobile class="claude-fold" style="margin-bottom:.8rem"><summary class="btn secondary sm">{{ ic("play") }} Trilha sonora e legendas{% if r.tl.music.asset_id %} · com trilha{% endif %}{% if r.tl.subtitles.enabled %} · legendas{% endif %}</summary>
+    <form method="post" action="/videos/{{ v.id }}/music/settings" style="margin-top:.7rem">
+      <div class="field"><label for="music-asset">Trilha</label>
+        <select id="music-asset" name="asset_id"><option value="">Sem trilha</option>
+          {% for m in r.music %}<option value="{{ m.id }}" {{ "selected" if r.tl.music.asset_id == m.id }}>{{ m.meta.original_name }}{% if m.meta.duration %} · {{ m.meta.duration }}s{% endif %}</option>{% endfor %}</select>
+        <div class="help">A trilha repete até o fim do vídeo e some em 2 s no final.</div></div>
+      <div class="field"><label for="music-vol">Volume da trilha (dB)</label>
+        <input id="music-vol" type="number" name="volume_db" value="{{ r.tl.music.volume_db }}" min="-40" max="0" step="1" style="width:6rem">
+        <div class="help">−18 é discreto; −12 mais presente. Ex.: −24 quase some.</div></div>
+      <label class="check"><input type="checkbox" name="ducking" {{ "checked" if r.tl.music.ducking }}> Baixar a trilha automaticamente enquanto a narração fala</label>
+      <label class="check"><input type="checkbox" name="subtitles" {{ "checked" if r.tl.subtitles.enabled }}> Queimar legendas no vídeo</label>
+      <div class="form-actions"><button class="secondary sm">Salvar</button></div>
+    </form>
+    <form method="post" action="/videos/{{ v.id }}/music" enctype="multipart/form-data" class="row compact" style="margin-top:.6rem">
+      <input type="file" name="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac" required style="max-width:100%">
+      <button class="secondary sm">{{ ic("upload") }} Enviar trilha</button>
+    </form>
+    {% if r.channel_music %}
+    <form method="post" action="/videos/{{ v.id }}/music/reuse" class="row compact" style="margin-top:.5rem">
+      <select name="asset_id">{% for m in r.channel_music %}<option value="{{ m.id }}">{{ m.meta.original_name }} (vídeo #{{ m.video_id }})</option>{% endfor %}</select>
+      <button class="secondary sm">Reaproveitar do canal</button>
+    </form>{% endif %}
+    {% for m in r.music %}<form method="post" action="/videos/{{ v.id }}/music/{{ m.id }}/remove" style="display:inline"><button class="ghost sm" data-confirm="Remover esta trilha?">Remover “{{ m.meta.original_name }}”</button></form>{% endfor %}
+  </details>
+  {% endif %}
+
+  <form method="post" action="/videos/{{ v.id }}/render/start">
+    <div class="field"><label for="rnd-subs">Legendas</label>
+      <select id="rnd-subs" name="subtitles"><option value="default">Como na timeline ({{ "ligadas" if r.tl and r.tl.subtitles.enabled else "desligadas" }})</option><option value="on">Ligar neste render</option><option value="off">Desligar neste render</option></select></div>
+    <label class="check"><input type="checkbox" name="allow_missing" value="1"> Cenas sem imagem: preencher com fundo escuro (só para teste)</label>
+    <div class="form-actions">
+      <button name="quality" value="preview" class="secondary" {{ "disabled" if r.active or not r.ffmpeg }} title="720p, rápido: serve para revisar o movimento e o ritmo">{{ ic("play") }} Prévia 720p</button>
+      <button name="quality" value="final" {{ "disabled" if r.active or not r.ffmpeg }} title="1080p, qualidade final">{{ ic("film") }} Render final 1080p</button>
+    </div>
+    <p class="help">O render roda no worker (<code>make worker</code>) e só refaz as cenas que mudaram. Enquanto ele roda, narrações novas esperam na fila.</p>
+  </form>
+
+  {% if r.job %}
+  <hr>
+  <div class="list-row" style="border:0;padding:0">
+    <div class="grow"><span class="title">Job #{{ r.job.id }} · render {{ r.job.params.quality }}</span><small>{{ r.users.get(r.job.created_by, "") }}</small></div>
+    <span class="badge {{ {'queued':'pending','running':'in_progress','done':'done','failed':'failed','cancelled':'stale'}[r.job.status] }}">{{ {"queued":"na fila","running":"renderizando","done":"concluído","failed":"falhou","cancelled":"cancelado"}[r.job.status] }}</span>
+    {% if r.job.status in ("queued", "running") %}<form method="post" action="/jobs/{{ r.job.id }}/cancel"><button class="secondary sm" data-confirm="Cancelar o render?">Cancelar</button></form>{% endif %}
+    {% if r.job.status in ("failed", "cancelled") %}<form method="post" action="/jobs/{{ r.job.id }}/retry"><button class="secondary sm">Tentar de novo</button></form>{% endif %}
+  </div>
+  {% if r.job.status in ("queued", "running") %}<div class="progress"><i style="width: {{ r.job.progress }}%"></i></div>{% endif %}
+  {% if r.job.status == "queued" %}<p class="help">Na fila. Se não andar, o worker não está rodando (<code>make worker</code>).</p>{% endif %}
+  {% if r.job.error %}<div class="alert">{{ r.job.error }}</div>{% endif %}
+  {% if r.log %}<details {{ "open" if r.job.status in ("running", "queued", "failed") }}><summary class="muted" style="cursor:pointer">Ver log do render</summary><pre class="promptbox" style="font-size:.78rem;max-height:12rem;overflow:auto">{{ r.log }}</pre></details>{% endif %}
+  {% endif %}
+
+  {% for kind, asset, label in (("final", r.final, "Render final 1080p"), ("preview", r.preview, "Prévia 720p")) %}
+  {% if asset %}
+  <hr>
+  <h4 class="subhead">{{ label }}
+    {% if asset.meta.partial %}<span class="badge partial">só teste</span>{% endif %}
+    {% if not r.fresh[kind] %}<span class="badge stale" title="Áudio, imagens ou timeline mudaram depois deste render">desatualizado</span>{% endif %}
+    {% if kind == "final" and asset.meta.approved_by %}<span class="badge done">aprovado por {{ r.users.get(asset.meta.approved_by, "?") }}</span>{% endif %}</h4>
+  <video controls preload="metadata" playsinline src="/assets/{{ asset.id }}/file" style="width:100%;border-radius:.5rem;background:#000"></video>
+  <p class="help">{{ asset.meta.duration }}s · {{ "%.1f"|format(asset.meta.bytes / 1000000) }} MB · {{ asset.meta.width }}×{{ asset.meta.height }}@{{ asset.meta.fps }}{% if asset.meta.subtitles %} · legendas{% endif %}{% if asset.meta.music %} · trilha{% endif %}{% if asset.meta.missing %} · cenas sem imagem: {{ asset.meta.missing|join(", ") }}{% endif %}</p>
+  <div class="stack-inline">
+    <a class="btn secondary sm" href="/assets/{{ asset.id }}/file?download=1" hx-boost="false">{{ ic("download") }} Baixar .mp4</a>
+    {% if kind == "final" and not asset.meta.approved_by and r.fresh.final and not asset.meta.partial %}
+    <form method="post" action="/videos/{{ v.id }}/render/approve"><button class="sm">{{ ic("check") }} Aprovar vídeo</button></form>{% endif %}
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>
