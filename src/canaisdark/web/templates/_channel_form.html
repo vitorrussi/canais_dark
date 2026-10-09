@@ -28,6 +28,7 @@
 
 <div class="card" style="margin-top:1rem">
   <header><h3>Narração (ElevenLabs)</h3></header>
+  {% if c.slug %}<p class="help" style="margin-top:0"><a class="btn secondary sm" href="/channels/{{ c.slug }}/voice">Escolher voz e modelo (com prévias)</a></p>{% endif %}
   {{ field("tts_model", "Modelo de voz", c.tts_model or "eleven_flash_v2_5", "eleven_flash_v2_5 gasta metade dos créditos (ótimo para testes); eleven_multilingual_v2 tem qualidade melhor (1 crédito por caractere).", "eleven_flash_v2_5  ou  eleven_multilingual_v2") }}
   <div class="row">
     {{ field("tts_stability", "Estabilidade (0–1)", c.tts_stability if c.tts_stability is not none else 0.5, "Baixa = mais expressiva; alta = mais monótona.", "0.5", kind="number", min=0, max=1, attrs='step="0.05"') }}

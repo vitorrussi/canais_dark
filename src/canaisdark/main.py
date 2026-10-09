@@ -22,6 +22,7 @@ from canaisdark.web.routes import router as web_router
 from canaisdark.web.scripts import router as web_scripts_router
 from canaisdark.web.settings import router as web_settings_router
 from canaisdark.web.transfer import router as web_transfer_router
+from canaisdark.web.voices import router as web_voices_router
 
 _STATUS: dict[type[DomainError], int] = {
     NotFound: 404,
@@ -78,6 +79,7 @@ def create_app() -> FastAPI:
     app.include_router(web_transfer_router)
     app.include_router(web_settings_router)
     app.include_router(web_narration_router)
+    app.include_router(web_voices_router)
     app.include_router(web_admin_router)
     # Último: o app MCP atende apenas /mcp; demais caminhos caem em 404.
     app.mount("/", build_mcp_app())

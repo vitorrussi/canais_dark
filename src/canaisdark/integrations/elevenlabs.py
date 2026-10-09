@@ -28,6 +28,7 @@ class ElevenLabsError(Exception):
 class Subscription:
     used: int
     limit: int
+    tier: str = ""  # "free", "starter", "creator"…
 
     @property
     def remaining(self) -> int:
@@ -52,6 +53,17 @@ class ElevenLabsLike(Protocol):
     def forced_alignment(self, audio: bytes, text: str) -> dict[str, Any]: ...
 
     def subscription(self) -> Subscription | None: ...
+
+    def list_voices(self) -> list[dict[str, Any]]: ...
+
+    def search_library(
+        self,
+        language: str = "pt",
+        accent: str = "",
+        gender: str = "",
+        search: str = "",
+        page_size: int = 24,
+    ) -> list[dict[str, Any]]: ...
 
 
 def credit_multiplier(model_id: str) -> float:
@@ -230,9 +242,57 @@ class ElevenLabsClient:
         try:
             resp = self._request("GET", "/v1/user/subscription")
             d = resp.json()
-            return Subscription(used=int(d["character_count"]), limit=int(d["character_limit"]))
+            return Subscription(
+                used=int(d["character_count"]),
+                limit=int(d["character_limit"]),
+                tier=str(d.get("tier", "")),
+            )
         except (ElevenLabsError, KeyError, ValueError):
             return None
+
+    def list_voices(self) -> list[dict[str, Any]]:
+        """Vozes da conta (premade + as que você adicionou). Exige permissão Voices (read)."""
+        resp = self._request("GET", "/v1/voices")
+        return [_normalize_voice(v) for v in resp.json().get("voices", [])]
+
+    def search_library(
+        self,
+        language: str = "pt",
+        accent: str = "",
+        gender: str = "",
+        search: str = "",
+        page_size: int = 24,
+    ) -> list[dict[str, Any]]:
+        """Voice Library (vozes públicas). Prévias são grátis; USAR via API exige plano pago."""
+        params: dict[str, Any] = {
+            "language": language,
+            "page_size": page_size,
+            "sort": "usage_character_count_1y",
+        }
+        if accent:
+            params["accent"] = accent
+        if gender:
+            params["gender"] = gender
+        if search:
+            params["search"] = search
+        resp = self._request("GET", "/v1/shared-voices", params=params)
+        return [_normalize_voice(v) for v in resp.json().get("voices", [])]
+
+
+def _normalize_voice(v: dict[str, Any]) -> dict[str, Any]:
+    labels = v.get("labels") or {}
+    return {
+        "voice_id": v.get("voice_id", ""),
+        "name": v.get("name", ""),
+        "category": v.get("category", ""),
+        "description": v.get("description") or labels.get("descriptive") or "",
+        "preview_url": v.get("preview_url") or "",
+        "accent": v.get("accent") or labels.get("accent") or "",
+        "gender": v.get("gender") or labels.get("gender") or "",
+        "language": v.get("language") or labels.get("language") or "",
+        "use_case": v.get("use_case") or labels.get("use_case") or "",
+        "free_users_allowed": v.get("free_users_allowed"),
+    }
 
 
 class FakeElevenLabs:
@@ -244,6 +304,7 @@ class FakeElevenLabs:
         self.used = 0
         self.limit = credits
         self.high_loss_words = high_loss_words or set()
+        self.tier = "free"
         self.tts_calls: list[dict[str, Any]] = []
         self.alignment_calls = 0
         self.fail_on_call: int | None = None  # nº (1-based) da chamada de TTS que deve falhar
@@ -279,7 +340,51 @@ class FakeElevenLabs:
         return {"words": words, "characters": [], "loss": 0.02}
 
     def subscription(self) -> Subscription | None:
-        return Subscription(self.used, self.limit)
+        return Subscription(self.used, self.limit, tier=self.tier)
+
+    def list_voices(self) -> list[dict[str, Any]]:
+        return [
+            _normalize_voice(
+                {
+                    "voice_id": "fake-george",
+                    "name": "George (demo)",
+                    "category": "premade",
+                    "description": "Voz de demonstração",
+                    "preview_url": "",
+                    "labels": {"accent": "british", "gender": "male"},
+                }
+            ),
+            _normalize_voice(
+                {
+                    "voice_id": "fake-sarah",
+                    "name": "Sarah (demo)",
+                    "category": "premade",
+                    "labels": {"accent": "american", "gender": "female"},
+                }
+            ),
+        ]
+
+    def search_library(
+        self,
+        language: str = "pt",
+        accent: str = "",
+        gender: str = "",
+        search: str = "",
+        page_size: int = 24,
+    ) -> list[dict[str, Any]]:
+        return [
+            _normalize_voice(
+                {
+                    "voice_id": "lib-adriano",
+                    "name": "Adriano (demo)",
+                    "category": "professional",
+                    "accent": accent or "brazilian",
+                    "gender": "male",
+                    "language": language,
+                    "free_users_allowed": True,
+                }
+            )
+        ]
 
 
 _demo: "FakeElevenLabs | None" = None
