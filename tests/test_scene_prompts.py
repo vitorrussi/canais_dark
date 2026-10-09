@@ -181,9 +181,13 @@ def test_batch_prompts_sizes_and_filters(session: Session, env: dict[str, object
     assert [(b["first"], b["last"], b["count"]) for b in batches] == [(1, 4, 4), (5, 6, 2)]
     first = batches[0]["text"]
     assert (
-        first.startswith("Gere as 4 imagens abaixo")
-        and "UMA POR VEZ" in first
-        and "16:9 (paisagem/widescreen)" in first
+        first.startswith("Gere AGORA, nesta mesma resposta, as 4 imagens")
+        and "todas de uma vez" in first
+    )
+    assert (
+        "16:9 (paisagem/widescreen)" in first
+        and "Não faça perguntas" in first
+        and "UMA POR VEZ" not in first
     )
     assert (
         "Estilo visual para TODAS: dark cinematic, 35mm grain" in first
@@ -207,3 +211,33 @@ def test_batch_prompts_sizes_and_filters(session: Session, env: dict[str, object
     assert scene_assets.coverage(
         session, scene_prompts.approved_scenes(session, env["video_id"])
     ) == (0, 9)  # type: ignore[arg-type]
+
+
+def test_batch_prompts_per_reply_wording(session: Session, env: dict[str, object]) -> None:
+    _approve(session, env, [f"Cena {i}" for i in range(1, 9)])
+    scene_prompts.save_prompts(
+        session,
+        env["video_id"],
+        [PromptIn(scene_index=i, image_prompt=f"scene {i + 1}") for i in range(8)],
+    )  # type: ignore[arg-type]
+    data = scene_prompts.batch_prompts(session, env["video_id"], size=0, per_reply=3)  # type: ignore[arg-type]
+    text = data["batches"][0]["text"]  # type: ignore[index]
+    assert (
+        "grupos de 3 por resposta" in text
+        and "cenas 1 a 3" in text
+        and 'escrever "continue"' in text
+        and "próximas 3 cenas" in text
+    )
+    assert (
+        "Cena 08: scene 8" in text
+    )  # a lista completa vai na mensagem; o chatbot libera 3 por vez
+    assert (
+        "grupos de"
+        not in scene_prompts.batch_prompts(session, env["video_id"], size=0, per_reply=0)[
+            "batches"
+        ][0]["text"]
+    )  # type: ignore[index]
+    big = scene_prompts.batch_prompts(session, env["video_id"], size=2, per_reply=3)["batches"][0][
+        "text"
+    ]  # type: ignore[index]
+    assert "grupos de" not in big  # per_reply >= tamanho do lote: vira "todas de uma vez"

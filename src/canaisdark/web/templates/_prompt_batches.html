@@ -9,5 +9,7 @@
   {% endfor %}
 </div>
 {% for b in batches %}<pre id="batch-text-{{ b.number }}" class="promptbox" hidden>{{ b.text }}</pre>{% endfor %}
+{% if per %}<p class="help">Depois de cada resposta do chatbot, escreva só <code>continue</code> — ele gera as próximas {{ per }} cenas da lista.</p>
+{% else %}<p class="help">Se ele gerar só parte, escreva <code>continue</code> e ele segue do próximo item.</p>{% endif %}
 <details><summary class="muted" style="cursor:pointer">Ver o texto do 1º lote</summary><pre class="promptbox" style="max-height:14rem;overflow:auto;font-size:.78rem">{{ batches[0].text }}</pre></details>
 {% endif %}

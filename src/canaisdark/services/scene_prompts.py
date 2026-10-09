@@ -168,11 +168,24 @@ def request_prompts(session: Session, video_id: int, instructions: str, actor: U
 
 # ----- Prompts em lote (várias imagens numa única mensagem) -----
 
-BATCH_PREAMBLE = (
-    "Gere as {n} imagens abaixo, UMA POR VEZ, na ordem, sem pular nenhuma e sem juntar várias numa só imagem. "
-    "Em cada imagem: proporção {aspect}; sem texto, legendas, logotipos nem marca d'água. "
+COMMON_RULES = (
+    "Proporção das imagens: {aspect}. Sem texto, legendas, logotipos nem marca d'água em nenhuma imagem. "
     "Estilo visual para TODAS: {style}. "
-    'Se não conseguir gerar todas de uma vez, gere o máximo possível e eu digo "continue" para você seguir do próximo item.'
+    "Gere uma imagem separada para cada cena numerada; não junte várias cenas numa imagem, não pule nenhuma e mantenha a ordem. "
+    "Não faça perguntas, não peça confirmação e não explique nada: responda apenas com as imagens."
+)
+ALL_AT_ONCE = (
+    "Gere AGORA, nesta mesma resposta, as {n} imagens das cenas abaixo, todas de uma vez. "
+    + COMMON_RULES
+    + ' Se por algum limite técnico você não conseguir todas numa resposta, gere o máximo que puder e eu escreverei "continue": '
+    "então gere as próximas, sem repetir as já feitas."
+)
+PER_REPLY = (
+    "Vou listar {n} cenas numeradas. Gere as imagens em grupos de {k} por resposta: nesta primeira resposta gere "
+    "as {k} primeiras (cenas {first} a {upto}), todas juntas. "
+    + COMMON_RULES
+    + ' Quando eu escrever "continue", gere as próximas {k} cenas da lista (sem repetir as anteriores), '
+    "e assim por diante até acabar as {n}."
 )
 ASPECT_PT = {False: "16:9 (paisagem/widescreen)", True: "9:16 (vertical)"}
 
@@ -183,10 +196,13 @@ def batch_prompts(
     size: int = 10,
     vertical: bool = False,
     only_missing: bool = False,
+    per_reply: int = 0,
 ) -> dict[str, object]:
     """Divide as cenas em lotes de `size` e monta UMA mensagem por lote (o estilo vai uma vez, no cabeçalho).
 
-    `size=0` = tudo numa mensagem só. Cenas sem prompt são puladas (e listadas em `skipped`)."""
+    `size=0` = tudo numa mensagem só. `per_reply` = quantas imagens o chatbot deve gerar por resposta
+    (0 = todas do lote na mesma resposta; N = N por resposta, continuando com "continue").
+    Cenas sem prompt são puladas (e listadas em `skipped`)."""
     from canaisdark.services import scene_assets
 
     video = videos.get_video(session, video_id)
@@ -216,11 +232,19 @@ def batch_prompts(
         lines = [
             f"Cena {sc.index + 1:02d}: {sc.image_prompt.strip().rstrip('.,; ')}" for sc in group
         ]
-        text = (
-            BATCH_PREAMBLE.format(n=len(group), aspect=ASPECT_PT[vertical], style=style)
-            + "\n\n"
-            + "\n".join(lines)
-        )
+        k = per_reply if 0 < per_reply < len(group) else 0
+        if k:
+            head = PER_REPLY.format(
+                n=len(group),
+                k=k,
+                first=group[0].index + 1,
+                upto=group[k - 1].index + 1,
+                aspect=ASPECT_PT[vertical],
+                style=style,
+            )
+        else:
+            head = ALL_AT_ONCE.format(n=len(group), aspect=ASPECT_PT[vertical], style=style)
+        text = head + "\n\n" + "\n".join(lines)
         batches.append(
             {
                 "number": len(batches) + 1,

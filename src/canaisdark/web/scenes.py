@@ -129,6 +129,7 @@ def prompt_batches(
     size: int = 10,
     variant: str = "main",
     only_missing: int = 0,
+    per: int = 0,
 ) -> Response:
     """Parcial HTMX: prompts em lote (uma mensagem por lote) para colar no Gemini/ChatGPT."""
     size = max(0, min(size, 200))
