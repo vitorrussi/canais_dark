@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ic %}
+{% block title %}Novo canal{% endblock %}
+{% block crumb %}Novo canal{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Novo canal</h1>
+  <p class="muted">Configure uma vez; todos os vídeos do canal herdam essas definições.</p></div></div>
+<div class="card accent" style="margin-bottom:1rem">
+  <header><h3>{{ ic("sparkles") }} Começar de um modelo</h3></header>
+  <p class="muted">Preenche o tom do roteiro e o estilo visual com um ponto de partida. Você pode editar tudo depois.</p>
+  <div class="chips">
+    {% for p in presets %}<button type="button" class="chip" data-fill='{{ p.fill|tojson }}'>{{ p.label }}</button>{% endfor %}
+  </div>
+</div>
+<form method="post" action="/channels">
+  {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+  {% include "_channel_form.html" %}
+  <div class="form-actions"><button>Criar canal</button><a class="btn secondary" href="/">Cancelar</a></div>
+</form>
+{% endblock %}

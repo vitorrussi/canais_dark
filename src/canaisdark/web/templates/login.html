@@ -1,13 +1,20 @@
 {% extends "base.html" %}
-{% block content %}
-<article>
+{% from "_macros.html" import ic %}
+{% block title %}Entrar — Estúdio de Canais Dark{% endblock %}
+{% block bare %}
+<div class="card login-card">
+  <div class="brand" style="padding-left:0"><span class="logo">{{ ic("film") }}</span> Estúdio de Canais Dark</div>
   <h2>Entrar</h2>
+  <p class="muted">Cole o seu token de API. Ainda não tem um? Peça para quem administra rodar
+    <code>canaisdark create-user</code> ou <code>rotate-token</code>.</p>
   <form method="post" action="/login">
-    <label>Token de API
-      <input type="password" name="token" placeholder="cd_..." required autofocus>
-    </label>
-    {% if error %}<p class="error">{{ error }}</p>{% endif %}
-    <button>Entrar</button>
+    <div class="field">
+      <label for="token">Token de API</label>
+      <input id="token" type="password" name="token" placeholder="cd_..." required autofocus>
+      <div class="help">Começa com <code>cd_</code>. Fica salvo só como hash no servidor.</div>
+    </div>
+    {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+    <button style="width:100%;justify-content:center">Entrar</button>
   </form>
-</article>
+</div>
 {% endblock %}

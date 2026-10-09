@@ -1,94 +1,98 @@
 {% extends "base.html" %}
-{% block title %}Vídeo {{ video.id }}{% endblock %}
+{% from "_macros.html" import ic, state_badge %}
+{% block title %}{{ video.title or "Vídeo #" ~ video.id }}{% endblock %}
+{% block crumb %}Vídeo #{{ video.id }}{% endblock %}
 {% block content %}
-<p><a href="/channels/{{ channel.slug }}">← {{ channel.name }}</a></p>
-<h2>{{ video.title or "Vídeo #" ~ video.id }}</h2>
-<p><strong>Tema:</strong> {{ video.topic }}</p>
-<p><small>Status: {{ video.status }} · Idioma: {{ video.language }}
-  {% if video.drive_url %}· <a href="{{ video.drive_url }}">Drive</a>{% endif %}
-  {% if video.youtube_url %}· <a href="{{ video.youtube_url }}">YouTube</a>{% endif %}</small></p>
+{% set total = stages|length %}
+{% set done = stages|selectattr("state", "equalto", "done")|list|length %}
+<div class="page-head">
+  <div>
+    <h1>{{ video.title or "Vídeo #" ~ video.id }}</h1>
+    <div class="meta"><span>{{ ic("film") }} <a href="/channels/{{ channel.slug }}">{{ channel.name }}</a></span><span class="badge">{{ video.language }}</span><span class="badge">{{ video.status }}</span>
+      {% if video.drive_url %}<a href="{{ video.drive_url }}">Drive</a>{% endif %}{% if video.youtube_url %}<a href="{{ video.youtube_url }}">YouTube</a>{% endif %}</div>
+  </div>
+</div>
 
-<h3>Tarefas do Claude</h3>
-{% for t in open_tasks %}
-<article>
-  <strong>{{ t.type }}</strong> —
-  {% if t.status == "pending" %}aguardando o Claude{% else %}em andamento por {{ claimers.get(t.claimed_by, "?") }}
-  desde {{ t.claimed_at.strftime("%H:%M") }} (UTC){% endif %}
-  {% if t.instructions %}<br><small>Instruções: {{ t.instructions }}</small>{% endif %}
-  <form method="post" action="/tasks/{{ t.id }}/cancel"><button class="secondary outline">Cancelar</button></form>
-</article>
-{% endfor %}
-{% for t in failed_tasks %}<p class="error">Última tentativa falhou: {{ t.error }}</p>{% endfor %}
-{% if not open_tasks %}
-<details>
-  <summary role="button" class="outline">{{ "Gerar novo roteiro" if versions else "Gerar roteiro" }}</summary>
-  <form method="post" action="/videos/{{ video.id }}/script/generate">
-    <label>Instruções extras (opcional) <textarea name="instructions" rows="2"></textarea></label>
-    <button>Pedir ao Claude</button>
-  </form>
-</details>
-{% endif %}
-{% if claude_prompt %}
-<article>
-  <header><strong>Prompt para o Claude Code</strong></header>
-  <pre id="claude-prompt" style="white-space:pre-wrap">{{ claude_prompt }}</pre>
-  <button type="button" onclick="copyPrompt(this)">Copiar prompt</button>
-</article>
-<script>
-function copyPrompt(btn) {
-  const text = document.getElementById("claude-prompt").innerText;
-  const done = () => { btn.textContent = "Copiado ✓"; setTimeout(() => btn.textContent = "Copiar prompt", 2000); };
-  if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(done); return; }
-  const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta);
-  ta.select(); document.execCommand("copy"); ta.remove(); done();
-}
-</script>
-{% endif %}
+<div class="layout-2">
+  <div class="stack">
+    <div class="card">
+      <header><h3>Tema</h3><div class="actions"><button type="button" class="ghost sm" data-copy="#video-topic">{{ ic("copy") }} Copiar</button></div></header>
+      <p id="video-topic" style="white-space:pre-wrap;margin:0">{{ video.topic }}</p>
+    </div>
 
-<h3>Roteiro</h3>
-{% if selected %}
-<p>
-  {% for ver in versions %}
-    <a href="/videos/{{ video.id }}?v={{ ver.number }}" {% if ver.id == selected.id %}aria-current="page"{% endif %}>v{{ ver.number }}{% if ver.approved %} ✓{% endif %}</a>{% if not loop.last %} · {% endif %}
-  {% endfor %}
-</p>
-<p><small>Versão {{ selected.number }} · {{ selected.author }} · {{ scenes|length }} cenas
-  {% if selected.approved %}· <strong>aprovada</strong>{% endif %}</small></p>
-<ol>
-  {% for sc in scenes %}<li>{{ sc.text }}{% if sc.notes %}<br><small><em>{{ sc.notes }}</em></small>{% endif %}</li>{% endfor %}
-</ol>
-{% if not selected.approved %}
-<form method="post" action="/scripts/{{ selected.id }}/approve">
-  <button>Aprovar roteiro (v{{ selected.number }})</button>
-</form>
-{% endif %}
-{% if not open_tasks %}
-<details>
-  <summary role="button" class="outline">Pedir revisão</summary>
-  <form method="post" action="/videos/{{ video.id }}/script/revision">
-    <label>O que ajustar? <textarea name="notes" rows="3" required></textarea></label>
-    <button>Enviar ao Claude</button>
-  </form>
-</details>
-{% endif %}
-{% else %}
-<p>Nenhum roteiro ainda.</p>
-{% endif %}
+    <div class="card {{ 'accent' if open_tasks }}">
+      <header><h3>{{ ic("sparkles") }} Claude</h3></header>
+      {% for t in open_tasks %}
+      <div class="list-row">
+        <div class="grow">
+          <span class="title">{{ t.type }}</span>
+          <small>{% if t.status == "pending" %}aguardando o Claude{% else %}em andamento por {{ claimers.get(t.claimed_by, "?") }} desde {{ t.claimed_at.strftime("%H:%M") }} (UTC){% endif %}</small>
+          {% if t.instructions %}<br><small>Instruções: {{ t.instructions }}</small>{% endif %}
+        </div>
+        <form method="post" action="/tasks/{{ t.id }}/cancel"><button class="secondary sm" data-confirm="Cancelar esta tarefa?">Cancelar</button></form>
+      </div>
+      {% endfor %}
+      {% for t in failed_tasks %}<div class="alert">Última tentativa falhou: {{ t.error }}</div>{% endfor %}
+      {% if claude_prompt %}
+      <p class="muted" style="margin-top:.75rem">Copie e cole no Claude Code (com o MCP <code>canais</code> conectado):</p>
+      <div id="claude-prompt" class="promptbox">{{ claude_prompt }}</div>
+      <button type="button" data-copy="#claude-prompt">{{ ic("copy") }} Copiar prompt</button>
+      {% else %}
+      <form method="post" action="/videos/{{ video.id }}/script/generate">
+        <div class="field"><label for="instructions">Instruções extras (opcional)</label>
+          <textarea id="instructions" name="instructions" rows="2" placeholder="Ex.: foque na teoria do sequestro e deixe a conclusão em aberto"></textarea></div>
+        <button>{{ ic("sparkles") }} {{ "Gerar novo roteiro" if versions else "Gerar roteiro" }}</button>
+      </form>
+      {% endif %}
+    </div>
 
-<h3>Etapas</h3>
-<table>
-  <thead><tr><th>#</th><th>Etapa</th><th>Estado</th></tr></thead>
-  <tbody>
-  {% for s in stages %}
-    <tr><td>{{ loop.index }}</td><td>{{ s.label }}</td>
-        <td><span class="badge {{ s.state }}">{{ state_labels[s.state] }}</span></td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+    <div class="card">
+      <header><h3>Roteiro</h3></header>
+      {% if selected %}
+      <div class="versions">
+        {% for ver in versions %}<a href="/videos/{{ video.id }}?v={{ ver.number }}" class="{{ 'current' if ver.id == selected.id }}">v{{ ver.number }}{% if ver.approved %} ✓{% endif %}</a>{% endfor %}
+      </div>
+      <p class="muted">Versão {{ selected.number }} · {{ selected.author }} · {{ scenes|length }} cenas {% if selected.approved %}· <span class="badge done">aprovada</span>{% endif %}</p>
+      {% for sc in scenes %}
+      <div class="scene"><span class="n">{{ sc.index + 1 }}</span><div>{{ sc.text }}{% if sc.notes %}<div class="note">{{ sc.notes }}</div>{% endif %}</div></div>
+      {% endfor %}
+      <div class="form-actions">
+        {% if not selected.approved %}
+        <form method="post" action="/scripts/{{ selected.id }}/approve"><button>{{ ic("check") }} Aprovar roteiro (v{{ selected.number }})</button></form>
+        {% endif %}
+      </div>
+      {% if not open_tasks %}
+      <hr>
+      <form method="post" action="/videos/{{ video.id }}/script/revision">
+        <div class="field"><label for="notes">Pedir revisão ao Claude</label>
+          <textarea id="notes" name="notes" rows="3" required placeholder="Ex.: encurte a introdução, troque o final por uma pergunta e evite repetir o nome do local"></textarea>
+          <div class="help">Descreva o que ajustar. O Claude cria uma nova versão; a atual continua guardada.</div></div>
+        <button class="secondary">Enviar revisão</button>
+      </form>
+      {% endif %}
+      {% else %}
+      <div class="empty">{{ ic("file") }}<h3>Nenhum roteiro ainda</h3><p>Peça ao Claude no cartão acima.</p></div>
+      {% endif %}
+    </div>
+  </div>
 
-{% if video.status == "draft" %}
-<form method="post" action="/videos/{{ video.id }}/delete">
-  <button class="secondary outline">Apagar rascunho</button>
-</form>
-{% endif %}
+  <div class="stack">
+    <div class="card">
+      <header><h3>Pipeline</h3><span class="muted" style="margin-left:auto">{{ done }}/{{ total }}</span></header>
+      <div class="progress"><i style="width: {{ (done * 100 / total)|round|int }}%"></i></div>
+      <ul class="pipeline">
+        {% for s in stages %}
+        <li class="{{ s.state }}"><span class="dot">{% if s.state == "done" %}{{ ic("check") }}{% else %}{{ loop.index }}{% endif %}</span>
+          <span class="label">{{ s.label }}</span>{% if s.state != "not_started" %}{{ state_badge(s.state, state_labels) }}{% endif %}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% if video.status == "draft" %}
+    <div class="card">
+      <header><h3>Zona de risco</h3></header>
+      <form method="post" action="/videos/{{ video.id }}/delete"><button class="danger" data-confirm="Apagar este rascunho, com roteiros e tarefas?">{{ ic("trash") }} Apagar rascunho</button></form>
+    </div>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

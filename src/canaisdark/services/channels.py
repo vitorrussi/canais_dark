@@ -1,9 +1,10 @@
 import re
 import unicodedata
 
-from sqlmodel import Session, select
+from sqlalchemy import func
+from sqlmodel import Session, col, select
 
-from canaisdark.models import Channel
+from canaisdark.models import Channel, ClaudeTask, Video
 from canaisdark.models.channel import utcnow
 from canaisdark.schemas.channel import ChannelCreate, ChannelUpdate
 from canaisdark.services.errors import Conflict, NotFound
@@ -68,3 +69,21 @@ def archive_channel(session: Session, channel_id: int) -> Channel:
     session.commit()
     session.refresh(channel)
     return channel
+
+
+def stats_by_channel(session: Session) -> dict[int, dict[str, int]]:
+    """Nº de vídeos e de tarefas abertas do Claude por canal (para os cards da home)."""
+    stats: dict[int, dict[str, int]] = {}
+    rows = session.exec(select(Video.channel_id, func.count()).group_by(col(Video.channel_id)))
+    for channel_id, count in rows:
+        stats.setdefault(channel_id, {"videos": 0, "open_tasks": 0})["videos"] = count
+    open_rows = session.exec(
+        select(Video.channel_id, func.count())
+        .select_from(ClaudeTask)
+        .join(Video, col(Video.id) == col(ClaudeTask.video_id))
+        .where(col(ClaudeTask.status).in_(("pending", "in_progress")))
+        .group_by(col(Video.channel_id))
+    )
+    for channel_id, count in open_rows:
+        stats.setdefault(channel_id, {"videos": 0, "open_tasks": 0})["open_tasks"] = count
+    return stats

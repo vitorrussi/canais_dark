@@ -1,0 +1,27 @@
+{% from "_macros.html" import field %}
+{% set c = channel or {} %}
+<div class="card">
+  <header><h3>Identidade</h3></header>
+  {{ field("name", "Nome do canal", c.name or "", "Nome interno e do site. O slug (usado em pastas) é gerado a partir dele e não muda depois.", "Mistérios Sem Rosto", required=true, placeholder="Mistérios Sem Rosto") }}
+  {{ field("description", "Descrição", c.description or "", "Para você se lembrar do foco do canal. O Claude também lê isso.", "Casos reais não resolvidos, contados com tom sombrio e sem sensacionalismo.", kind="textarea", rows=2) }}
+  <div class="row">
+    {{ field("youtube_url", "Link do canal no YouTube", c.youtube_url or "", "Opcional. Só referência por enquanto.", "https://youtube.com/@meucanal", placeholder="https://youtube.com/@...") }}
+    {{ field("drive_folder_id", "Pasta do Google Drive (ID)", c.drive_folder_id or "", "É o trecho final da URL da pasta no Drive. Usado na sincronização (Fase 8).", "…/folders/1AbCdEfGh → 1AbCdEfGh", tip="Abra a pasta no Drive e copie o que vem depois de /folders/ na barra de endereço.") }}
+  </div>
+</div>
+
+<div class="card" style="margin-top:1rem">
+  <header><h3>Roteiro e voz</h3></header>
+  <div class="row">
+    {{ field("language", "Idioma principal", c.language or "pt-BR", "Idioma da narração e do roteiro.", "pt-BR, en-US, es-ES") }}
+    {{ field("extra_languages", "Idiomas extras", (c.extra_languages or [])|join(", "), "Separados por vírgula. Reservado para dublagens futuras.", "en-US, es-ES") }}
+    {{ field("target_duration_minutes", "Duração alvo (min)", c.target_duration_minutes or 8, "Tamanho aproximado dos vídeos. O Claude calcula cerca de 150 palavras por minuto.", "8", kind="number", min=1, max=240) }}
+  </div>
+  {{ field("elevenlabs_voice_id", "Voz do ElevenLabs (voice_id)", c.elevenlabs_voice_id or "", "ID da voz que narra este canal (usado na Fase 3).", "21m00Tcm4TlvDq8ikWAM", tip="No ElevenLabs: Voices → escolha a voz → botão de copiar ID.") }}
+  {{ field("script_template", "Template / tom do roteiro", c.script_template or "", "Instruções fixas de estilo que o Claude segue em todo roteiro deste canal: voz do narrador, ritmo, estrutura, o que evitar.", "Narrador grave e calmo, frases curtas. Gancho forte nos 10 primeiros segundos, tensão por camadas, fecha com uma pergunta.", kind="textarea", rows=4) }}
+</div>
+
+<div class="card" style="margin-top:1rem">
+  <header><h3>Visual</h3></header>
+  {{ field("visual_style_prompt", "Prompt de estilo visual", c.visual_style_prompt or "", "Prefixo fixo colocado no começo de TODOS os prompts de imagem do canal, para manter a identidade visual. Escreva em inglês, em frases curtas separadas por vírgula.", "dark cinematic still, low-key lighting, 35mm film grain, muted teal and amber palette, no text, no watermark", kind="textarea", rows=3) }}
+</div>

@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, text
 from starlette.middleware.sessions import SessionMiddleware
@@ -15,7 +15,7 @@ from canaisdark.logging import configure_logging
 from canaisdark.mcp.server import build_mcp_app, mcp
 from canaisdark.services.errors import Conflict, DomainError, InvalidState, NotFound
 from canaisdark.web.routes import BASE as WEB_BASE
-from canaisdark.web.routes import NotLoggedIn
+from canaisdark.web.routes import NotLoggedIn, templates
 from canaisdark.web.routes import router as web_router
 
 _STATUS: dict[type[DomainError], int] = {NotFound: 404, Conflict: 409, InvalidState: 422}
@@ -48,8 +48,16 @@ def create_app() -> FastAPI:
         return {"status": "ok", "db": "ok"}
 
     @app.exception_handler(DomainError)
-    async def domain_error(_: Request, exc: DomainError) -> JSONResponse:
-        return JSONResponse({"detail": str(exc)}, status_code=_STATUS.get(type(exc), 400))
+    async def domain_error(request: Request, exc: DomainError) -> Response:
+        code = _STATUS.get(type(exc), 400)
+        if request.url.path.startswith(("/api", "/mcp")):
+            return JSONResponse({"detail": str(exc)}, status_code=code)
+        return templates.TemplateResponse(
+            request,
+            "error.html",
+            {"user": None, "message": str(exc), "code": code},
+            status_code=code,
+        )
 
     @app.exception_handler(NotLoggedIn)
     async def not_logged_in(_: Request, __: NotLoggedIn) -> RedirectResponse:

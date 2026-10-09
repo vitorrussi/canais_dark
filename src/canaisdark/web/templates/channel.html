@@ -1,39 +1,58 @@
 {% extends "base.html" %}
+{% from "_macros.html" import ic, field, empty %}
 {% block title %}{{ channel.name }}{% endblock %}
+{% block crumb %}{{ channel.name }}{% endblock %}
 {% block content %}
-<p><a href="/">← Canais</a></p>
-<h2>{{ channel.name }} {% if channel.is_archived %}<small>(arquivado)</small>{% endif %}</h2>
-<small>slug: {{ channel.slug }}</small>
+<div class="page-head">
+  <div>
+    <h1>{{ channel.name }} {% if channel.is_archived %}<span class="badge stale">arquivado</span>{% endif %}</h1>
+    <p class="muted">{{ channel.description or "Sem descrição." }}</p>
+    <div class="meta"><span class="mono">{{ channel.slug }}</span><span class="badge">{{ channel.language }}</span><span>{{ ic("clock") }} {{ channel.target_duration_minutes }} min por vídeo</span></div>
+  </div>
+</div>
+<div class="tabs">
+  <a href="/channels/{{ channel.slug }}" class="{{ 'active' if tab != 'settings' }}">Vídeos ({{ videos|length }})</a>
+  <a href="/channels/{{ channel.slug }}?tab=settings" class="{{ 'active' if tab == 'settings' }}">Configurações</a>
+</div>
 
-<h3>Vídeos</h3>
-{% for v in videos %}
-<article>
-  <a href="/videos/{{ v.id }}"><strong>{{ v.title or v.topic[:80] }}</strong></a>
-  <small>— {{ v.status }} · {{ v.created_at.strftime('%d/%m/%Y') }}</small>
-</article>
-{% else %}
-<p>Nenhum vídeo ainda.</p>
-{% endfor %}
-{% if not channel.is_archived %}
-<details {% if video_error %}open{% endif %}>
-  <summary role="button">Novo vídeo</summary>
-  <form method="post" action="/channels/{{ channel.slug }}/videos">
-    {% if video_error %}<p class="error">{{ video_error }}</p>{% endif %}
-    <label>Tema / conteúdo de entrada <textarea name="topic" rows="4" required></textarea></label>
-    <button>Criar vídeo</button>
+{% if tab != "settings" %}
+<div class="layout-2">
+  <div class="card">
+    <header><h2>Vídeos</h2></header>
+    {% for v in videos %}
+    {% set info = vinfo.get(v.id, {}) %}
+    <div class="list-row">
+      <div class="grow">
+        <a class="title" href="/videos/{{ v.id }}">{{ v.title or v.topic[:90] }}</a>
+        <div class="meta" style="margin-top:.15rem"><span>#{{ v.id }}</span><span>{{ v.created_at.strftime('%d/%m/%Y') }}</span><span>{{ info.done|default(0) }}/{{ info.total|default(13) }} etapas</span></div>
+      </div>
+      {% if info.open_task %}<span class="badge pending">Claude: {{ "aguardando" if info.open_task == "pending" else "trabalhando" }}</span>{% endif %}
+      <span class="badge">{{ v.status }}</span>
+    </div>
+    {% else %}
+    {% call empty("film", "Nenhum vídeo ainda", "Descreva o tema ao lado e o Claude escreve o roteiro.") %}{% endcall %}
+    {% endfor %}
+  </div>
+  {% if not channel.is_archived %}
+  <form class="card accent" method="post" action="/channels/{{ channel.slug }}/videos">
+    <header><h3>{{ ic("plus") }} Novo vídeo</h3></header>
+    {{ field("topic", "Tema / conteúdo de entrada", "", "Descreva o assunto, o ângulo e o que não pode faltar. Quanto mais específico, melhor o roteiro.", "O farol de Flannan Isles: 3 guardiões desapareceram em 1900. Foco no mistério e nas hipóteses, sem sensacionalismo.", kind="textarea", rows=5, required=true) }}
+    <button>Criar vídeo e pedir roteiro</button>
   </form>
-</details>
-{% endif %}
-
-<h3>Configurações do canal</h3>
+  {% endif %}
+</div>
+{% else %}
 <form method="post" action="/channels/{{ channel.slug }}">
-  {% if error %}<p class="error">{{ error }}</p>{% endif %}
-  {% include "_channel_fields.html" %}
-  <button>Salvar</button>
+  {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+  {% include "_channel_form.html" %}
+  <div class="form-actions"><button>Salvar alterações</button></div>
 </form>
 {% if not channel.is_archived %}
-<form method="post" action="/channels/{{ channel.slug }}/archive">
-  <button class="secondary outline">Arquivar canal</button>
-</form>
+<div class="card" style="margin-top:1rem">
+  <header><h3>Zona de risco</h3></header>
+  <p class="muted">Arquivar esconde o canal da lista e impede novos vídeos. Os dados são mantidos.</p>
+  <form method="post" action="/channels/{{ channel.slug }}/archive"><button class="danger" data-confirm="Arquivar o canal {{ channel.name }}?">{{ ic("archive") }} Arquivar canal</button></form>
+</div>
+{% endif %}
 {% endif %}
 {% endblock %}

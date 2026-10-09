@@ -1,27 +1,32 @@
 {% extends "base.html" %}
+{% from "_macros.html" import ic, empty %}
 {% block title %}Pendências do Claude{% endblock %}
+{% block crumb %}Pendências do Claude{% endblock %}
 {% block content %}
-<h2>Pendências do Claude</h2>
-<p><small>No Claude Code (com o MCP conectado), diga: "processa as pendências".</small></p>
-<h3>Abertas</h3>
-<table>
-  <thead><tr><th>#</th><th>Tipo</th><th>Vídeo</th><th>Estado</th></tr></thead>
-  <tbody>
+<div class="page-head"><div><h1>Pendências do Claude</h1>
+  <p class="muted">Tarefas que o Claude ainda precisa executar. No Claude Code (MCP conectado), use o prompt copiável da página de cada vídeo ou diga "processa as pendências".</p></div></div>
+<div class="card">
+  <header><h3>Abertas</h3></header>
   {% for t in open_tasks %}
-    <tr><td>{{ t.id }}</td><td>{{ t.type }}</td><td><a href="/videos/{{ t.video_id }}">#{{ t.video_id }}</a></td>
-        <td>{% if t.status == "pending" %}aguardando{% else %}em andamento ({{ claimers.get(t.claimed_by, "?") }}){% endif %}</td></tr>
-  {% else %}<tr><td colspan="4">Nada pendente.</td></tr>
+  <div class="list-row">
+    <div class="grow"><a class="title" href="/videos/{{ t.video_id }}">{{ t.type }} · vídeo #{{ t.video_id }}</a>
+      <small>{% if t.status == "pending" %}aguardando{% else %}em andamento ({{ claimers.get(t.claimed_by, "?") }}){% endif %}</small></div>
+    <span class="badge {{ t.status }}">{{ t.status }}</span>
+  </div>
+  {% else %}
+  {% call empty("check", "Nada pendente", "O Claude está em dia.") %}{% endcall %}
   {% endfor %}
-  </tbody>
-</table>
-<h3>Recentes</h3>
-<table>
-  <thead><tr><th>#</th><th>Tipo</th><th>Vídeo</th><th>Status</th><th>Resumo/erro</th></tr></thead>
-  <tbody>
-  {% for t in recent %}
-    <tr><td>{{ t.id }}</td><td>{{ t.type }}</td><td><a href="/videos/{{ t.video_id }}">#{{ t.video_id }}</a></td>
-        <td>{{ t.status }}</td><td>{{ t.result_summary or t.error }}</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+</div>
+<div class="card" style="margin-top:1rem">
+  <header><h3>Recentes</h3></header>
+  <table>
+    <thead><tr><th>#</th><th>Tipo</th><th>Vídeo</th><th>Status</th><th>Resumo / erro</th></tr></thead>
+    <tbody>
+    {% for t in recent %}
+      <tr><td>{{ t.id }}</td><td>{{ t.type }}</td><td><a href="/videos/{{ t.video_id }}">#{{ t.video_id }}</a></td>
+          <td><span class="badge {{ t.status }}">{{ t.status }}</span></td><td>{{ t.result_summary or t.error }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

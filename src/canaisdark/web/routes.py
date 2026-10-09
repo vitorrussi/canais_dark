@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -8,7 +8,7 @@ from pydantic import ValidationError
 from sqlmodel import Session, select
 
 from canaisdark.db import get_engine, get_session
-from canaisdark.models import User
+from canaisdark.models import Channel, User
 from canaisdark.schemas.channel import ChannelCreate, ChannelUpdate
 from canaisdark.schemas.video import VideoCreate
 from canaisdark.services import (
@@ -21,6 +21,7 @@ from canaisdark.services import (
     videos,
 )
 from canaisdark.services.errors import DomainError
+from canaisdark.web.presets import CHANNEL_PRESETS
 
 BASE = Path(__file__).parent
 templates = Jinja2Templates(directory=BASE / "templates")
@@ -65,17 +66,24 @@ def _render(
     request: Request, name: str, user: User | None, status: int = 200, **ctx: object
 ) -> HTMLResponse:
     flash = request.session.pop("flash", None) if "session" in request.scope else None
+    if ctx.get("error") and not flash:
+        flash = {"kind": "error", "msg": str(ctx["error"])}
     return templates.TemplateResponse(
         request,
         name,
-        {"user": user, "state_labels": STATE_LABELS, "flash": flash, **ctx},
+        {"user": user, "state_labels": STATE_LABELS, "flash": flash, "nav": "channels", **ctx},
         status_code=status,
     )
 
 
-def _back(request: Request, url: str, error: Exception | None = None) -> RedirectResponse:
+def _back(
+    request: Request, url: str, error: Exception | None = None, ok: str | None = None
+) -> RedirectResponse:
+    """Redireciona (PRG) deixando uma mensagem para o próximo render (toast)."""
     if error is not None:
-        request.session["flash"] = str(error)
+        request.session["flash"] = {"kind": "error", "msg": str(error)}
+    elif ok:
+        request.session["flash"] = {"kind": "success", "msg": ok}
     return _redirect(url)
 
 
@@ -155,7 +163,20 @@ def logout(request: Request) -> Response:
 
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request, user: WebUser, session: SessionDep) -> Response:
-    return _render(request, "channels.html", user, channels=channels.list_channels(session))
+    return _render(
+        request,
+        "channels.html",
+        user,
+        channels=channels.list_channels(session),
+        stats=channels.stats_by_channel(session),
+    )
+
+
+@router.get("/channels/new", response_class=HTMLResponse)
+def new_channel_page(request: Request, user: WebUser) -> Response:
+    return _render(
+        request, "channel_new.html", user, presets=CHANNEL_PRESETS, crumbs=[("Canais", "/")]
+    )
 
 
 @router.post("/channels")
@@ -166,27 +187,47 @@ async def create_channel(request: Request, user: WebUser, session: SessionDep) -
     except (DomainError, ValidationError) as e:
         return _render(
             request,
-            "channels.html",
+            "channel_new.html",
             user,
             status=422,
-            channels=channels.list_channels(session),
+            presets=CHANNEL_PRESETS,
             channel=data,
             error=_error_text(e),
+            crumbs=[("Canais", "/")],
         )
-    return _redirect(f"/channels/{channel.slug}")
+    return _back(request, f"/channels/{channel.slug}", ok=f"Canal “{channel.name}” criado")
+
+
+def _channel_ctx(
+    session: Session, channel: Channel, tab: str = "videos", **extra: Any
+) -> dict[str, Any]:
+    assert channel.id is not None
+    chan_videos = videos.list_videos(session, channel.id)
+    vinfo: dict[int | None, dict[str, object]] = {}
+    for v in chan_videos:
+        stages = video_status.get_stages(session, v)
+        open_tasks = tasks.list_tasks(session, video_id=v.id, open_only=True)
+        vinfo[v.id] = {
+            "done": sum(1 for s in stages if s.state == "done"),
+            "total": len(stages),
+            "open_task": open_tasks[0].status if open_tasks else None,
+        }
+    return {
+        "channel": channel,
+        "videos": chan_videos,
+        "vinfo": vinfo,
+        "tab": tab,
+        "crumbs": [("Canais", "/")],
+        **extra,
+    }
 
 
 @router.get("/channels/{slug}", response_class=HTMLResponse)
-def channel_page(request: Request, user: WebUser, session: SessionDep, slug: str) -> Response:
+def channel_page(
+    request: Request, user: WebUser, session: SessionDep, slug: str, tab: str = "videos"
+) -> Response:
     channel = channels.get_channel_by_slug(session, slug)
-    assert channel.id is not None
-    return _render(
-        request,
-        "channel.html",
-        user,
-        channel=channel,
-        videos=videos.list_videos(session, channel.id),
-    )
+    return _render(request, "channel.html", user, **_channel_ctx(session, channel, tab))
 
 
 @router.post("/channels/{slug}")
@@ -205,19 +246,17 @@ async def update_channel(
             "channel.html",
             user,
             status=422,
-            channel=channel,
-            videos=videos.list_videos(session, channel.id),
-            error=_error_text(e),
+            **_channel_ctx(session, channel, "settings", error=_error_text(e)),
         )
-    return _redirect(f"/channels/{slug}")
+    return _back(request, f"/channels/{slug}?tab=settings", ok="Configurações salvas")
 
 
 @router.post("/channels/{slug}/archive")
-def archive_channel(user: WebUser, session: SessionDep, slug: str) -> Response:
+def archive_channel(request: Request, user: WebUser, session: SessionDep, slug: str) -> Response:
     channel = channels.get_channel_by_slug(session, slug)
     assert channel.id is not None
     channels.archive_channel(session, channel.id)
-    return _redirect("/")
+    return _back(request, "/", ok=f"Canal “{channel.name}” arquivado")
 
 
 @router.post("/channels/{slug}/videos")
@@ -234,11 +273,9 @@ def create_video(
             "channel.html",
             user,
             status=422,
-            channel=channel,
-            videos=videos.list_videos(session, channel.id),
-            video_error=_error_text(e),
+            **_channel_ctx(session, channel, error=_error_text(e)),
         )
-    return _redirect(f"/videos/{video.id}")
+    return _back(request, f"/videos/{video.id}", ok="Vídeo criado — tarefa de roteiro enfileirada")
 
 
 @router.get("/videos/{video_id}", response_class=HTMLResponse)
@@ -265,6 +302,7 @@ def video_page(
         user,
         video=video,
         channel=channel,
+        crumbs=[("Canais", "/"), (channel.name, f"/channels/{channel.slug}")],
         claude_prompt=claude_prompt,
         stages=video_status.get_stages(session, video),
         versions=versions,
@@ -288,7 +326,7 @@ def generate_script(
         scripts.request_script(session, video_id, instructions.strip(), user)
     except DomainError as e:
         return _back(request, f"/videos/{video_id}", e)
-    return _back(request, f"/videos/{video_id}")
+    return _back(request, f"/videos/{video_id}", ok="Tarefa enfileirada para o Claude")
 
 
 @router.post("/videos/{video_id}/script/revision")
@@ -303,7 +341,7 @@ def request_revision(
         scripts.request_revision(session, video_id, notes, user)
     except DomainError as e:
         return _back(request, f"/videos/{video_id}", e)
-    return _back(request, f"/videos/{video_id}")
+    return _back(request, f"/videos/{video_id}", ok="Revisão enviada ao Claude")
 
 
 @router.post("/scripts/{version_id}/approve")
@@ -311,7 +349,7 @@ def approve_script(
     request: Request, user: WebUser, session: SessionDep, version_id: int
 ) -> Response:
     version = scripts.approve_script(session, version_id, user)
-    return _back(request, f"/videos/{version.video_id}")
+    return _back(request, f"/videos/{version.video_id}", ok=f"Roteiro v{version.number} aprovado")
 
 
 @router.get("/tasks", response_class=HTMLResponse)
@@ -321,6 +359,7 @@ def tasks_page(request: Request, user: WebUser, session: SessionDep) -> Response
         request,
         "tasks.html",
         user,
+        nav="tasks",
         open_tasks=tasks.list_tasks(session, open_only=True),
         recent=list(reversed(tasks.list_tasks(session)))[:20],
         claimers=claimers,

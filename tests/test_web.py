@@ -38,7 +38,7 @@ def test_full_flow(logged: TestClient) -> None:
         r.status_code == 200 and "Canal Teste" in r.text
     )  # seguiu redirect p/ /channels/canal-teste
     r = logged.post("/channels/canal-teste/videos", data={"topic": "Um tema"})
-    assert r.status_code == 200 and "Roteiro" in r.text and "Não iniciada" in r.text
+    assert r.status_code == 200 and "Roteiro" in r.text and "Pipeline" in r.text
     assert "Copiar prompt" in r.text and "claim_next_task(video_id=" in r.text
     assert "Um tema" in r.text
     r = logged.post(
@@ -96,3 +96,22 @@ def test_script_review_flow(
     tid = tasks.list_tasks(session, open_only=True)[0].id
     page = logged.post(f"/tasks/{tid}/cancel").text
     assert "aguardando o Claude" not in page
+
+
+def test_new_channel_page_has_presets_and_help(logged: TestClient) -> None:
+    html = logged.get("/channels/new").text
+    assert "Mistério" in html and "data-fill" in html
+    assert "voice_id" in html and "Exemplo:" not in html  # o prefixo "Exemplo:" vem do CSS
+    assert 'class="help"' in html
+
+
+def test_channel_cards_show_stats(logged: TestClient) -> None:
+    logged.post("/channels", data={"name": "Canal A"})
+    logged.post("/channels/canal-a/videos", data={"topic": "x"})
+    html = logged.get("/").text
+    assert "1 vídeo" in html and "1 pendência" in html
+
+
+def test_friendly_error_page(logged: TestClient) -> None:
+    r = logged.get("/channels/inexistente")
+    assert r.status_code == 404 and "não encontrado" in r.text

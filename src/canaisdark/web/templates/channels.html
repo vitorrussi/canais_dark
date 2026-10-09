@@ -1,20 +1,29 @@
 {% extends "base.html" %}
+{% from "_macros.html" import ic, empty %}
+{% block title %}Canais — Estúdio Dark{% endblock %}
+{% block crumb %}Canais{% endblock %}
 {% block content %}
-<h2>Canais</h2>
-{% for c in channels %}
-<article>
-  <a href="/channels/{{ c.slug }}"><strong>{{ c.name }}</strong></a>
-  <small>— {{ c.language }}{% if c.description %} · {{ c.description }}{% endif %}</small>
-</article>
+<div class="page-head">
+  <div><h1>Canais</h1><p class="muted">Cada canal tem sua voz, estilo visual e tom de roteiro próprios.</p></div>
+  <div class="actions"><a class="btn" href="/channels/new">{{ ic("plus") }} Novo canal</a></div>
+</div>
+{% if channels %}
+<div class="grid cols-3">
+  {% for c in channels %}
+  {% set st = stats.get(c.id, {"videos": 0, "open_tasks": 0}) %}
+  <a class="card card-link" href="/channels/{{ c.slug }}">
+    <h3>{{ c.name }}</h3>
+    <p class="muted">{{ (c.description or "Sem descrição ainda.")[:110] }}</p>
+    <div class="meta">
+      <span>{{ ic("film") }} {{ st.videos }} vídeo{{ "s" if st.videos != 1 }}</span>
+      <span>{{ ic("clock") }} {{ c.target_duration_minutes }} min</span>
+      <span class="badge">{{ c.language }}</span>
+      {% if st.open_tasks %}<span class="badge pending">{{ st.open_tasks }} pendência{{ "s" if st.open_tasks != 1 }}</span>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
 {% else %}
-<p>Nenhum canal ainda.</p>
-{% endfor %}
-<details {% if error %}open{% endif %}>
-  <summary role="button">Novo canal</summary>
-  <form method="post" action="/channels">
-    {% if error %}<p class="error">{{ error }}</p>{% endif %}
-    {% include "_channel_fields.html" %}
-    <button>Criar canal</button>
-  </form>
-</details>
+<div class="card">{% call empty("film", "Nenhum canal ainda", "Crie o primeiro canal para começar a produzir vídeos.") %}<a class="btn" href="/channels/new">{{ ic("plus") }} Criar canal</a>{% endcall %}</div>
+{% endif %}
 {% endblock %}
