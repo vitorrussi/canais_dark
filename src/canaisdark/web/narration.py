@@ -29,7 +29,7 @@ def narration_ctx(session: Session, video: Video) -> dict[str, Any]:
     assert video.id is not None
     settings = get_settings()
     channel = channels.get_channel(session, video.channel_id)
-    balance = credits.get_balance()
+    balance = credits.get_balance(wait=False)
     full = narration.plan(session, video.id, None, None, balance)
     test = narration.plan(session, video.id, 1, None, balance)
     cum: list[int] = []

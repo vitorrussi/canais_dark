@@ -85,7 +85,7 @@ def voice_list(
         )
     except ElevenLabsError as e:
         error = str(e)
-    balance = credits.get_balance()
+    balance = credits.get_balance(wait=False)
     tier = balance.tier if balance else ""
     return templates.TemplateResponse(
         request,

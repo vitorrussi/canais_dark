@@ -195,3 +195,33 @@ def test_streaming_tts_collects_and_cancels() -> None:
             speed=1,
             should_cancel=lambda: True,
         )  # cancela antes de enviar
+
+
+def test_balance_does_not_block_pages(monkeypatch: pytest.MonkeyPatch) -> None:
+    import threading
+
+    from canaisdark.config import get_settings
+    from canaisdark.integrations.elevenlabs import Subscription
+    from canaisdark.services import credits
+
+    release = threading.Event()
+
+    class Slow:
+        def subscription(self) -> Subscription:
+            release.wait(5)
+            return Subscription(1, 10, tier="free")
+
+    monkeypatch.setattr(get_settings(), "elevenlabs_fake", False)
+    monkeypatch.setattr(get_settings(), "elevenlabs_api_key", "k")
+    credits.set_client_factory(lambda: Slow())  # type: ignore[arg-type,return-value]
+    try:
+        assert credits.get_balance(wait=False) is None  # não esperou a rede
+        release.set()
+        for _ in range(50):
+            got = credits.get_balance(wait=False)
+            if got:
+                break
+            threading.Event().wait(0.05)
+        assert got and got.limit == 10
+    finally:
+        credits.set_client_factory(None)

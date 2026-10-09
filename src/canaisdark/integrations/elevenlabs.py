@@ -240,14 +240,17 @@ class ElevenLabsClient:
     def subscription(self) -> Subscription | None:
         """Saldo de créditos; None se a chave não tiver permissão de leitura da conta."""
         try:
-            resp = self._request("GET", "/v1/user/subscription")
+            # Consulta usada ao abrir páginas: uma tentativa e prazo curto (sem os retries dos jobs).
+            resp = self._http.get("/v1/user/subscription", timeout=4.0)
+            if resp.status_code >= 400:
+                return None
             d = resp.json()
             return Subscription(
                 used=int(d["character_count"]),
                 limit=int(d["character_limit"]),
                 tier=str(d.get("tier", "")),
             )
-        except (ElevenLabsError, KeyError, ValueError):
+        except (httpx.HTTPError, KeyError, ValueError):
             return None
 
     def list_voices(self) -> list[dict[str, Any]]:
