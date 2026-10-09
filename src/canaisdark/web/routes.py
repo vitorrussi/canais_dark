@@ -43,6 +43,9 @@ def _channel_form(
     script_template: str,
     target_duration_minutes: str,
     drive_folder_id: str,
+    words_per_scene: str,
+    script_rules: str,
+    default_script_instructions: str,
 ) -> dict[str, object]:
     return {
         "name": name.strip(),
@@ -55,6 +58,9 @@ def _channel_form(
         "script_template": script_template,
         "target_duration_minutes": target_duration_minutes or 8,
         "drive_folder_id": drive_folder_id.strip(),
+        "words_per_scene": words_per_scene or 40,
+        "script_rules": script_rules,
+        "default_script_instructions": default_script_instructions,
     }
 
 
@@ -71,6 +77,9 @@ async def _form_data(request: Request) -> dict[str, object]:
         "script_template",
         "target_duration_minutes",
         "drive_folder_id",
+        "words_per_scene",
+        "script_rules",
+        "default_script_instructions",
     ]
     return _channel_form(**{k: str(f.get(k, "")) for k in keys})
 

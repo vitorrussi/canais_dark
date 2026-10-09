@@ -171,3 +171,27 @@ def test_diff_page(logged: TestClient, session: Session, user_token: tuple[User,
     html = logged.get(f"/videos/{vid}/diff?a=1&b=2").text
     assert "<del>velho</del>" in html and "<ins>novo</ins>" in html and "Extra" in html
     assert logged.get(f"/videos/{vid}/diff?a=1&b=9").status_code == 404
+
+
+def test_channel_script_settings_flow_to_claude_context(
+    logged: TestClient, session: Session, user_token: tuple[User, str]
+) -> None:
+    from canaisdark.services import task_context, tasks
+
+    logged.post(
+        "/channels",
+        data={
+            "name": "Regras",
+            "words_per_scene": "55",
+            "script_rules": "Nunca citar vítimas",
+            "default_script_instructions": "Fechar com pergunta",
+        },
+    )
+    logged.post("/channels/regras/videos", data={"topic": "x"})
+    task = tasks.claim_next(session, user_token[0])
+    assert task
+    ctx = task_context.build_task_context(session, task)["channel"]
+    assert ctx["words_per_scene"] == 55 and ctx["script_rules"] == "Nunca citar vítimas"
+    assert ctx["default_script_instructions"] == "Fechar com pergunta"
+    page = logged.get("/channels/regras?tab=settings").text
+    assert "Nunca citar vítimas" in page and 'value="55"' in page

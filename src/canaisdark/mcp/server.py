@@ -91,6 +91,9 @@ def get_channel(channel_id: int) -> dict[str, Any]:
             "script_template": c.script_template,
             "visual_style_prompt": c.visual_style_prompt,
             "target_duration_minutes": c.target_duration_minutes,
+            "words_per_scene": c.words_per_scene,
+            "script_rules": c.script_rules,
+            "default_script_instructions": c.default_script_instructions,
             "elevenlabs_voice_id": c.elevenlabs_voice_id,
         }
 

@@ -12,7 +12,8 @@ HOW_TO: dict[str, str] = {
     TaskType.GENERATE_SCRIPT.value: (
         "Escreva o roteiro narrado do vídeo, já dividido em cenas (uma ideia/imagem por cena, "
         "texto exatamente como será narrado: sem marcações de cena, sem emojis, sem rubricas). "
-        "Siga idioma, tom/template e duração alvo do canal (cerca de 150 palavras por minuto). "
+        "Siga idioma, tom/template, duração alvo e `words_per_scene` (palavras por cena) do canal "
+        "(cerca de 150 palavras por minuto), e respeite SEMPRE `script_rules` e `default_script_instructions`. "
         "Se houver 'instructions' ou 'previous_script', trate-as como pedido de revisão. "
         "Depois chame save_script(video_id, scenes, task_id) e, em seguida, complete_task(task_id, resumo). "
         "Se não conseguir, chame fail_task(task_id, motivo)."
@@ -55,6 +56,9 @@ def build_task_context(session: Session, task: ClaudeTask) -> dict[str, Any]:
             "script_template": channel.script_template,
             "visual_style_prompt": channel.visual_style_prompt,
             "target_duration_minutes": channel.target_duration_minutes,
+            "words_per_scene": channel.words_per_scene,
+            "script_rules": channel.script_rules,
+            "default_script_instructions": channel.default_script_instructions,
         },
         "previous_script": previous,
     }

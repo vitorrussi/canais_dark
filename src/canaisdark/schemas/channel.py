@@ -14,6 +14,9 @@ class ChannelCreate(BaseModel):
     script_template: str = ""
     target_duration_minutes: int = Field(default=8, ge=1, le=240)
     drive_folder_id: str = ""
+    words_per_scene: int = Field(default=40, ge=10, le=300)
+    script_rules: str = ""
+    default_script_instructions: str = ""
 
 
 class ChannelUpdate(BaseModel):
@@ -29,6 +32,9 @@ class ChannelUpdate(BaseModel):
     script_template: str | None = None
     target_duration_minutes: int | None = Field(default=None, ge=1, le=240)
     drive_folder_id: str | None = None
+    words_per_scene: int | None = Field(default=None, ge=10, le=300)
+    script_rules: str | None = None
+    default_script_instructions: str | None = None
 
 
 class ChannelRead(ChannelCreate):

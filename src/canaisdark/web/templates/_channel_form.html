@@ -18,7 +18,12 @@
     {{ field("target_duration_minutes", "Duração alvo (min)", c.target_duration_minutes or 8, "Tamanho aproximado dos vídeos. O Claude calcula cerca de 150 palavras por minuto.", "8", kind="number", min=1, max=240) }}
   </div>
   {{ field("elevenlabs_voice_id", "Voz do ElevenLabs (voice_id)", c.elevenlabs_voice_id or "", "ID da voz que narra este canal (usado na Fase 3).", "21m00Tcm4TlvDq8ikWAM", tip="No ElevenLabs: Voices → escolha a voz → botão de copiar ID.") }}
+  <div class="row">
+    {{ field("words_per_scene", "Palavras por cena (aprox.)", c.words_per_scene or 40, "Tamanho desejado de cada cena. Cenas curtas = mais trocas de imagem; longas = ritmo mais calmo.", "40 (≈ 16 segundos de narração)", kind="number", min=10, max=300, tip="Cada cena recebe uma imagem. Para um vídeo de 8 min (~1200 palavras), 40 palavras por cena dá ~30 imagens.") }}
+  </div>
   {{ field("script_template", "Template / tom do roteiro", c.script_template or "", "Instruções fixas de estilo que o Claude segue em todo roteiro deste canal: voz do narrador, ritmo, estrutura, o que evitar.", "Narrador grave e calmo, frases curtas. Gancho forte nos 10 primeiros segundos, tensão por camadas, fecha com uma pergunta.", kind="textarea", rows=4) }}
+  {{ field("script_rules", "Regras e proibições do roteiro", c.script_rules or "", "Lista do que o Claude deve SEMPRE ou NUNCA fazer neste canal. Aparece para ele em toda tarefa de roteiro.", "Nunca citar nomes de vítimas. Sempre separar fato de hipótese. Sem gírias. Não prometer 'final chocante'.", kind="textarea", rows=3) }}
+  {{ field("default_script_instructions", "Instruções padrão para todo roteiro", c.default_script_instructions or "", "Pedido fixo adicionado a todo vídeo do canal (além das instruções extras de cada vídeo).", "Termine com um convite para comentar a teoria do espectador.", kind="textarea", rows=2) }}
 </div>
 
 <div class="card" style="margin-top:1rem">
