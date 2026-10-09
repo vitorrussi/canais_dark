@@ -142,3 +142,27 @@ def test_package_formats(session: Session, env: dict[str, object]) -> None:
     assert data[0]["image_prompt_vertical"] and data[1]["image_prompt_full"] == ""
     with pytest.raises(InvalidState):
         scene_prompts.package(session, env["video_id"], "pdf")  # type: ignore[arg-type]
+
+
+def test_request_prompts_creates_task_with_context(
+    session: Session, env: dict[str, object]
+) -> None:
+    from canaisdark.services import task_context, tasks
+
+    with pytest.raises(InvalidState):
+        scene_prompts.request_prompts(session, env["video_id"], "", env["user"])  # type: ignore[arg-type]
+    _approve(session, env, ["Cena um", "Cena dois"])
+    task = scene_prompts.request_prompts(
+        session, env["video_id"], "mais planos de detalhe", env["user"]
+    )  # type: ignore[arg-type]
+    assert task.type == "generate_prompts" and task.instructions == "mais planos de detalhe"
+    with pytest.raises(Exception, match="aberta"):
+        scene_prompts.request_prompts(session, env["video_id"], "", env["user"])  # type: ignore[arg-type]
+    claimed = tasks.claim_next(session, env["user"], "generate_prompts")  # type: ignore[arg-type]
+    assert claimed
+    ctx = task_context.build_task_context(session, claimed)
+    assert (
+        [s["index"] for s in ctx["scenes"]] == [0, 1]
+        and "INGLÊS" in ctx["how_to"]
+        and ctx["channel"]["visual_style_prompt"].startswith("dark")
+    )

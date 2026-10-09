@@ -100,3 +100,39 @@ async def test_job_tools(setup: int, session: Session) -> None:
     assert str(job.id) in str(await call("list_jobs", {"video_id": setup}))
     with pytest.raises(ToolError, match="não encontrado"):
         await call("get_job_status", {"job_id": 999})
+
+
+async def test_save_scene_prompts_tool(setup: int, session: Session) -> None:
+    from canaisdark.models import User
+    from canaisdark.schemas.script import SceneIn
+    from canaisdark.services import scripts
+
+    user = session.get(User, 1)
+    assert user
+    scripts.save_user_script(
+        session,
+        setup,
+        [SceneIn(text="A"), SceneIn(text="B"), SceneIn(text="C")],
+        user,
+        approve=True,
+    )
+    r = await call(
+        "save_scene_prompts",
+        {
+            "video_id": setup,
+            "prompts": [
+                {"scene_index": 0, "image_prompt": "a lighthouse", "vertical": True},
+                {"scene_index": 2, "image_prompt": "a diary", "key_scene": True},
+            ],
+        },
+    )
+    assert "[1]" in str(r.get("missing_scene_indexes", r)) and "[0, 2]" in str(r)
+    script = await call("get_script", {"video_id": setup})
+    assert "a lighthouse" in str(script) and "wants_vertical" in str(script)
+    with pytest.raises(ToolError, match="índices 0 a 2"):
+        await call(
+            "save_scene_prompts",
+            {"video_id": setup, "prompts": [{"scene_index": 9, "image_prompt": "x"}]},
+        )
+    with pytest.raises(ToolError):
+        await call("save_scene_prompts", {"video_id": setup, "prompts": []})

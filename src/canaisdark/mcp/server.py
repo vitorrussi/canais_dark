@@ -13,8 +13,18 @@ from canaisdark.db import get_engine
 from canaisdark.mcp.auth import BearerAuthMiddleware
 from canaisdark.mcp.context import current_user
 from canaisdark.models import TaskType, User, VideoStatus
+from canaisdark.schemas.scene import PromptIn
 from canaisdark.schemas.script import SceneIn
-from canaisdark.services import channels, jobs, scripts, task_context, tasks, video_status, videos
+from canaisdark.services import (
+    channels,
+    jobs,
+    scene_prompts,
+    scripts,
+    task_context,
+    tasks,
+    video_status,
+    videos,
+)
 from canaisdark.services.errors import DomainError
 
 mcp = MCPServer(
@@ -155,7 +165,17 @@ def get_script(video_id: int, version: int | None = None) -> dict[str, Any]:
         return {
             "version": ver.number,
             "approved": ver.approved,
-            "scenes": [{"index": x.index, "text": x.text, "notes": x.notes} for x in scenes],
+            "scenes": [
+                {
+                    "index": x.index,
+                    "text": x.text,
+                    "notes": x.notes,
+                    "image_prompt": x.image_prompt,
+                    "wants_vertical": x.wants_vertical,
+                    "is_key_scene": x.is_key_scene,
+                }
+                for x in scenes
+            ],
         }
 
 
@@ -259,6 +279,26 @@ def save_script(video_id: int, scenes: list[SceneIn], task_id: int | None = None
     with _db() as (s, user):
         v = scripts.save_script(s, video_id, scenes, user, task_id=task_id)
         return {"version": v.number, "scene_count": len(scenes), "approved": v.approved}
+
+
+@mcp.tool()
+@safe
+def save_scene_prompts(
+    video_id: int, prompts: list[PromptIn], task_id: int | None = None
+) -> dict[str, Any]:
+    """Salva prompts de imagem por cena do roteiro APROVADO (pode ser em lotes; salvar de novo sobrescreve a cena).
+
+    Cada item: {"scene_index": 0-based, "image_prompt": "...", "video_prompt"?: "...", "vertical"?: bool, "key_scene"?: bool}.
+    Escreva só o conteúdo da cena em inglês; o prefixo de estilo do canal é adicionado automaticamente.
+    Retorna `missing_scene_indexes` (cenas ainda sem prompt). Exemplo:
+    save_scene_prompts(42, [{"scene_index": 0, "image_prompt": "an abandoned lighthouse at dusk, wide shot, fog", "vertical": true}], 9)"""
+    with _db() as (s, _):
+        result = scene_prompts.save_prompts(s, video_id, prompts)
+        return {
+            "saved_scene_indexes": result.saved,
+            "missing_scene_indexes": result.missing,
+            "task_id": task_id,
+        }
 
 
 # ----- Prompt (vira slash command no Claude Code) -----

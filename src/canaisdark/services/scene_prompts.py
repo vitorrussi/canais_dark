@@ -5,9 +5,9 @@ from dataclasses import dataclass
 
 from sqlmodel import Session, select
 
-from canaisdark.models import Asset, Channel, Scene
+from canaisdark.models import Asset, Channel, ClaudeTask, Scene, TaskType, User
 from canaisdark.schemas.scene import PromptIn, SceneUpdate
-from canaisdark.services import channels, scripts, videos
+from canaisdark.services import channels, scripts, tasks, videos
 from canaisdark.services.errors import InvalidState, NotFound
 
 ASPECT_SUFFIX = {
@@ -43,6 +43,8 @@ class SaveResult:
 
 
 def save_prompts(session: Session, video_id: int, items: list[PromptIn]) -> SaveResult:
+    if not items:
+        raise InvalidState("Envie ao menos um prompt em `prompts`.")
     scenes = approved_scenes(session, video_id)
     by_index = {s.index: s for s in scenes}
     unknown = sorted({i.scene_index for i in items if i.scene_index not in by_index})
@@ -154,3 +156,11 @@ def package(session: Session, video_id: int, fmt: str) -> tuple[str, str, str]:
     sep = "\n" if fmt == "md" else "\n\n"
     mime = "text/markdown; charset=utf-8" if fmt == "md" else "text/plain; charset=utf-8"
     return f"{stem}.{fmt}", mime, sep.join(lines) + "\n"
+
+
+def request_prompts(session: Session, video_id: int, instructions: str, actor: User) -> ClaudeTask:
+    """Enfileira a tarefa `generate_prompts` para o Claude (exige roteiro aprovado)."""
+    approved_scenes(session, video_id)  # valida
+    return tasks.create_task(
+        session, video_id, TaskType.GENERATE_PROMPTS, instructions.strip(), actor
+    )

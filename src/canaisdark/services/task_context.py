@@ -18,6 +18,17 @@ HOW_TO: dict[str, str] = {
         "Depois chame save_script(video_id, scenes, task_id) e, em seguida, complete_task(task_id, resumo). "
         "Se não conseguir, chame fail_task(task_id, motivo)."
     ),
+    TaskType.GENERATE_PROMPTS.value: (
+        "Escreva UM prompt de imagem por cena do roteiro APROVADO (`scenes`). Escreva em INGLÊS, em frases curtas separadas por vírgula, "
+        "descrevendo só o conteúdo visual da cena: sujeito, ação, cenário, enquadramento/plano, luz e clima. "
+        "NÃO repita o estilo do canal (o prefixo `channel.visual_style_prompt` é adicionado automaticamente na hora de copiar) "
+        "e NÃO peça texto, legendas, logotipos nem rostos de pessoas reais reconhecíveis. "
+        "Varie os planos entre cenas seguidas (aberto, médio, detalhe, silhueta…) e mantenha coerência de época, lugar e elementos recorrentes. "
+        "Marque `vertical=true` nas cenas visualmente fortes para virarem Shorts 9:16 (cerca de 20–30%) e `key_scene=true` (com `video_prompt` curto "
+        "descrevendo o movimento) nas poucas cenas que merecem clipe de vídeo de IA (no máximo ~10%). Respeite `channel.script_rules`. "
+        "Salve com save_scene_prompts(video_id, prompts, task_id) — pode salvar em lotes — e depois chame complete_task(task_id, resumo). "
+        "Confira o campo `missing_scene_indexes` da resposta até ficar vazio."
+    ),
 }
 
 
@@ -34,7 +45,23 @@ def build_task_context(session: Session, task: ClaudeTask) -> dict[str, Any]:
         }
     except NotFound:
         pass
+    scenes_ctx: list[dict[str, Any]] | None = None
+    if task.type == TaskType.GENERATE_PROMPTS.value and video.approved_script_version_id:
+        scenes_ctx = [
+            {
+                "index": sc.index,
+                "text": sc.text,
+                "notes": sc.notes,
+                "start_s": sc.start_s,
+                "end_s": sc.end_s,
+                "existing_image_prompt": sc.image_prompt,
+            }
+            for sc in scripts.scenes_of(
+                session, scripts.get_version(session, video.approved_script_version_id)
+            )
+        ]
     return {
+        "scenes": scenes_ctx,
         "task": {
             "id": task.id,
             "type": task.type,
