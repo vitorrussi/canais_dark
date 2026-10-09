@@ -32,26 +32,22 @@ def ctx(
 
 def test_account_and_library_tabs(ctx: dict[str, object]) -> None:
     c: TestClient = ctx["client"]  # type: ignore[assignment]
-    html = c.get("/channels/canal/voice").text
+    page = c.get("/channels/canal/voice").text
+    assert "Flash v2.5" in page and "Multilingual v2" in page
     assert (
-        "George (demo)" in html
-        and "Usar esta voz" in html
-        and "Flash v2.5" in html
-        and "Multilingual v2" in html
-    )
-    lib = c.get("/channels/canal/voice?tab=library&accent=brazilian").text
-    assert (
-        "Adriano (demo)" in lib
-        and "exige plano pago" in lib.replace("<strong>", "").replace("</strong>", "")
-        or "plano pago" in lib
-    )
+        'hx-get="/channels/canal/voice/list' in page
+    )  # casca instantânea; a lista carrega por HTMX
+    html = c.get("/channels/canal/voice/list?tab=account").text
+    assert "George (demo)" in html and "Usar esta voz" in html
+    lib = c.get("/channels/canal/voice/list?tab=library&accent=brazilian").text
+    assert "Adriano (demo)" in lib and "plano pago" in lib
     assert "Usar esta voz</button>" not in lib  # plano free: não dá para usar voz da biblioteca
 
 
 def test_library_usable_on_paid_plan(ctx: dict[str, object]) -> None:
     ctx["fake"].tier = "starter"  # type: ignore[attr-defined]
     credits.get_balance(force=True)
-    lib = ctx["client"].get("/channels/canal/voice?tab=library").text  # type: ignore[attr-defined]
+    lib = ctx["client"].get("/channels/canal/voice/list?tab=library").text  # type: ignore[attr-defined]
     assert "Usar esta voz</button>" in lib
 
 

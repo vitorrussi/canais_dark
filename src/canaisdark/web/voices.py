@@ -14,7 +14,7 @@ from canaisdark.models import Video
 from canaisdark.schemas.channel import ChannelUpdate
 from canaisdark.services import channels, credits, scripts, voices
 from canaisdark.services.errors import DomainError
-from canaisdark.web.common import SessionDep, WebUser, back, render
+from canaisdark.web.common import SessionDep, WebUser, back, render, templates
 
 router = APIRouter(include_in_schema=False)
 
@@ -43,38 +43,62 @@ def voice_page(
     gender: str = "",
     q: str = "",
 ) -> Response:
+    """Casca da página (instantânea). A lista de vozes carrega depois, por HTMX, porque a API do ElevenLabs é lenta."""
     channel = channels.get_channel_by_slug(session, slug)
-    error = ""
-    items: list[dict[str, Any]] = []
-    try:
-        if tab == "library":
-            items = voices.library_voices("pt", accent, gender, q)
-        else:
-            items = voices.account_voices()
-    except ElevenLabsError as e:
-        error = str(e)
-    balance = credits.get_balance()
-    tier = balance.tier if balance else ""
     return render(
         request,
         "voice_picker.html",
         user,
-        status=200,
         channel=channel,
         tab=tab,
         accent=accent,
         gender=gender,
         q=q,
-        items=items,
-        error=error,
         models=voices.MODELS,
         multiplier=voices.model_multiplier(channel.tts_model),
-        tier=tier,
-        library_usable=voices.library_usable(tier),
         ready=get_settings().elevenlabs_ready,
         sample_text=_default_sample_text(session, channel.id or 0),
         max_chars=voices.SAMPLE_MAX_CHARS,
         crumbs=[("Canais", "/"), (channel.name, f"/channels/{slug}")],
+    )
+
+
+@router.get("/channels/{slug}/voice/list", response_class=HTMLResponse)
+def voice_list(
+    request: Request,
+    user: WebUser,
+    session: SessionDep,
+    slug: str,
+    tab: str = "account",
+    accent: str = "brazilian",
+    gender: str = "",
+    q: str = "",
+) -> Response:
+    channel = channels.get_channel_by_slug(session, slug)
+    error = ""
+    items: list[dict[str, Any]] = []
+    try:
+        items = (
+            voices.library_voices("pt", accent, gender, q)
+            if tab == "library"
+            else voices.account_voices()
+        )
+    except ElevenLabsError as e:
+        error = str(e)
+    balance = credits.get_balance()
+    tier = balance.tier if balance else ""
+    return templates.TemplateResponse(
+        request,
+        "_voice_list.html",
+        {
+            "user": user,
+            "channel": channel,
+            "tab": tab,
+            "items": items,
+            "error": error,
+            "tier": tier,
+            "library_usable": voices.library_usable(tier),
+        },
     )
 
 

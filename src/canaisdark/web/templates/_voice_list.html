@@ -1,0 +1,22 @@
+{% if tab == "library" and not library_usable %}<div class="alert" style="border-color:var(--warn);color:var(--warn);background:transparent">As vozes da biblioteca podem ser <strong>ouvidas</strong> aqui, mas <strong>usá-las pela API exige plano pago</strong> do ElevenLabs (seu plano: {{ tier or "desconhecido" }}). Depois de assinar, adicione a voz à sua conta no site do ElevenLabs e escolha-a em “Minhas vozes”.</div>{% endif %}
+    {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+    <div class="grid cols-2">
+      {% for v in items %}
+      {% set usable = (tab != "library") or library_usable %}
+      <div class="card" style="{{ 'border-color:var(--accent)' if v.voice_id == channel.elevenlabs_voice_id }}">
+        <strong>{{ v.name[:48] }}</strong> {% if v.voice_id == channel.elevenlabs_voice_id %}<span class="badge done">em uso</span>{% endif %}
+        <div class="meta" style="margin:.3rem 0">{% if v.category %}<span class="badge">{{ v.category }}</span>{% endif %}{% if v.accent %}<span>{{ v.accent }}</span>{% endif %}{% if v.gender %}<span>{{ v.gender }}</span>{% endif %}</div>
+        {% if v.description %}<small class="muted">{{ v.description[:110] }}</small>{% endif %}
+        {% if v.preview_url %}<audio controls preload="none" src="{{ v.preview_url }}" style="width:100%;margin-top:.5rem"></audio>{% else %}<small class="muted"><br>Sem prévia gratuita.</small>{% endif %}
+        <div class="stack-inline" style="margin-top:.5rem">
+          {% if usable %}
+          <form method="post" action="/channels/{{ channel.slug }}/voice/select"><input type="hidden" name="voice_id" value="{{ v.voice_id }}"><input type="hidden" name="model_id" value="{{ channel.tts_model }}"><button class="sm" {{ "disabled" if v.voice_id == channel.elevenlabs_voice_id }}>Usar esta voz</button></form>
+          <button type="button" class="secondary sm" data-sample data-voice="{{ v.voice_id }}">Testar com meu texto</button>
+          {% else %}<button type="button" class="secondary sm" disabled title="Exige plano pago do ElevenLabs">Plano pago</button>{% endif %}
+        </div>
+        <div class="sample-out" style="margin-top:.4rem"></div>
+      </div>
+      {% else %}
+      <p class="muted">{{ "Nenhuma voz encontrada." if not error else "" }}</p>
+      {% endfor %}
+    </div>
