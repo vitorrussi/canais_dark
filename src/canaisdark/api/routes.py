@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from canaisdark.api import channels, jobs, scripts, tasks, transfer, videos
+from canaisdark.api import channels, jobs, scenes, scripts, tasks, transfer, videos
 from canaisdark.api.deps import CurrentUser
 
 router = APIRouter(prefix="/api")
@@ -17,3 +17,4 @@ router.include_router(tasks.router)
 router.include_router(scripts.router)
 router.include_router(transfer.router)
 router.include_router(jobs.router)
+router.include_router(scenes.router)

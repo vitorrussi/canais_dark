@@ -166,3 +166,78 @@ def test_rest_jobs_and_narration(
         assert client.get("/api/jobs/999", headers=auth).status_code == 404
     finally:
         credits.set_client_factory(None)
+
+
+def test_rest_scene_prompts_and_uploads(client: TestClient, auth: dict[str, str]) -> None:
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (1920, 1080), "teal").save(buf, "PNG")
+    cid = client.post(
+        "/api/channels", json={"name": "C", "visual_style_prompt": "noir"}, headers=auth
+    ).json()["id"]
+    vid = client.post(f"/api/channels/{cid}/videos", json={"topic": "t"}, headers=auth).json()["id"]
+    assert (
+        client.get(f"/api/videos/{vid}/scenes", headers=auth).status_code == 422
+    )  # roteiro não aprovado
+    client.post(
+        f"/api/videos/{vid}/scripts",
+        json={"scenes": [{"text": "A"}, {"text": "B"}], "approve": True},
+        headers=auth,
+    )
+    r = client.put(
+        f"/api/videos/{vid}/scene-prompts",
+        json={"prompts": [{"scene_index": 0, "image_prompt": "a door"}]},
+        headers=auth,
+    )
+    assert r.json() == {"saved": [0], "missing": [1]}
+    assert (
+        client.put(
+            f"/api/videos/{vid}/scene-prompts",
+            json={"prompts": [{"scene_index": 7, "image_prompt": "x"}]},
+            headers=auth,
+        ).status_code
+        == 422
+    )
+    up = client.post(
+        f"/api/videos/{vid}/scenes/0/upload",
+        files={"file": ("a.png", buf.getvalue(), "image/png")},
+        headers=auth,
+    )
+    assert (
+        up.status_code == 201
+        and up.json()["asset"]["width"] == 1920
+        and up.json()["replaced"] is False
+    )
+    scenes = client.get(f"/api/videos/{vid}/scenes", headers=auth).json()
+    assert (
+        scenes[0]["image_prompt_full"] == "noir, a door, wide 16:9 landscape composition"
+        and "main" in scenes[0]["assets"]
+        and scenes[1]["assets"] == {}
+    )
+    assert (
+        client.post(
+            f"/api/videos/{vid}/scenes/1/upload",
+            files={"file": ("x.png", b"nope", "image/png")},
+            headers=auth,
+        ).status_code
+        == 422
+    )
+    assert (
+        "[Cena 1] noir, a door"
+        in client.get(f"/api/videos/{vid}/prompts?format=txt", headers=auth).text
+    )
+    assert (
+        client.post(
+            f"/api/videos/{vid}/prompts/request", json={"instructions": "x"}, headers=auth
+        ).status_code
+        == 201
+    )
+    assert (
+        client.delete(
+            f"/api/videos/{vid}/assets/{up.json()['asset']['id']}", headers=auth
+        ).status_code
+        == 204
+    )
