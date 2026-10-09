@@ -164,3 +164,70 @@ def request_prompts(session: Session, video_id: int, instructions: str, actor: U
     return tasks.create_task(
         session, video_id, TaskType.GENERATE_PROMPTS, instructions.strip(), actor
     )
+
+
+# ----- Prompts em lote (várias imagens numa única mensagem) -----
+
+BATCH_PREAMBLE = (
+    "Gere as {n} imagens abaixo, UMA POR VEZ, na ordem, sem pular nenhuma e sem juntar várias numa só imagem. "
+    "Em cada imagem: proporção {aspect}; sem texto, legendas, logotipos nem marca d'água. "
+    "Estilo visual para TODAS: {style}. "
+    'Se não conseguir gerar todas de uma vez, gere o máximo possível e eu digo "continue" para você seguir do próximo item.'
+)
+ASPECT_PT = {False: "16:9 (paisagem/widescreen)", True: "9:16 (vertical)"}
+
+
+def batch_prompts(
+    session: Session,
+    video_id: int,
+    size: int = 10,
+    vertical: bool = False,
+    only_missing: bool = False,
+) -> dict[str, object]:
+    """Divide as cenas em lotes de `size` e monta UMA mensagem por lote (o estilo vai uma vez, no cabeçalho).
+
+    `size=0` = tudo numa mensagem só. Cenas sem prompt são puladas (e listadas em `skipped`)."""
+    from canaisdark.services import scene_assets
+
+    video = videos.get_video(session, video_id)
+    channel = channels.get_channel(session, video.channel_id)
+    scenes = approved_scenes(session, video_id)
+    amap = scene_assets.scene_assets(session, [s.id for s in scenes if s.id])
+    variant = "vertical" if vertical else "main"
+    chosen: list[Scene] = []
+    skipped: list[int] = []
+    for sc in scenes:
+        if vertical and not sc.wants_vertical:
+            continue
+        if only_missing and variant in amap.get(sc.id or 0, {}):
+            continue
+        if not sc.image_prompt.strip():
+            skipped.append(sc.index + 1)
+            continue
+        chosen.append(sc)
+    style = (
+        channel.visual_style_prompt.strip().rstrip(".,; ")
+        or "cinematográfico, consistente entre as imagens"
+    )
+    step = size if size > 0 else max(len(chosen), 1)
+    batches: list[dict[str, object]] = []
+    for i in range(0, len(chosen), step):
+        group = chosen[i : i + step]
+        lines = [
+            f"Cena {sc.index + 1:02d}: {sc.image_prompt.strip().rstrip('.,; ')}" for sc in group
+        ]
+        text = (
+            BATCH_PREAMBLE.format(n=len(group), aspect=ASPECT_PT[vertical], style=style)
+            + "\n\n"
+            + "\n".join(lines)
+        )
+        batches.append(
+            {
+                "number": len(batches) + 1,
+                "first": group[0].index + 1,
+                "last": group[-1].index + 1,
+                "count": len(group),
+                "text": text,
+            }
+        )
+    return {"batches": batches, "total": len(chosen), "skipped": skipped, "variant": variant}

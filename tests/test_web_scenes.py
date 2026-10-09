@@ -161,3 +161,29 @@ def test_requires_login(client: TestClient) -> None:
         ).status_code
         == 303
     )
+
+
+def test_prompt_batches_partial_and_plan_mtimes(ctx: dict[str, object]) -> None:
+    _approve(ctx, ["A.", "B.", "C.", "D."])
+    c: TestClient = ctx["c"]  # type: ignore[assignment]
+    vid = ctx["vid"]
+    scene_prompts.save_prompts(
+        ctx["session"],
+        vid,
+        [scene_prompts.PromptIn(scene_index=i, image_prompt=f"p{i}") for i in range(4)],
+    )  # type: ignore[arg-type]
+    html = c.get(f"/videos/{vid}/scenes/batches?size=3&variant=main").text
+    assert (
+        "Lote 1 (cenas 1–3, 3)" in html
+        and "Lote 2 (cenas 4–4, 1)" in html
+        and "Cena 01: p0" in html
+    )
+    assert "4 cena(s) em 1 mensagem" in c.get(f"/videos/{vid}/scenes/batches?size=0").text
+    assert "Nenhuma cena" in c.get(f"/videos/{vid}/scenes/batches?size=5&variant=vertical").text
+    page = c.get(f"/videos/{vid}/scenes").text
+    assert "Pedir várias imagens numa só mensagem" in page and 'name="size"' in page
+    plan = c.post(
+        f"/videos/{vid}/assets/batch-plan",
+        json={"names": ["x.png", "y.png"], "variant": "main", "mtimes": [200, 100]},
+    ).json()
+    assert [p["scene"] for p in plan["plan"]] == [1, 0] and plan["scene_count"] == 4

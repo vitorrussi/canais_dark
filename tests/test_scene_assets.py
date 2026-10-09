@@ -201,3 +201,20 @@ def test_stage_states_for_prompts_and_assets(
     assert states()["assets"] == "partial"  # a cena 2 pediu versão vertical
     scene_assets.save_upload(session, env["vid"], 1, png(1080, 1920), "2v.png", "vertical")  # type: ignore[arg-type]
     assert states()["assets"] == "done"
+
+
+def test_map_filenames_orders_unnumbered_by_mtime() -> None:
+    names = [
+        "Gemini_Generated_Image_zzz.png",
+        "Gemini_Generated_Image_aaa.png",
+        "Gemini_Generated_Image_mmm.png",
+    ]
+    # baixados na ordem: zzz (t=1), mmm (t=2), aaa (t=3) — nomes aleatórios, horário conta a história
+    res = scene_assets.map_filenames(names, 5, set(), mtimes=[1.0, 3.0, 2.0])
+    assert [r["scene"] for r in res] == [0, 2, 1]
+    nomtime = scene_assets.map_filenames(names, 5, set())
+    assert [r["scene"] for r in nomtime] == [
+        2,
+        0,
+        1,
+    ]  # sem horário: ordem natural do nome (aaa, mmm, zzz)

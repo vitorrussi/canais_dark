@@ -94,25 +94,44 @@
     if (ev === "drop" && e.dataTransfer.files[0]) { const slot = body.closest(".slot"); upload(e.dataTransfer.files[0], slot.closest(".scene-row").dataset.index, slot.dataset.variant, slot); }
   }));
 
-  // ---------- lote ----------
+  // ---------- lote (com pré-visualização e ordenação pelo horário do arquivo) ----------
   const batch = document.getElementById("batch-drop"), report = document.getElementById("batch-report");
+  const esc = (t) => { const d = document.createElement("div"); d.textContent = t; return d.innerHTML; };
   async function runBatch(files) {
     files = Array.from(files); if (!files.length) return;
     const variant = document.getElementById("batch-variant").value;
     report.textContent = "Planejando…";
-    const r = await fetch(`/videos/${videoId}/assets/batch-plan`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ names: files.map((f) => f.name), variant }) });
+    const r = await fetch(`/videos/${videoId}/assets/batch-plan`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ names: files.map((f) => f.name), variant, mtimes: files.map((f) => f.lastModified) }) });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) { toast(j.detail || "Falha ao planejar o lote", "error"); report.textContent = ""; return; }
-    report.innerHTML = ""; let ok = 0;
-    for (let i = 0; i < files.length; i++) {
-      const p = j.plan[i], line = document.createElement("div"); report.append(line);
-      if (p.scene === null) { line.textContent = `✗ ${files[i].name}: ${p.reason}`; continue; }
-      line.textContent = `… ${files[i].name} → cena ${p.scene + 1} (${p.reason})`;
-      const res = await upload(files[i], p.scene, variant, slotFor(p.scene, variant));
-      line.textContent = res.ok ? `✓ ${files[i].name} → cena ${p.scene + 1}${res.replaced ? " (substituiu)" : ""}` : `✗ ${files[i].name}: ${res.msg}`;
-      if (res.ok) ok++;
-    }
-    toast(`Lote concluído: ${ok}/${files.length} enviado(s).`, ok === files.length ? "success" : "info");
+    const n = j.scene_count, urls = [];
+    const sceneOptions = (sel) => `<option value="">— não enviar —</option>` + Array.from({ length: n }, (_, i) => `<option value="${i}" ${sel === i ? "selected" : ""}>Cena ${i + 1}</option>`).join("");
+    report.innerHTML = `<div class="help"><strong>Confira antes de enviar.</strong> Arquivos sem número no nome foram ordenados pelo horário em que foram criados/baixados. Ajuste a cena de cada um se precisar.</div>
+      <div class="batch-grid">${files.map((f, i) => { const p = j.plan[i]; const isImg = f.type.startsWith("image/"); const u = isImg ? URL.createObjectURL(f) : ""; if (u) urls.push(u);
+        return `<div class="batch-item" data-i="${i}">${isImg ? `<img src="${u}" alt="">` : `<div class="batch-vid muted">vídeo</div>`}<small class="batch-name">${esc(f.name)}</small>
+          <select class="batch-scene">${sceneOptions(p.scene)}</select><small class="muted">${esc(p.reason || "")}</small></div>`; }).join("")}</div>
+      <div class="stack-inline" style="margin-top:.6rem"><button type="button" id="batch-go">Enviar tudo</button><button type="button" class="secondary" id="batch-cancel">Cancelar</button><span id="batch-msg" class="muted"></span></div>`;
+    const items = () => Array.from(report.querySelectorAll(".batch-item"));
+    const check = () => { const seen = {}; let dup = 0; items().forEach((el) => { const v = el.querySelector("select").value; el.classList.remove("conflict");
+      if (v !== "") { if (seen[v] !== undefined) { dup++; el.classList.add("conflict"); items()[seen[v]].classList.add("conflict"); } else seen[v] = Number(el.dataset.i); } });
+      const ready = items().filter((el) => el.querySelector("select").value !== "").length;
+      document.getElementById("batch-msg").textContent = dup ? `⚠ ${dup} cena(s) com mais de uma imagem — ajuste antes de enviar.` : `${ready} de ${files.length} serão enviados.`;
+      document.getElementById("batch-go").disabled = !!dup || !ready; };
+    report.addEventListener("change", (e) => { if (e.target.matches(".batch-scene")) check(); }); check();
+    document.getElementById("batch-cancel").onclick = () => { urls.forEach(URL.revokeObjectURL); report.innerHTML = ""; };
+    document.getElementById("batch-go").onclick = async () => {
+      const plan = items().map((el) => ({ file: files[Number(el.dataset.i)], scene: el.querySelector("select").value })).filter((x) => x.scene !== "");
+      report.innerHTML = ""; let ok = 0;
+      for (const x of plan) {
+        const line = document.createElement("div"); report.append(line); line.textContent = `… ${x.file.name} → cena ${Number(x.scene) + 1}`;
+        const res = await upload(x.file, Number(x.scene), variant, slotFor(Number(x.scene), variant));
+        line.textContent = res.ok ? `✓ ${x.file.name} → cena ${Number(x.scene) + 1}${res.replaced ? " (substituiu)" : ""}` : `✗ ${x.file.name}: ${res.msg}`;
+        if (res.ok) ok++;
+      }
+      urls.forEach(URL.revokeObjectURL);
+      toast(`Lote concluído: ${ok}/${plan.length} enviado(s).`, ok === plan.length ? "success" : "info");
+    };
   }
   if (batch) {
     ["dragenter", "dragover"].forEach((ev) => batch.addEventListener(ev, (e) => { e.preventDefault(); batch.classList.add("drag"); }));

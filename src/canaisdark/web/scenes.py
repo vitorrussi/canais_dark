@@ -20,7 +20,7 @@ from canaisdark.services import (
     videos,
 )
 from canaisdark.services.errors import DomainError, NotFound
-from canaisdark.web.common import SessionDep, WebUser, back, render
+from canaisdark.web.common import SessionDep, WebUser, back, render, templates
 
 router = APIRouter(include_in_schema=False)
 
@@ -120,6 +120,35 @@ def scenes_page(
     )
 
 
+@router.get("/videos/{video_id}/scenes/batches", response_class=HTMLResponse)
+def prompt_batches(
+    request: Request,
+    user: WebUser,
+    session: SessionDep,
+    video_id: int,
+    size: int = 10,
+    variant: str = "main",
+    only_missing: int = 0,
+) -> Response:
+    """Parcial HTMX: prompts em lote (uma mensagem por lote) para colar no Gemini/ChatGPT."""
+    size = max(0, min(size, 200))
+    data = scene_prompts.batch_prompts(
+        session, video_id, size, variant == "vertical", bool(only_missing)
+    )
+    return templates.TemplateResponse(
+        request,
+        "_prompt_batches.html",
+        {
+            "user": user,
+            "video_id": video_id,
+            "size": size,
+            "variant": variant,
+            "only_missing": only_missing,
+            **data,
+        },
+    )
+
+
 @router.post("/videos/{video_id}/prompts/request")
 def request_prompts(
     request: Request,
@@ -183,6 +212,7 @@ async def upload(
 class BatchPlanRequest(BaseModel):
     names: list[str]
     variant: str = "main"
+    mtimes: list[float] | None = None  # File.lastModified (ms) de cada arquivo
 
 
 @router.post("/videos/{video_id}/assets/batch-plan")
@@ -195,7 +225,12 @@ def batch_plan(
         return JSONResponse({"detail": str(e)}, status_code=422)
     amap = scene_assets.scene_assets(session, [s.id for s in scenes if s.id])
     filled = {s.index for s in scenes if data.variant in amap.get(s.id or 0, {})}
-    return JSONResponse({"plan": scene_assets.map_filenames(data.names, len(scenes), filled)})
+    return JSONResponse(
+        {
+            "plan": scene_assets.map_filenames(data.names, len(scenes), filled, data.mtimes),
+            "scene_count": len(scenes),
+        }
+    )
 
 
 @router.post("/videos/{video_id}/assets/{asset_id}/delete")

@@ -36,6 +36,19 @@
   {% endif %}
 </div>
 
+<div class="card" style="margin-bottom:1rem" id="prompt-batches-card">
+  <header><h3>{{ ic("sparkles") }} Pedir várias imagens numa só mensagem</h3></header>
+  <p class="muted">Gera uma mensagem pronta para o Gemini/ChatGPT com várias cenas de uma vez (o estilo do canal entra uma vez só no cabeçalho). Chatbots costumam seguir melhor lotes de 8 a 12; para tentar tudo de uma vez, use “Todas”.</p>
+  <form class="row" id="batch-form" hx-get="/videos/{{ video.id }}/scenes/batches" hx-target="#batch-out" hx-trigger="change, load" hx-boost="false" hx-swap="innerHTML" style="align-items:end">
+    <div class="field" style="margin:0"><label for="bsize">Cenas por mensagem</label>
+      <select id="bsize" name="size"><option value="5">5</option><option value="8">8</option><option value="10" selected>10</option><option value="12">12</option><option value="20">20</option><option value="0">Todas</option></select></div>
+    <div class="field" style="margin:0"><label for="bvar">Versão</label>
+      <select id="bvar" name="variant"><option value="main">16:9</option><option value="vertical">9:16 (só cenas marcadas)</option></select></div>
+    <label class="check"><input type="checkbox" name="only_missing" value="1"> Só cenas sem imagem</label>
+  </form>
+  <div id="batch-out" style="margin-top:.75rem"><p class="muted">Carregando…</p></div>
+</div>
+
 <div class="card" id="batch-drop" style="margin-bottom:1rem;border-style:dashed;text-align:center">
   <strong>Envio em lote</strong> — arraste várias imagens aqui ou <label style="display:inline;color:var(--accent);cursor:pointer">escolha arquivos<input type="file" id="batch-input" multiple accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime" hidden></label>
   <div class="help">O número no nome define a cena (<code>03.png</code>, <code>cena-3.jpg</code>); sem número, preenche as cenas ainda sem imagem, em ordem.

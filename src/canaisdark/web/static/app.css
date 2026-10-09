@@ -190,3 +190,7 @@ img, svg { max-width: 100%; }
 #batch-drop.drag { border-color: var(--accent); background: var(--accent-soft); }
 .scene-row.complete { border-left: 3px solid var(--success); }
 @media (max-width: 900px) { .scene-row .layout-2 { grid-template-columns: minmax(0, 1fr) !important; } .slot { width: 100%; max-width: 320px; } .slot-body.v { width: 140px; } }
+.batch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .6rem; margin-top: .5rem; }
+.batch-item { border: 1px solid var(--border); border-radius: 8px; padding: .4rem; display: flex; flex-direction: column; gap: .25rem; background: var(--bg); } .batch-item.conflict { border-color: var(--danger); }
+.batch-item img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; } .batch-vid { aspect-ratio: 16/9; display: grid; place-items: center; background: var(--surface-2); border-radius: 6px; }
+.batch-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .batch-item select { padding: .2rem 1.6rem .2rem .4rem; font-size: .85rem; }

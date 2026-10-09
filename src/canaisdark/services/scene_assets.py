@@ -268,8 +268,16 @@ def _natural_key(name: str) -> list[object]:
     return [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", name)]
 
 
-def map_filenames(filenames: list[str], scene_count: int, filled: set[int]) -> list[dict[str, Any]]:
-    """Decide a cena (0-based) de cada arquivo: pelo número no nome; sem número, ocupa as cenas ainda vazias em ordem."""
+def map_filenames(
+    filenames: list[str],
+    scene_count: int,
+    filled: set[int],
+    mtimes: list[float] | None = None,
+) -> list[dict[str, Any]]:
+    """Decide a cena (0-based) de cada arquivo: pelo número no nome; sem número, ocupa as cenas ainda vazias.
+
+    A ordem dos arquivos sem número é a do horário de modificação (`mtimes`, ou seja, a ordem em que foram
+    baixados/gerados) e, em empate ou sem horário, a ordem natural do nome."""
     result: list[dict[str, Any]] = [{"name": n, "scene": None, "reason": ""} for n in filenames]
     taken: dict[int, int] = {}
     unnumbered: list[int] = []
@@ -286,7 +294,11 @@ def map_filenames(filenames: list[str], scene_count: int, filled: set[int]) -> l
         else:
             unnumbered.append(i)
     free = [s for s in range(scene_count) if s not in filled and s not in taken]
-    order = sorted(unnumbered, key=lambda i: _natural_key(filenames[i]))
+
+    def order_key(i: int) -> tuple[float, list[object]]:
+        return (mtimes[i] if mtimes and i < len(mtimes) else 0.0, _natural_key(filenames[i]))
+
+    order = sorted(unnumbered, key=order_key)
     for i in order:
         if free:
             result[i].update(scene=free.pop(0), reason="próxima cena sem imagem")

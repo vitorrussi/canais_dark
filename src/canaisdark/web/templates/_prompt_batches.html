@@ -1,0 +1,13 @@
+{% from "_macros.html" import ic %}
+{% if not batches %}
+<p class="muted">Nenhuma cena para pedir com este filtro{% if skipped %} (cenas sem prompt: {{ skipped|join(", ") }}){% endif %}.</p>
+{% else %}
+<p class="muted">{{ total }} cena(s) em {{ batches|length }} mensagem(ns).{% if skipped %} <span class="warn-text">Cenas sem prompt ficaram de fora: {{ skipped|join(", ") }}.</span>{% endif %}</p>
+<div class="stack-inline" style="margin-bottom:.5rem">
+  {% for b in batches %}
+  <button type="button" class="secondary sm" data-copy="#batch-text-{{ b.number }}">{{ ic("copy") }} Lote {{ b.number }} (cenas {{ b.first }}–{{ b.last }}, {{ b.count }})</button>
+  {% endfor %}
+</div>
+{% for b in batches %}<pre id="batch-text-{{ b.number }}" class="promptbox" hidden>{{ b.text }}</pre>{% endfor %}
+<details><summary class="muted" style="cursor:pointer">Ver o texto do 1º lote</summary><pre class="promptbox" style="max-height:14rem;overflow:auto;font-size:.78rem">{{ batches[0].text }}</pre></details>
+{% endif %}

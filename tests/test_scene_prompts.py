@@ -166,3 +166,44 @@ def test_request_prompts_creates_task_with_context(
         and "INGLÊS" in ctx["how_to"]
         and ctx["channel"]["visual_style_prompt"].startswith("dark")
     )
+
+
+def test_batch_prompts_sizes_and_filters(session: Session, env: dict[str, object]) -> None:
+    _approve(session, env, [f"Cena {i}" for i in range(1, 8)])
+    items = [
+        PromptIn(scene_index=i, image_prompt=f"scene {i + 1} view.", vertical=(i % 3 == 0))
+        for i in range(6)
+    ]  # a cena 7 fica sem prompt
+    scene_prompts.save_prompts(session, env["video_id"], items)  # type: ignore[arg-type]
+    data = scene_prompts.batch_prompts(session, env["video_id"], size=4)  # type: ignore[arg-type]
+    assert data["skipped"] == [7] and data["total"] == 6
+    batches = data["batches"]  # type: ignore[assignment]
+    assert [(b["first"], b["last"], b["count"]) for b in batches] == [(1, 4, 4), (5, 6, 2)]
+    first = batches[0]["text"]
+    assert (
+        first.startswith("Gere as 4 imagens abaixo")
+        and "UMA POR VEZ" in first
+        and "16:9 (paisagem/widescreen)" in first
+    )
+    assert (
+        "Estilo visual para TODAS: dark cinematic, 35mm grain" in first
+        and first.count("35mm grain") == 1
+    )  # estilo só no cabeçalho
+    assert (
+        "Cena 01: scene 1 view" in first
+        and "Cena 04: scene 4 view" in first
+        and "Cena 05" not in first
+    )
+    everything = scene_prompts.batch_prompts(session, env["video_id"], size=0)  # type: ignore[arg-type]
+    assert len(everything["batches"]) == 1 and everything["batches"][0]["count"] == 6  # type: ignore[index]
+    vert = scene_prompts.batch_prompts(session, env["video_id"], size=10, vertical=True)  # type: ignore[arg-type]
+    assert (
+        vert["total"] == 2
+        and "9:16 (vertical)" in vert["batches"][0]["text"]
+        and "Cena 04" in vert["batches"][0]["text"]
+    )  # type: ignore[index]
+    from canaisdark.services import scene_assets
+
+    assert scene_assets.coverage(
+        session, scene_prompts.approved_scenes(session, env["video_id"])
+    ) == (0, 9)  # type: ignore[arg-type]
