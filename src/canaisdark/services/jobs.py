@@ -4,7 +4,7 @@ from datetime import timedelta
 from typing import Any
 
 from sqlalchemy import update
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, or_, select
 
 from canaisdark.models import Job, JobStatus, JobType, User, Video
 from canaisdark.models.channel import utcnow
