@@ -15,6 +15,6 @@
 <form method="post" action="/channels">
   {% if error %}<div class="alert">{{ error }}</div>{% endif %}
   {% include "_channel_form.html" %}
-  <div class="form-actions"><button>Criar canal</button><a class="btn secondary" href="/">Cancelar</a></div>
+  <div class="form-actions sticky-save"><button>Criar canal</button><a class="btn secondary" href="/">Cancelar</a></div>
 </form>
 {% endblock %}

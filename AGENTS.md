@@ -41,7 +41,10 @@ Etapa 2.4 (concluída): `/connect` (comando `claude mcp add` pronto + gerar/rota
 de status, desarquivar canal, instruções extras por vídeo (`VideoCreate.instructions`), painel inicial (`services/dashboard.py`: "precisa da sua
 atenção" + atividade recente), atalhos de teclado (g c/p/k, /, n, ?), prompt "processar tudo" em `/tasks`.
 Cuidado: chaves de contexto de template não podem colidir com parâmetros de `render()` (ex.: use `status_filter`, nunca `status`).
-**Fase 2 e extensões 2.1–2.4 concluídas.** Próxima: Fase 3 (Jobs + ElevenLabs) — exige chave da API e `voice_id`; avisar o usuário antes de planejar.
+Etapa 2.5 (polimento visual, concluída): sem overflow horizontal no celular (testado em 11 páginas com iframe de 390px), `select` com seta própria,
+favicon, barra de carregamento do htmx, proteção contra envio duplo, foco visível, barra de salvar fixa nos formulários de canal, menus que fecham ao clicar fora,
+`prefers-reduced-motion`. Dica de teste responsivo: `resize_window` do Chrome não muda o viewport; use iframes de 390px e compare `scrollWidth` x `clientWidth`.
+**Fase 2 e extensões 2.1–2.5 concluídas.** Próxima: Fase 3 (Jobs + ElevenLabs) — exige chave da API e `voice_id`; avisar o usuário antes de planejar.
 
 ## Estrutura
 `src/canaisdark/`: `config.py`, `logging.py`, `db.py`, `models/`, `services/` (lógica),

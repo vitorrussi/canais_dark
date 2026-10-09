@@ -65,7 +65,7 @@
 <form method="post" action="/channels/{{ channel.slug }}">
   {% if error %}<div class="alert">{{ error }}</div>{% endif %}
   {% include "_channel_form.html" %}
-  <div class="form-actions"><button>Salvar alterações</button></div>
+  <div class="form-actions sticky-save"><button>Salvar alterações</button><span class="muted">Mudanças valem para os próximos roteiros.</span></div>
 </form>
 {% if channel.is_archived %}
 <div class="card" style="margin-top:1rem"><header><h3>Canal arquivado</h3></header>

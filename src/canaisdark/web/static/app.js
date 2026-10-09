@@ -12,6 +12,18 @@
   window.studioToast = toast;
 
   function flushFlash() { const f = document.getElementById("flash-data"); if (f) { toast(f.dataset.msg, f.dataset.kind); f.remove(); } }
+  // Barra de carregamento (htmx) e proteção contra envio duplo
+  const bar = () => document.getElementById("loadbar");
+  document.addEventListener("htmx:beforeRequest", () => { const b = bar(); if (b) { b.className = "on"; } });
+  document.addEventListener("htmx:afterRequest", () => { const b = bar(); if (b) { b.className = "done"; setTimeout(() => { b.className = ""; }, 400); } });
+  document.addEventListener("submit", (e) => {
+    const btn = e.target.querySelector && e.target.querySelector("button:not([type=button])");
+    if (btn && !e.defaultPrevented) setTimeout(() => { btn.disabled = true; }, 0);
+  });
+  window.addEventListener("pageshow", () => document.querySelectorAll("button:disabled").forEach((b) => { if (!b.hasAttribute("disabled-by-page")) b.disabled = false; }));
+  // fecha menus <details class="menu"> ao clicar fora
+  document.addEventListener("click", (e) => document.querySelectorAll("details.menu[open]").forEach((d) => { if (!d.contains(e.target)) d.removeAttribute("open"); }));
+
   document.addEventListener("DOMContentLoaded", flushFlash);
   document.addEventListener("htmx:afterSettle", flushFlash);
   document.addEventListener("htmx:afterSwap", () => document.body.classList.remove("menu-open"));
