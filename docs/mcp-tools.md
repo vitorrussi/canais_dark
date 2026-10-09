@@ -30,6 +30,7 @@ ferramenta de escrita → `complete_task` (ou `fail_task` / `release_task`). A a
 | `complete_task(task_id, result_summary)` | só quem reservou (ou reserva expirada) |
 | `fail_task(task_id, reason)` | idem |
 | `release_task(task_id)` | devolve à fila |
+| `save_scene_prompts(video_id, prompts, task_id?)` | prompts de imagem por cena (roteiro aprovado); `prompts=[{scene_index (0-based), image_prompt, video_prompt?, vertical?, key_scene?}]`; devolve `missing_scene_indexes` |
 | `save_script(video_id, scenes, task_id?)` | nova versão do roteiro; `scenes=[{text, notes?}]`, 1–200 cenas |
 
 Prompt: `process_pending`.
@@ -42,7 +43,7 @@ Prompt: `process_pending`.
 Narração/alinhamento só são disparados por pessoas no site (gastam créditos).
 
 ## Planejadas
-`save_scene_prompts`, `save_timeline`, `save_metadata`, `save_short_selections` (Fases 4–6);
+`save_timeline`, `save_metadata`, `save_short_selections` (Fases 4–6);
 `start_render`, `start_shorts` (Fases 5, 6). Regra: nenhuma tool bloqueia — operações longas criam Job e retornam `job_id`.
 
 ## Auth e extensão

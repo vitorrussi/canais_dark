@@ -7,6 +7,7 @@
 | **Canal** | Aba Vídeos (busca por título/tema, filtro de status, novo vídeo com instruções extras, “Já tenho o roteiro”, importar/exportar) e aba Configurações (inclui palavras por cena, regras e instruções padrão) |
 | **Vídeo** | Tema, cartão do Claude (prompt copiável), roteiro com versões (editar, baixar, comparar, aprovar, pedir revisão), pipeline de etapas, detalhes editáveis, duplicar, importar/exportar |
 | **Editor de roteiro** | Cenas ou texto corrido, dividir/mesclar/frases, localizar-substituir (regex), limpeza, desfazer/refazer, rascunho local; salvar = nova versão |
+| **Storyboard** (`/videos/<id>/scenes`) | Prompts por cena (editáveis, copiar completo/9:16, pacote .txt/.md/.json), upload por cena e em lote com miniaturas e avisos |
 | **Jobs** (`/jobs`) | Histórico dos jobs de narração/alinhamento, cancelar e tentar de novo |
 | **Pendências** (`/tasks`) | Tarefas abertas e recentes, prompt “processar tudo” |
 | **Conectar Claude** (`/connect`) | Comando do MCP pronto, gerar novo token (mostrado uma vez), solução de problemas |

@@ -48,7 +48,8 @@ favicon, barra de carregamento do htmx, proteção contra envio duplo, foco vis�
 legendas `.srt/.ass`, invalidação automática, card de Narração com progresso, `/jobs`, REST e MCP `get_job_status/list_jobs`. Detalhes: `docs/jobs-and-narration.md`.
 Dois processos: `make serve` + `make worker`. `ELEVENLABS_FAKE=true` = demonstração sem créditos. Testes usam `FakeElevenLabs` (nunca rede). Segredo `ELEVENLABS_API_KEY` só no `.env`.
 Cancelamento/desfazer: `Job.run_after` (janela `NARRATION_UNDO_SECONDS`), TTS por streaming com `should_cancel`, `TTS_CHUNK_CHARS=1500`. Escolha de voz/modelo: `web/voices.py`, `services/voices.py`. Plano grátis NÃO usa vozes da biblioteca via API.
-**Próxima: Fase 4 (Prompts e assets)** — não exige chaves externas (uploads manuais); lembrar do limite de 100 MB do Cloudflare.
+**Fase 4 (Prompts e assets) concluída**: `Scene.image_prompt/video_prompt/wants_vertical/is_key_scene`, `services/scene_prompts.py` (compose, save, carry-over ao aprovar, pacote), `services/scene_assets.py` (upload validado por conteúdo, miniaturas Pillow, substituir/remover, lote por nome), storyboard `/videos/<id>/scenes` (`web/scenes.py`, `static/scenes.js`), MCP `save_scene_prompts`. Detalhes: `docs/prompts-and-assets.md`. Upload = 1 arquivo/requisição (Cloudflare 100 MB).
+**Próxima: Fase 5 (Render)** — precisa de **ffmpeg instalado** (`sudo apt install ffmpeg`); avisar o usuário antes de planejar.
 
 ## Estrutura
 `src/canaisdark/`: `config.py`, `logging.py`, `db.py`, `models/`, `services/` (lógica),
