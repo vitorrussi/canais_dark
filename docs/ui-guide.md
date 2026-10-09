@@ -1,0 +1,17 @@
+# Guia da interface
+
+| Onde | O que faz |
+|---|---|
+| **Canais** (`/`) | Cards dos canais, painel “Precisa da sua atenção” (roteiros para aprovar, tarefas que falharam), atividade recente, mostrar arquivados, importar |
+| **Novo canal** (`/channels/new`) | Formulário com ajuda e exemplo em cada campo + modelos (Mistério, História sombria, Curiosidades, True crime) |
+| **Canal** | Aba Vídeos (busca por título/tema, filtro de status, novo vídeo com instruções extras, “Já tenho o roteiro”, importar/exportar) e aba Configurações (inclui palavras por cena, regras e instruções padrão) |
+| **Vídeo** | Tema, cartão do Claude (prompt copiável), roteiro com versões (editar, baixar, comparar, aprovar, pedir revisão), pipeline de etapas, detalhes editáveis, duplicar, importar/exportar |
+| **Editor de roteiro** | Cenas ou texto corrido, dividir/mesclar/frases, localizar-substituir (regex), limpeza, desfazer/refazer, rascunho local; salvar = nova versão |
+| **Pendências** (`/tasks`) | Tarefas abertas e recentes, prompt “processar tudo” |
+| **Conectar Claude** (`/connect`) | Comando do MCP pronto, gerar novo token (mostrado uma vez), solução de problemas |
+
+## Atalhos
+`g c` canais · `g p` pendências · `g k` conectar Claude · `/` buscar · `n` novo (canal ou vídeo) · `?` ajuda. No editor: `Ctrl+S` salvar, `Ctrl+Enter` dividir, `Alt+↑/↓` mover, `Ctrl+Z/Y`, `Ctrl+H` localizar.
+
+## Tema
+Botão de sol/lua no topo alterna escuro/claro (salvo no navegador).

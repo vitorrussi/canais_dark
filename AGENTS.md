@@ -10,7 +10,7 @@ narração → imagens → render → Shorts → upload. O Claude atua via servi
 **a API do Claude nunca é usada**. Roda em servidor doméstico via Cloudflare Tunnel, 2 usuários.
 
 ## Status
-- Fases 0 (Fundação), 1 (Canais e vídeos) e 2 (MCP + ClaudeTasks): **concluídas**. Próxima: Fase 3 (Jobs + ElevenLabs) — exige chave da API do ElevenLabs e voice_id; avisar o usuário antes de planejar.
+- Fases 0, 1 e 2 (incl. extensões 2.1–2.4: UI, editor, import/export, QoL): **concluídas**. Próxima: Fase 3 (Jobs + ElevenLabs) — exige chave da API do ElevenLabs e voice_id; avisar o usuário antes de planejar.
 
 ## Stack
 Python 3.12+, uv, FastAPI, SQLModel + SQLite (WAL) + Alembic, pydantic-settings, structlog,
@@ -36,7 +36,12 @@ exportar/importar vídeo e canal (`/videos/{id}/export`, `/channels/{slug}/expor
 (`canaisdark.video|channel|script`, v1) em `schemas/transfer.py`; lógica em `services/transfer.py` e `services/script_formats.py`;
 rotas em `web/transfer.py` e `api/transfer.py`. Importar SEMPRE cria algo novo (autor `import:<id>`), nunca sobrescreve; canal importado
 sem nome explícito ganha sufixo " (2)". `htmx-config` em `base.html` faz o htmx trocar respostas 404/422 (senão erros de formulário somem).
-Próxima: 2.4 configuração/QoL (ver plano).
+Etapa 2.4 (concluída): `/connect` (comando `claude mcp add` pronto + gerar/rotacionar token; o valor aparece uma única vez), campos extras do canal
+(`words_per_scene`, `script_rules`, `default_script_instructions` → vão no contexto de `claim_next_task`), editar/duplicar vídeo, busca (`?q=`) e filtro
+de status, desarquivar canal, instruções extras por vídeo (`VideoCreate.instructions`), painel inicial (`services/dashboard.py`: "precisa da sua
+atenção" + atividade recente), atalhos de teclado (g c/p/k, /, n, ?), prompt "processar tudo" em `/tasks`.
+Cuidado: chaves de contexto de template não podem colidir com parâmetros de `render()` (ex.: use `status_filter`, nunca `status`).
+**Fase 2 e extensões 2.1–2.4 concluídas.** Próxima: Fase 3 (Jobs + ElevenLabs) — exige chave da API e `voice_id`; avisar o usuário antes de planejar.
 
 ## Estrutura
 `src/canaisdark/`: `config.py`, `logging.py`, `db.py`, `models/`, `services/` (lógica),
