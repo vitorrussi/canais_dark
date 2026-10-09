@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import ic, state_badge %}
+{% from "_macros.html" import ic, state_badge, field %}
 {% block title %}{{ video.title or "Vídeo #" ~ video.id }}{% endblock %}
 {% block crumb %}Vídeo #{{ video.id }}{% endblock %}
 {% block content %}
@@ -95,6 +95,21 @@
           <span class="label">{{ s.label }}</span>{% if s.state != "not_started" %}{{ state_badge(s.state, state_labels) }}{% endif %}</li>
         {% endfor %}
       </ul>
+    </div>
+    <div class="card">
+      <header><h3>Detalhes</h3></header>
+      <details {% if video.title or video.tags %}{% else %}open{% endif %}>
+        <summary class="muted" style="cursor:pointer">Editar título, tema, idioma e tags</summary>
+        <form method="post" action="/videos/{{ video.id }}/edit" style="margin-top:.75rem">
+          {{ field("title", "Título", video.title, "Nome do vídeo (no YouTube virá da etapa de metadados).", "O desaparecimento de Flannan Isles") }}
+          {{ field("topic", "Tema", video.topic, "O que o Claude lê como pedido principal.", kind="textarea", rows=3) }}
+          {{ field("language", "Idioma", video.language, "", "pt-BR") }}
+          {{ field("tags", "Tags (vírgula)", video.tags|join(", "), "", "mistério, farol, 1900") }}
+          {{ field("description", "Descrição", video.description, "", kind="textarea", rows=2) }}
+          <button class="secondary sm">Salvar detalhes</button>
+        </form>
+      </details>
+      <form method="post" action="/videos/{{ video.id }}/duplicate" style="margin-top:.75rem"><button class="secondary sm" data-confirm="Duplicar este vídeo (com o último roteiro)?">{{ ic("copy") }} Duplicar vídeo</button></form>
     </div>
     <div class="card">
       <header><h3>Importar e exportar</h3></header>

@@ -11,14 +11,21 @@
   </div>
 </div>
 <div class="tabs">
-  <a href="/channels/{{ channel.slug }}" class="{{ 'active' if tab != 'settings' }}">Vídeos ({{ videos|length }})</a>
+  <a href="/channels/{{ channel.slug }}" class="{{ 'active' if tab != 'settings' }}">Vídeos ({{ total_videos }})</a>
   <a href="/channels/{{ channel.slug }}?tab=settings" class="{{ 'active' if tab == 'settings' }}">Configurações</a>
 </div>
 
 {% if tab != "settings" %}
 <div class="layout-2">
-  <div class="card">
+  <div class="card" id="video-list">
     <header><h2>Vídeos</h2></header>
+    {% if total_videos > 3 or q or status_filter %}
+    <form class="row" method="get" action="/channels/{{ channel.slug }}" style="margin-bottom:.75rem"
+          hx-get="/channels/{{ channel.slug }}" hx-target="#video-list" hx-select="#video-list" hx-swap="outerHTML" hx-push-url="true" hx-trigger="input changed delay:300ms from:find input, change from:find select">
+      <input type="search" name="q" value="{{ q }}" placeholder="Buscar por título ou tema…  ( / )" data-search autocomplete="off">
+      <select name="status"><option value="">Todos os status</option>{% for st in statuses %}<option value="{{ st }}" {{ "selected" if st == status_filter }}>{{ st }}</option>{% endfor %}</select>
+    </form>
+    {% endif %}
     {% for v in videos %}
     {% set info = vinfo.get(v.id, {}) %}
     <div class="list-row">
@@ -30,7 +37,8 @@
       <span class="badge">{{ v.status }}</span>
     </div>
     {% else %}
-    {% call empty("film", "Nenhum vídeo ainda", "Descreva o tema ao lado e o Claude escreve o roteiro.") %}{% endcall %}
+    {% if q or status_filter %}{% call empty("film", "Nada encontrado", "Tente outra busca ou limpe os filtros.") %}{% endcall %}
+    {% else %}{% call empty("film", "Nenhum vídeo ainda", "Descreva o tema ao lado e o Claude escreve o roteiro.") %}{% endcall %}{% endif %}
     {% endfor %}
   </div>
   {% if not channel.is_archived %}
@@ -38,6 +46,7 @@
   <form class="card accent" method="post" action="/channels/{{ channel.slug }}/videos">
     <header><h3>{{ ic("plus") }} Novo vídeo</h3></header>
     {{ field("topic", "Tema / conteúdo de entrada", "", "Descreva o assunto, o ângulo e o que não pode faltar. Quanto mais específico, melhor o roteiro.", "O farol de Flannan Isles: 3 guardiões desapareceram em 1900. Foco no mistério e nas hipóteses, sem sensacionalismo.", kind="textarea", rows=5, required=true) }}
+    {{ field("instructions", "Instruções extras para o Claude (opcional)", "", "Pedidos só para este vídeo, além das regras do canal.", "Use um tom mais investigativo e termine citando as duas teorias principais.", kind="textarea", rows=2) }}
     <button>Criar vídeo e pedir roteiro</button>
   </form>
   <div class="card">
@@ -58,6 +67,10 @@
   {% include "_channel_form.html" %}
   <div class="form-actions"><button>Salvar alterações</button></div>
 </form>
+{% if channel.is_archived %}
+<div class="card" style="margin-top:1rem"><header><h3>Canal arquivado</h3></header>
+  <form method="post" action="/channels/{{ channel.slug }}/unarchive"><button>Reativar canal</button></form></div>
+{% endif %}
 {% if not channel.is_archived %}
 <div class="card" style="margin-top:1rem">
   <header><h3>Zona de risco</h3></header>

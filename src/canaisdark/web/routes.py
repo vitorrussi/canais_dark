@@ -5,9 +5,9 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import ValidationError
 from sqlmodel import Session, select
 
-from canaisdark.models import Channel, User
+from canaisdark.models import Channel, User, VideoStatus
 from canaisdark.schemas.channel import ChannelCreate, ChannelUpdate
-from canaisdark.schemas.video import VideoCreate
+from canaisdark.schemas.video import VideoCreate, VideoUpdate
 from canaisdark.services import (
     channels,
     scripts,
@@ -106,13 +106,14 @@ def logout(request: Request) -> Response:
 
 
 @router.get("/", response_class=HTMLResponse)
-def home(request: Request, user: WebUser, session: SessionDep) -> Response:
+def home(request: Request, user: WebUser, session: SessionDep, archived: int = 0) -> Response:
     return render(
         request,
         "channels.html",
         user,
-        channels=channels.list_channels(session),
+        channels=channels.list_channels(session, include_archived=bool(archived)),
         stats=channels.stats_by_channel(session),
+        show_archived=bool(archived),
     )
 
 
@@ -142,11 +143,23 @@ async def create_channel(request: Request, user: WebUser, session: SessionDep) -
     return back(request, f"/channels/{channel.slug}", ok=f"Canal “{channel.name}” criado")
 
 
+def _parse_status(value: str | None) -> VideoStatus | None:
+    try:
+        return VideoStatus(value) if value else None
+    except ValueError:
+        return None
+
+
 def _channel_ctx(
-    session: Session, channel: Channel, tab: str = "videos", **extra: Any
+    session: Session,
+    channel: Channel,
+    tab: str = "videos",
+    q: str = "",
+    status: str = "",
+    **extra: Any,
 ) -> dict[str, Any]:
     assert channel.id is not None
-    chan_videos = videos.list_videos(session, channel.id)
+    chan_videos = videos.list_videos(session, channel.id, _parse_status(status), q)
     vinfo: dict[int | None, dict[str, object]] = {}
     for v in chan_videos:
         stages = video_status.get_stages(session, v)
@@ -161,6 +174,10 @@ def _channel_ctx(
         "videos": chan_videos,
         "vinfo": vinfo,
         "tab": tab,
+        "q": q,
+        "status_filter": status,
+        "total_videos": len(videos.list_videos(session, channel.id)),
+        "statuses": [s.value for s in VideoStatus],
         "crumbs": [("Canais", "/")],
         **extra,
     }
@@ -168,10 +185,16 @@ def _channel_ctx(
 
 @router.get("/channels/{slug}", response_class=HTMLResponse)
 def channel_page(
-    request: Request, user: WebUser, session: SessionDep, slug: str, tab: str = "videos"
+    request: Request,
+    user: WebUser,
+    session: SessionDep,
+    slug: str,
+    tab: str = "videos",
+    q: str = "",
+    status: str = "",
 ) -> Response:
     channel = channels.get_channel_by_slug(session, slug)
-    return render(request, "channel.html", user, **_channel_ctx(session, channel, tab))
+    return render(request, "channel.html", user, **_channel_ctx(session, channel, tab, q, status))
 
 
 @router.post("/channels/{slug}")
@@ -205,12 +228,19 @@ def archive_channel(request: Request, user: WebUser, session: SessionDep, slug: 
 
 @router.post("/channels/{slug}/videos")
 def create_video(
-    request: Request, user: WebUser, session: SessionDep, slug: str, topic: Annotated[str, Form()]
+    request: Request,
+    user: WebUser,
+    session: SessionDep,
+    slug: str,
+    topic: Annotated[str, Form()],
+    instructions: Annotated[str, Form()] = "",
 ) -> Response:
     channel = channels.get_channel_by_slug(session, slug)
     assert channel.id is not None
     try:
-        video = videos.create_video(session, channel.id, VideoCreate(topic=topic.strip()), user)
+        video = videos.create_video(
+            session, channel.id, VideoCreate(topic=topic.strip(), instructions=instructions), user
+        )
     except (DomainError, ValidationError) as e:
         return render(
             request,
@@ -318,6 +348,58 @@ def cancel_task(request: Request, user: WebUser, session: SessionDep, task_id: i
     except DomainError as e:
         return back(request, f"/videos/{task.video_id}", e)
     return back(request, request.headers.get("referer", f"/videos/{task.video_id}"))
+
+
+@router.post("/videos/{video_id}/edit")
+def edit_video(
+    request: Request,
+    user: WebUser,
+    session: SessionDep,
+    video_id: int,
+    title: Annotated[str, Form()] = "",
+    topic: Annotated[str, Form()] = "",
+    language: Annotated[str, Form()] = "",
+    tags: Annotated[str, Form()] = "",
+    description: Annotated[str, Form()] = "",
+) -> Response:
+    try:
+        videos.update_video(
+            session,
+            video_id,
+            VideoUpdate(
+                title=title.strip(),
+                topic=topic.strip() or None,
+                language=language.strip() or None,
+                tags=[t.strip() for t in tags.split(",") if t.strip()],
+                description=description,
+            ),
+        )
+    except (DomainError, ValidationError) as e:
+        return back(request, f"/videos/{video_id}", error=ValueError(error_text(e)))
+    return back(request, f"/videos/{video_id}", ok="Detalhes do vídeo salvos")
+
+
+@router.post("/videos/{video_id}/duplicate")
+def duplicate_video(
+    request: Request,
+    user: WebUser,
+    session: SessionDep,
+    video_id: int,
+    with_script: Annotated[str | None, Form()] = "on",
+) -> Response:
+    try:
+        new = videos.duplicate_video(session, video_id, user, bool(with_script))
+    except DomainError as e:
+        return back(request, f"/videos/{video_id}", error=e)
+    return back(request, f"/videos/{new.id}", ok="Vídeo duplicado")
+
+
+@router.post("/channels/{slug}/unarchive")
+def unarchive_channel(request: Request, user: WebUser, session: SessionDep, slug: str) -> Response:
+    channel = channels.get_channel_by_slug(session, slug)
+    assert channel.id is not None
+    channels.unarchive_channel(session, channel.id)
+    return back(request, f"/channels/{slug}", ok="Canal reativado")
 
 
 @router.post("/videos/{video_id}/delete")

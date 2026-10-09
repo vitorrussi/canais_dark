@@ -6,6 +6,7 @@ from sqlmodel import Session
 
 from canaisdark.config import get_settings
 from canaisdark.models import User
+from canaisdark.schemas.script import SceneIn
 
 
 @pytest.fixture
@@ -195,3 +196,51 @@ def test_channel_script_settings_flow_to_claude_context(
     assert ctx["default_script_instructions"] == "Fechar com pergunta"
     page = logged.get("/channels/regras?tab=settings").text
     assert "Nunca citar vítimas" in page and 'value="55"' in page
+
+
+def test_edit_duplicate_search_unarchive(
+    logged: TestClient, session: Session, user_token: tuple[User, str]
+) -> None:
+    from canaisdark.services import scripts, tasks, videos
+
+    logged.post("/channels", data={"name": "Canal Teste"})
+    r = logged.post(
+        "/channels/canal-teste/videos",
+        data={"topic": "Farol abandonado", "instructions": "tom investigativo"},
+    )
+    vid = int(str(r.url).rsplit("/", 1)[1])
+    assert tasks.list_tasks(session, video_id=vid)[0].instructions == "tom investigativo"
+
+    r = logged.post(
+        f"/videos/{vid}/edit",
+        data={
+            "title": "O Farol",
+            "topic": "Farol abandonado",
+            "language": "en-US",
+            "tags": "a, b",
+            "description": "d",
+        },
+    )
+    assert "Detalhes do vídeo salvos" in r.text
+    video = videos.get_video(session, vid)
+    assert (video.title, video.language, video.tags) == ("O Farol", "en-US", ["a", "b"])
+
+    scripts.save_script(session, vid, [SceneIn(text="Um"), SceneIn(text="Dois")], user_token[0])
+    r = logged.post(f"/videos/{vid}/duplicate")
+    new_id = int(str(r.url).rsplit("/", 1)[1])
+    assert new_id != vid and "O Farol (cópia)" in r.text and "Vídeo duplicado" in r.text
+    assert len(scripts.get_script(session, new_id)[1]) == 2
+    assert tasks.list_tasks(session, video_id=new_id) == []
+
+    page = logged.get("/channels/canal-teste?q=cópia").text
+    assert "O Farol (cópia)" in page and "Farol abandonado" not in page.split('id="video-list"')[
+        1
+    ].split("Novo vídeo")[0].replace("O Farol (cópia)", "")
+    assert "Nada encontrado" in logged.get("/channels/canal-teste?q=zzz").text
+    assert "Nada encontrado" in logged.get("/channels/canal-teste?status=published").text
+
+    logged.post("/channels/canal-teste/archive")
+    assert (
+        "Canal Teste" not in logged.get("/").text and "arquivado" in logged.get("/?archived=1").text
+    )
+    assert "Canal reativado" in logged.post("/channels/canal-teste/unarchive").text

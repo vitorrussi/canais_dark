@@ -5,14 +5,14 @@
 {% block content %}
 <div class="page-head">
   <div><h1>Canais</h1><p class="muted">Cada canal tem sua voz, estilo visual e tom de roteiro próprios.</p></div>
-  <div class="actions"><a class="btn secondary" href="/import">{{ ic("upload") }} Importar</a><a class="btn" href="/channels/new">{{ ic("plus") }} Novo canal</a></div>
+  <div class="actions"><a class="btn ghost" href="/?archived={{ 0 if show_archived else 1 }}">{{ "Ocultar arquivados" if show_archived else "Mostrar arquivados" }}</a><a class="btn secondary" href="/import">{{ ic("upload") }} Importar</a><a class="btn" href="/channels/new">{{ ic("plus") }} Novo canal</a></div>
 </div>
 {% if channels %}
 <div class="grid cols-3">
   {% for c in channels %}
   {% set st = stats.get(c.id, {"videos": 0, "open_tasks": 0}) %}
   <a class="card card-link" href="/channels/{{ c.slug }}">
-    <h3>{{ c.name }}</h3>
+    <h3>{{ c.name }} {% if c.is_archived %}<span class="badge stale">arquivado</span>{% endif %}</h3>
     <p class="muted">{{ (c.description or "Sem descrição ainda.")[:110] }}</p>
     <div class="meta">
       <span>{{ ic("film") }} {{ st.videos }} vídeo{{ "s" if st.videos != 1 }}</span>

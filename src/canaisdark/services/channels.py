@@ -87,3 +87,13 @@ def stats_by_channel(session: Session) -> dict[int, dict[str, int]]:
     for channel_id, count in open_rows:
         stats.setdefault(channel_id, {"videos": 0, "open_tasks": 0})["open_tasks"] = count
     return stats
+
+
+def unarchive_channel(session: Session, channel_id: int) -> Channel:
+    channel = get_channel(session, channel_id)
+    channel.is_archived = False
+    channel.updated_at = utcnow()
+    session.add(channel)
+    session.commit()
+    session.refresh(channel)
+    return channel
