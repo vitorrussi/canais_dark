@@ -45,7 +45,7 @@
   <div class="stack">
   <form class="card accent" method="post" action="/channels/{{ channel.slug }}/videos">
     <header><h3>{{ ic("plus") }} Novo vídeo</h3></header>
-    {{ field("topic", "Tema / conteúdo de entrada", "", "Descreva o assunto, o ângulo e o que não pode faltar. Quanto mais específico, melhor o roteiro.", "O farol de Flannan Isles: 3 guardiões desapareceram em 1900. Foco no mistério e nas hipóteses, sem sensacionalismo.", kind="textarea", rows=5, required=true) }}
+    {{ field("topic", "Tema / conteúdo de entrada", "", "Descreva o assunto, o ângulo e o que não pode faltar. Quanto mais específico, melhor o roteiro.", "O farol de Flannan Isles: 3 guardiões desapareceram em 1900. Foco no mistério e nas hipóteses, sem sensacionalismo.", kind="textarea", rows=5, required=true, attrs="data-new") }}
     {{ field("instructions", "Instruções extras para o Claude (opcional)", "", "Pedidos só para este vídeo, além das regras do canal.", "Use um tom mais investigativo e termine citando as duas teorias principais.", kind="textarea", rows=2) }}
     <button>Criar vídeo e pedir roteiro</button>
   </form>

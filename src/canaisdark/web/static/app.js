@@ -16,6 +16,22 @@
   document.addEventListener("htmx:afterSettle", flushFlash);
   document.addEventListener("htmx:afterSwap", () => document.body.classList.remove("menu-open"));
 
+  // Atalhos de teclado (ignorados ao digitar em campos)
+  let gPending = 0;
+  document.addEventListener("keydown", (e) => {
+    const t = e.target, typing = t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
+    if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (gPending && Date.now() - gPending < 1000) {
+      const dest = { c: "/", p: "/tasks", k: "/connect" }[e.key];
+      gPending = 0; if (dest) { e.preventDefault(); window.location.href = dest; } return;
+    }
+    gPending = 0;
+    if (e.key === "g") gPending = Date.now();
+    else if (e.key === "/") { const el = document.querySelector("[data-search]"); if (el) { e.preventDefault(); el.focus(); el.select(); } }
+    else if (e.key === "n") { const el = document.querySelector("[data-new]"); if (el) { e.preventDefault(); if (/^(INPUT|TEXTAREA)$/.test(el.tagName)) el.focus(); else el.click(); } }
+    else if (e.key === "?") toast("Atalhos: g c (canais) · g p (pendências) · g k (conectar Claude) · / (buscar) · n (novo)", "info");
+  });
+
   document.addEventListener("click", async (e) => {
     const conf = e.target.closest("[data-confirm]");
     if (conf && !window.confirm(conf.dataset.confirm)) { e.preventDefault(); e.stopPropagation(); return; }

@@ -5,8 +5,20 @@
 {% block content %}
 <div class="page-head">
   <div><h1>Canais</h1><p class="muted">Cada canal tem sua voz, estilo visual e tom de roteiro próprios.</p></div>
-  <div class="actions"><a class="btn ghost" href="/?archived={{ 0 if show_archived else 1 }}">{{ "Ocultar arquivados" if show_archived else "Mostrar arquivados" }}</a><a class="btn secondary" href="/import">{{ ic("upload") }} Importar</a><a class="btn" href="/channels/new">{{ ic("plus") }} Novo canal</a></div>
+  <div class="actions"><a class="btn ghost" href="/?archived={{ 0 if show_archived else 1 }}">{{ "Ocultar arquivados" if show_archived else "Mostrar arquivados" }}</a><a class="btn secondary" href="/import">{{ ic("upload") }} Importar</a><a class="btn" href="/channels/new" data-new>{{ ic("plus") }} Novo canal</a></div>
 </div>
+{% if attention %}
+<div class="card accent" style="margin-bottom:1.25rem">
+  <header><h3>{{ ic("alert") }} Precisa da sua atenção</h3></header>
+  {% for it in attention[:6] %}
+  <div class="list-row">
+    <div class="grow"><a class="title" href="/videos/{{ it.video.id }}">{{ it.video.title or it.video.topic[:80] }}</a>
+      <small>{{ it.channel.name }} · {{ it.label }}</small></div>
+    <a class="btn sm {{ 'secondary' if it.reason == 'task_failed' else '' }}" href="/videos/{{ it.video.id }}">{{ "Revisar" if it.reason == "approve_script" else "Ver" }}</a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
 {% if channels %}
 <div class="grid cols-3">
   {% for c in channels %}
@@ -25,5 +37,17 @@
 </div>
 {% else %}
 <div class="card">{% call empty("film", "Nenhum canal ainda", "Crie o primeiro canal para começar a produzir vídeos.") %}<a class="btn" href="/channels/new">{{ ic("plus") }} Criar canal</a>{% endcall %}</div>
+{% endif %}
+{% if recent %}
+<div class="card" style="margin-top:1.25rem">
+  <header><h3>Atividade recente</h3></header>
+  {% for v, c in recent %}
+  <div class="list-row">
+    <div class="grow"><a class="title" href="/videos/{{ v.id }}">{{ v.title or v.topic[:80] }}</a>
+      <small>{{ c.name }} · atualizado {{ v.updated_at.strftime("%d/%m %H:%M") }}</small></div>
+    <span class="badge">{{ v.status }}</span>
+  </div>
+  {% endfor %}
+</div>
 {% endif %}
 {% endblock %}

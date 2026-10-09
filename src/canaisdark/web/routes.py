@@ -10,6 +10,7 @@ from canaisdark.schemas.channel import ChannelCreate, ChannelUpdate
 from canaisdark.schemas.video import VideoCreate, VideoUpdate
 from canaisdark.services import (
     channels,
+    dashboard,
     scripts,
     task_context,
     tasks,
@@ -28,6 +29,7 @@ from canaisdark.web.common import (
     render,
 )
 from canaisdark.web.presets import CHANNEL_PRESETS
+from canaisdark.web.settings import PROCESS_ALL_PROMPT
 
 router = APIRouter(include_in_schema=False)
 
@@ -114,6 +116,8 @@ def home(request: Request, user: WebUser, session: SessionDep, archived: int = 0
         channels=channels.list_channels(session, include_archived=bool(archived)),
         stats=channels.stats_by_channel(session),
         show_archived=bool(archived),
+        attention=dashboard.attention(session),
+        recent=dashboard.recent_videos(session),
     )
 
 
@@ -334,6 +338,7 @@ def tasks_page(request: Request, user: WebUser, session: SessionDep) -> Response
         "tasks.html",
         user,
         nav="tasks",
+        process_all_prompt=PROCESS_ALL_PROMPT,
         open_tasks=tasks.list_tasks(session, open_only=True),
         recent=list(reversed(tasks.list_tasks(session)))[:20],
         claimers=claimers,

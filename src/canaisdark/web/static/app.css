@@ -157,3 +157,4 @@ mark.hit { background: var(--warn); color: #000; }
 @media (max-width: 900px) { .tool-hint { display: none; } .editor-toolbar { top: 52px; } }
 .menu-body a.btn { justify-content: flex-start; width: 100%; }
 .stack-inline { display: flex; gap: .5rem; flex-wrap: wrap; }
+kbd { font: .72rem var(--mono); background: var(--surface-2); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 .3rem; color: var(--text); }

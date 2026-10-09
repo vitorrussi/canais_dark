@@ -244,3 +244,39 @@ def test_edit_duplicate_search_unarchive(
         "Canal Teste" not in logged.get("/").text and "arquivado" in logged.get("/?archived=1").text
     )
     assert "Canal reativado" in logged.post("/channels/canal-teste/unarchive").text
+
+
+def test_dashboard_attention_and_recent(
+    logged: TestClient, session: Session, user_token: tuple[User, str]
+) -> None:
+    from canaisdark.services import scripts, tasks
+
+    logged.post("/channels", data={"name": "Canal Teste"})
+    r = logged.post("/channels/canal-teste/videos", data={"topic": "Pronto para revisar"})
+    vid = int(str(r.url).rsplit("/", 1)[1])
+    home = logged.get("/").text
+    assert (
+        "Precisa da sua atenção" not in home and "Atividade recente" in home
+    )  # tarefa aberta: ainda não é com você
+    task = tasks.claim_next(session, user_token[0])
+    assert task and task.id
+    scripts.save_script(session, vid, [SceneIn(text="Um")], user_token[0], task_id=task.id)
+    tasks.complete_task(session, task.id, user_token[0], "ok")
+    home = logged.get("/").text
+    assert "Precisa da sua atenção" in home and "Roteiro pronto para revisar" in home
+    ver = scripts.get_script(session, vid)[0]
+    assert ver.id
+    scripts.approve_script(session, ver.id, user_token[0])
+    assert "Precisa da sua atenção" not in logged.get("/").text
+
+    r2 = logged.post("/channels/canal-teste/videos", data={"topic": "Vai falhar"})
+    vid2 = int(str(r2.url).rsplit("/", 1)[1])
+    t2 = tasks.claim_next(session, user_token[0], video_id=vid2)
+    assert t2 and t2.id
+    tasks.fail_task(session, t2.id, user_token[0], "sem contexto suficiente")
+    assert "Tarefa de roteiro falhou: sem contexto suficiente" in logged.get("/").text
+
+
+def test_tasks_page_has_process_all_prompt(logged: TestClient) -> None:
+    html = logged.get("/tasks").text
+    assert "Processar tudo de uma vez" in html and "claim_next_task" in html

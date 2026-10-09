@@ -24,6 +24,7 @@
       <a href="/connect" class="{{ 'active' if nav == 'connect' }}">{{ ic("plug") }} Conectar Claude</a>
     </nav>
     <div class="spacer"></div>
+    <p class="muted" style="font-size:.78rem;padding:0 .7rem" title="g c = canais · g p = pendências · g k = conectar · / = buscar · n = novo · ? = ajuda">Atalhos: <kbd>g</kbd> <kbd>c</kbd>/<kbd>p</kbd>/<kbd>k</kbd> · <kbd>/</kbd> · <kbd>n</kbd> · <kbd>?</kbd></p>
     <div class="userbox">
       <span class="avatar">{{ user.name[:1]|upper }}</span><span>{{ user.name }}</span>
       <form method="post" action="/logout"><button class="ghost icon" title="Sair" aria-label="Sair">{{ ic("logout") }}</button></form>

@@ -27,12 +27,12 @@
 {%- endmacro %}
 
 {# Campo de formulário com ajuda e exemplo. kind: input|textarea|number #}
-{% macro field(name, label, value="", help="", example="", tip="", kind="input", rows=3, required=false, placeholder="", min=None, max=None) -%}
+{% macro field(name, label, value="", help="", example="", tip="", kind="input", rows=3, required=false, placeholder="", min=None, max=None, attrs="") -%}
 <div class="field">
   <label for="f-{{ name }}">{{ label }}{% if required %} <span class="muted">*</span>{% endif %}
     {% if tip %}<span class="tip" tabindex="0" data-tip="{{ tip }}">?</span>{% endif %}</label>
   {% if kind == "textarea" %}
-  <textarea id="f-{{ name }}" name="{{ name }}" rows="{{ rows }}" placeholder="{{ placeholder }}" {{ "required" if required }}>{{ value }}</textarea>
+  <textarea id="f-{{ name }}" name="{{ name }}" rows="{{ rows }}" placeholder="{{ placeholder }}" {{ "required" if required }} {{ attrs }}>{{ value }}</textarea>
   {% else %}
   <input id="f-{{ name }}" name="{{ name }}" type="{{ 'number' if kind == 'number' else 'text' }}" value="{{ value }}" placeholder="{{ placeholder }}"
          {% if min is not none %}min="{{ min }}"{% endif %} {% if max is not none %}max="{{ max }}"{% endif %} {{ "required" if required }}>

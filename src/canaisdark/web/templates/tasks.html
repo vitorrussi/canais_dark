@@ -5,6 +5,12 @@
 {% block content %}
 <div class="page-head"><div><h1>Pendências do Claude</h1>
   <p class="muted">Tarefas que o Claude ainda precisa executar. No Claude Code (MCP conectado), use o prompt copiável da página de cada vídeo ou diga "processa as pendências".</p></div></div>
+<div class="card" style="margin-bottom:1rem">
+  <header><h3>Processar tudo de uma vez</h3></header>
+  <div id="process-all" class="promptbox">{{ process_all_prompt }}</div>
+  <button type="button" data-copy="#process-all">{{ ic("copy") }} Copiar prompt</button>
+  <span class="muted" style="margin-left:.5rem">ou, no Claude Code: <code>/mcp__canais__process_pending</code></span>
+</div>
 <div class="card">
   <header><h3>Abertas</h3></header>
   {% for t in open_tasks %}
