@@ -20,6 +20,13 @@ Typer, Jinja2 + HTMX (UI), SDK `mcp` 2.x (`MCPServer`), ffmpeg (Fase 5), pytest/
 `uv sync` · `make dev` (porta 8123) · `make test` · `make lint` · `make fmt` · `make migrate` ·
 `uv run canaisdark create-user --name N --email E` · `uv run canaisdark rotate-token --email E`
 
+## UI (Etapa 2.1)
+Tema próprio em `web/static/app.css` (escuro por padrão, alterna claro/escuro; sem framework CSS), `app.js` (copiar via
+`data-copy`, confirmar via `data-confirm`, presets via `data-fill`, toasts), macros em `web/templates/_macros.html`
+(`ic()` ícones SVG, `field()` campo com ajuda+exemplo). Feedback ao usuário: `_back(request, url, ok=/error=)` → toast.
+Presets de canal em `web/presets.py`. Erros de domínio em páginas HTML renderizam `error.html`.
+Etapas em andamento: 2.2 editor de roteiro, 2.3 baixar/exportar/importar, 2.4 configuração/QoL (ver plano).
+
 ## Estrutura
 `src/canaisdark/`: `config.py`, `logging.py`, `db.py`, `models/`, `services/` (lógica),
 `schemas/` (Pydantic), `api/` (REST Bearer; `deps.py` auth), `web/` (Jinja2+HTMX, login por cookie de sessão,

@@ -37,3 +37,9 @@ usam `WebUser` (sessão); REST usa `CurrentUser` (Bearer). Padrão: POST → red
 Adicionar tool: função em `mcp/server.py` com `@mcp.tool()` + `@safe` (nessa ordem), usando `with _db() as (s, user):`
 e chamando `services/`. Documentar em `docs/mcp-tools.md`. Testes: `tests/test_mcp_tools.py` (chamada direta via
 `server.mcp.call_tool` com `current_user.set(...)`) e `tests/test_mcp_auth.py` (HTTP + auth). Testes async usam `pytest.mark.anyio`.
+
+## Convenções de UI
+- Campos de formulário: use a macro `field(name, label, value, help, example, tip=...)` — sempre com ajuda e exemplo.
+- Ícones: `ic("nome")` (adicione o path SVG em `_macros.html`). Estilos só em `app.css`, com variáveis de tema (`--accent`, `--surface`…).
+- Mensagens de sucesso/erro: `_back(request, url, ok="…")` / `error=exc` (viram toast). Erros de validação em re-render: passe `error=`.
+- JS global por delegação (`data-copy`, `data-confirm`, `data-fill`), compatível com `hx-boost`.
