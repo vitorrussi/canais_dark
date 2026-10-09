@@ -278,3 +278,21 @@ def test_stage_states_timeline_render_review(
     assert _stage(session, vid, "timeline") == "stale" and _stage(session, vid, "render") == "stale"
     with pytest.raises(InvalidState, match="render final"):
         render.approve(session, 99999, user)
+
+
+def test_music_upload_validation_and_reuse(
+    session: Session, user_token: tuple[User, str], cfg: Path
+) -> None:
+    from canaisdark.services import music
+
+    a = setup_video(session, user_token[0], [2.0])
+    with pytest.raises(InvalidState, match="não suportado"):
+        music.save_upload(session, a["video_id"], b"MZ not audio", "x.mp3")  # extensão não vale
+    with pytest.raises(InvalidState, match="vazio"):
+        music.save_upload(session, a["video_id"], b"", "x.mp3")
+    got = music.save_upload(session, a["video_id"], b"ID3" + b"\x00" * 50, "trilha.mp3")
+    assert got.meta["format"] == "mp3" and (get_settings().data_dir / got.path).is_file()
+    assert music.detect_audio(b"RIFF\x00\x00\x00\x00WAVEfmt ") == "wav"
+    assert [m.id for m in music.list_music(session, a["video_id"])] == [got.id]
+    music.remove(session, a["video_id"], got.id)  # type: ignore[arg-type]
+    assert not (get_settings().data_dir / got.path).exists()
