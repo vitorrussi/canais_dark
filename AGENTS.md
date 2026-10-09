@@ -10,7 +10,7 @@ narração → imagens → render → Shorts → upload. O Claude atua via servi
 **a API do Claude nunca é usada**. Roda em servidor doméstico via Cloudflare Tunnel, 2 usuários.
 
 ## Status
-- Fases 0–3 (incl. extensões 2.1–2.5) **concluídas**. Próxima: Fase 4 (Prompts e assets).
+- Fases 0–5 (incl. extensões 2.1–2.5) **concluídas**. Próxima: Fase 6 (Shorts).
 
 ## Stack
 Python 3.12+, uv, FastAPI, SQLModel + SQLite (WAL) + Alembic, pydantic-settings, structlog,
@@ -49,7 +49,8 @@ legendas `.srt/.ass`, invalidação automática, card de Narração com progress
 Dois processos: `make serve` + `make worker`. `ELEVENLABS_FAKE=true` = demonstração sem créditos. Testes usam `FakeElevenLabs` (nunca rede). Segredo `ELEVENLABS_API_KEY` só no `.env`.
 Cancelamento/desfazer: `Job.run_after` (janela `NARRATION_UNDO_SECONDS`), TTS por streaming com `should_cancel`, `TTS_CHUNK_CHARS=1500`. Escolha de voz/modelo: `web/voices.py`, `services/voices.py`. Plano grátis NÃO usa vozes da biblioteca via API.
 **Fase 4 (Prompts e assets) concluída**: `Scene.image_prompt/video_prompt/wants_vertical/is_key_scene`, `services/scene_prompts.py` (compose, save, carry-over ao aprovar, pacote), `services/scene_assets.py` (upload validado por conteúdo, miniaturas Pillow, substituir/remover, lote por nome), storyboard `/videos/<id>/scenes` (`web/scenes.py`, `static/scenes.js`), MCP `save_scene_prompts`. Detalhes: `docs/prompts-and-assets.md`. Upload = 1 arquivo/requisição (Cloudflare 100 MB).
-**Próxima: Fase 5 (Render)** — precisa de **ffmpeg instalado** (`sudo apt install ffmpeg`); avisar o usuário antes de planejar.
+**Fase 5 (Timeline e render) concluída**: `schemas/timeline.py` (JSON versionado), `services/timeline.py` (padrão automática, validação, versões como ativo `timeline`), `services/render.py` (segmentos por cena com crossfade embutido e cache por hash, execução paralela, passo final com trilha/ducking/legendas/textos), `services/music.py`, job `render` (`worker/handlers.py:run_render`), etapas `timeline`/`render`/`review`, cartão **④** em `/videos/{id}` + `/videos/{id}/timeline` (`web/render.py`), REST `api/render.py`, MCP `get_timeline/save_timeline/start_render` e tarefa `generate_timeline`. Detalhes: `docs/render.md`. Precisa de **ffmpeg** (instalado). Testes de render reais usam ffmpeg (skip se ausente); `tests/media.py` cria vídeos de teste. Mudou a montagem dos segmentos → incremente `ALGO_VERSION`.
+**Próxima: Fase 6 (Shorts)** — reaproveitar o construtor de segmentos de `services/render.py` com resolução 9:16.
 
 ## Estrutura
 `src/canaisdark/`: `config.py`, `logging.py`, `db.py`, `models/`, `services/` (lógica),

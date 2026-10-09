@@ -5,7 +5,7 @@
 - [x] Fase 2 — MCP + tarefas do Claude
 - [x] Fase 3 — Jobs + ElevenLabs
 - [x] Fase 4 — Prompts e assets
-- [ ] Fase 5 — Render
+- [x] Fase 5 — Render (timeline automática + ffmpeg por segmentos com cache, trilha com ducking, legendas, player)
 - [ ] Fase 6 — Shorts
 - [ ] Fase 7 — YouTube
 - [ ] Fase 8 — Google Drive
