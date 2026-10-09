@@ -30,6 +30,16 @@ Plano grátis: 10.000 créditos/mês, **sem licença comercial**; vozes da Voice
 ## Modo demonstração
 `ELEVENLABS_FAKE=true` usa um ElevenLabs falso (sem chave, sem créditos; áudio sintético e mudo) para testar toda a interface e o worker.
 
+## Cancelar e desfazer (importante para créditos)
+O ElevenLabs **não tem API para cancelar** uma geração em andamento: depois que a requisição começa, o trecho é processado e pode ser cobrado. O sistema reduz o prejuízo assim:
+1. **Janela de desfazer** (`NARRATION_UNDO_SECONDS`, padrão 10 s): ao clicar em *Gerar narração* o job só começa depois dela; *Desfazer* nesse período não gasta nada.
+2. **Trechos menores** (`TTS_CHUNK_CHARS`, padrão 1500): mais pontos de cancelamento entre as requisições.
+3. **Cancelar durante a geração**: o sistema usa o endpoint de *streaming* e, ao cancelar, fecha a conexão e para de esperar (o trecho em andamento pode já estar cobrado). Os trechos prontos ficam salvos e são reaproveitados numa nova tentativa.
+
+## Escolha de voz e modelo
+Configurações do canal → *Escolher voz e modelo* (`/channels/<slug>/voice`): modelos (Flash 0,5 / Turbo 0,5 / Multilingual v2 1 crédito por caractere), **Minhas vozes** e **Biblioteca (pt)** com **prévias gratuitas (▶)** e **teste curto com o seu texto** (≤150 caracteres, mostra o custo antes e pede confirmação).
+No **plano gratuito** só as vozes da conta (*premade*) funcionam pela API; as da biblioteca aparecem com “Plano pago”. A lista carrega de forma assíncrona (a API do ElevenLabs leva até ~20 s; cache de 5 min).
+
 ## Invalidação
 Narração/alinhamento ficam **Desatualizados** quando a versão aprovada do roteiro difere da usada (comparação automática; os arquivos antigos são mantidos). “Só teste” e “Pulada” são estados próprios do pipeline.
 

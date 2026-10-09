@@ -33,7 +33,7 @@
 
   <div class="card">
     <header><h3>3. Voz</h3>
-      <div class="actions"><a class="btn sm {{ '' if tab != 'account' else 'secondary' }}" href="/channels/{{ channel.slug }}/voice?tab=account">Minhas vozes</a>
+      <div class="actions"><a class="btn sm {{ '' if tab == 'account' else 'secondary' }}" href="/channels/{{ channel.slug }}/voice?tab=account">Minhas vozes</a>
         <a class="btn sm {{ '' if tab == 'library' else 'secondary' }}" href="/channels/{{ channel.slug }}/voice?tab=library">Biblioteca (pt)</a></div></header>
     {% if tab == "library" %}
     <form method="get" class="row" style="margin-bottom:.75rem">

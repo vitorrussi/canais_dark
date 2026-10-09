@@ -47,6 +47,7 @@ favicon, barra de carregamento do htmx, proteção contra envio duplo, foco vis�
 **Fase 3 (Jobs + ElevenLabs) concluída**: fila `Job` + worker (`make worker`), narração (TTS) com guardas de crédito, Forced Alignment OPCIONAL (global/canal/geração; sem ele tempos estimados),
 legendas `.srt/.ass`, invalidação automática, card de Narração com progresso, `/jobs`, REST e MCP `get_job_status/list_jobs`. Detalhes: `docs/jobs-and-narration.md`.
 Dois processos: `make serve` + `make worker`. `ELEVENLABS_FAKE=true` = demonstração sem créditos. Testes usam `FakeElevenLabs` (nunca rede). Segredo `ELEVENLABS_API_KEY` só no `.env`.
+Cancelamento/desfazer: `Job.run_after` (janela `NARRATION_UNDO_SECONDS`), TTS por streaming com `should_cancel`, `TTS_CHUNK_CHARS=1500`. Escolha de voz/modelo: `web/voices.py`, `services/voices.py`. Plano grátis NÃO usa vozes da biblioteca via API.
 **Próxima: Fase 4 (Prompts e assets)** — não exige chaves externas (uploads manuais); lembrar do limite de 100 MB do Cloudflare.
 
 ## Estrutura
