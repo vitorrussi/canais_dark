@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     # URL pública (ex.: https://canaisdark.russi.app). Quando definida: SECRET_KEY real é obrigatório,
     # o cookie de sessão vira Secure (se https) e o host entra automaticamente em MCP_ALLOWED_HOSTS.
     public_url: str = ""
+    # ElevenLabs (Fase 3). A chave fica só no .env; nunca é exibida nem gravada no banco.
+    elevenlabs_api_key: str = ""
+    elevenlabs_max_chars_per_job: int = 2500
+    # Interruptor geral do Forced Alignment (false = nunca chama; tempos das cenas são estimados)
+    forced_alignment_enabled: bool = True
+    worker_poll_seconds: float = 2.0
 
 
 @lru_cache

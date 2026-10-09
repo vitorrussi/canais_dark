@@ -36,7 +36,7 @@
   <textarea id="f-{{ name }}" name="{{ name }}" rows="{{ rows }}" placeholder="{{ placeholder }}" {{ "required" if required }} {{ attrs }}>{{ value }}</textarea>
   {% else %}
   <input id="f-{{ name }}" name="{{ name }}" type="{{ 'number' if kind == 'number' else 'text' }}" value="{{ value }}" placeholder="{{ placeholder }}"
-         {% if min is not none %}min="{{ min }}"{% endif %} {% if max is not none %}max="{{ max }}"{% endif %} {{ "required" if required }}>
+         {% if min is not none %}min="{{ min }}"{% endif %} {% if max is not none %}max="{{ max }}"{% endif %} {{ "required" if required }} {{ attrs }}>
   {% endif %}
   {% if help or example %}<div class="help">{{ help }}{% if example %}<span class="ex">{{ example }}</span>{% endif %}</div>{% endif %}
 </div>

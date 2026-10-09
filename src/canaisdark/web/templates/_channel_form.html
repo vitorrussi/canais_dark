@@ -27,6 +27,18 @@
 </div>
 
 <div class="card" style="margin-top:1rem">
+  <header><h3>Narração (ElevenLabs)</h3></header>
+  {{ field("tts_model", "Modelo de voz", c.tts_model or "eleven_flash_v2_5", "eleven_flash_v2_5 gasta metade dos créditos (ótimo para testes); eleven_multilingual_v2 tem qualidade melhor (1 crédito por caractere).", "eleven_flash_v2_5  ou  eleven_multilingual_v2") }}
+  <div class="row">
+    {{ field("tts_stability", "Estabilidade (0–1)", c.tts_stability if c.tts_stability is not none else 0.5, "Baixa = mais expressiva; alta = mais monótona.", "0.5", kind="number", min=0, max=1, attrs='step="0.05"') }}
+    {{ field("tts_similarity", "Similaridade (0–1)", c.tts_similarity if c.tts_similarity is not none else 0.75, "Quão fiel à voz original.", "0.75", kind="number", min=0, max=1, attrs='step="0.05"') }}
+    {{ field("tts_speed", "Velocidade (0.7–1.2)", c.tts_speed if c.tts_speed is not none else 1.0, "Abaixo de 1 fala mais devagar.", "1.0", kind="number", min=0.7, max=1.2, attrs='step="0.05"') }}
+  </div>
+  <label class="check"><input type="checkbox" name="forced_alignment" {{ "checked" if c.forced_alignment is none or c.forced_alignment }}> Usar Forced Alignment (tempo exato de cada palavra)
+    <span class="tip" tabindex="0" data-tip="Envia o áudio ao ElevenLabs para medir o tempo de cada palavra: legendas e cenas ficam exatas. Desligado: os tempos são ESTIMADOS pela duração do áudio (grátis, menos preciso). Dá para escolher de novo a cada geração.">?</span></label>
+</div>
+
+<div class="card" style="margin-top:1rem">
   <header><h3>Visual</h3></header>
   {{ field("visual_style_prompt", "Prompt de estilo visual", c.visual_style_prompt or "", "Prefixo fixo colocado no começo de TODOS os prompts de imagem do canal, para manter a identidade visual. Escreva em inglês, em frases curtas separadas por vírgula.", "dark cinematic still, low-key lighting, 35mm film grain, muted teal and amber palette, no text, no watermark", kind="textarea", rows=3) }}
 </div>

@@ -49,6 +49,11 @@ def _channel_form(
     words_per_scene: str,
     script_rules: str,
     default_script_instructions: str,
+    tts_model: str,
+    tts_stability: str,
+    tts_similarity: str,
+    tts_speed: str,
+    forced_alignment: bool,
 ) -> dict[str, object]:
     return {
         "name": name.strip(),
@@ -64,6 +69,11 @@ def _channel_form(
         "words_per_scene": words_per_scene or 40,
         "script_rules": script_rules,
         "default_script_instructions": default_script_instructions,
+        "tts_model": tts_model.strip() or "eleven_flash_v2_5",
+        "tts_stability": tts_stability or 0.5,
+        "tts_similarity": tts_similarity or 0.75,
+        "tts_speed": tts_speed or 1.0,
+        "forced_alignment": forced_alignment,
     }
 
 
@@ -83,8 +93,15 @@ async def _form_data(request: Request) -> dict[str, object]:
         "words_per_scene",
         "script_rules",
         "default_script_instructions",
+        "tts_model",
+        "tts_stability",
+        "tts_similarity",
+        "tts_speed",
     ]
-    return _channel_form(**{k: str(f.get(k, "")) for k in keys})
+    return _channel_form(
+        **{k: str(f.get(k, "")) for k in keys},
+        forced_alignment=f.get("forced_alignment") is not None,
+    )
 
 
 @router.get("/login", response_class=HTMLResponse)

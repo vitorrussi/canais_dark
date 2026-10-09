@@ -307,3 +307,27 @@ def test_public_url_requires_real_secret(monkeypatch: pytest.MonkeyPatch) -> Non
     check_production_settings(ok)
     assert public_host(ok) == "canaisdark.russi.app"
     check_production_settings(Settings())  # dev local sem URL pública continua livre
+
+
+def test_channel_tts_settings_roundtrip(logged: TestClient) -> None:
+    logged.post(
+        "/channels",
+        data={
+            "name": "Voz",
+            "tts_model": "eleven_multilingual_v2",
+            "tts_stability": "0.3",
+            "tts_speed": "1.1",
+        },
+    )  # sem forced_alignment = desmarcado
+    page = logged.get("/channels/voz?tab=settings").text
+    assert (
+        'value="eleven_multilingual_v2"' in page and 'value="0.3"' in page and 'value="1.1"' in page
+    )
+    assert "checked" not in page.split('name="forced_alignment"')[1].split(">")[0]
+    logged.post("/channels/voz", data={"name": "Voz", "forced_alignment": "on"})
+    assert (
+        "checked"
+        in logged.get("/channels/voz?tab=settings")
+        .text.split('name="forced_alignment"')[1]
+        .split(">")[0]
+    )

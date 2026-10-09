@@ -27,3 +27,5 @@ class Scene(SQLModel, table=True):
     index: int
     text: str
     notes: str = ""
+    start_s: float | None = None  # preenchido pelo alinhamento (Fase 3)
+    end_s: float | None = None
