@@ -23,6 +23,7 @@
       <a href="/" class="{{ 'active' if nav == 'channels' }}">{{ ic("home") }} Canais</a>
       {% set n = open_task_count() %}
       <a href="/tasks" class="{{ 'active' if nav == 'tasks' }}">{{ ic("inbox") }} Pendências do Claude {% if n %}<span class="count">{{ n }}</span>{% endif %}</a>
+      <a href="/jobs" class="{{ 'active' if nav == 'jobs' }}">{{ ic("clock") }} Jobs</a>
       <a href="/connect" class="{{ 'active' if nav == 'connect' }}">{{ ic("plug") }} Conectar Claude</a>
       {% if user.is_admin %}<a href="/admin/users" class="{{ 'active' if nav == 'admin' }}">{{ ic("users") }} Usuários</a>{% endif %}
     </nav>

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ic, empty %}
+{% block title %}Jobs{% endblock %}
+{% block crumb %}Jobs{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Jobs</h1>
+  <p class="muted">Trabalhos pesados (narração, alinhamento…) executados pelo worker. Se ficarem “na fila”, rode <code>make worker</code> no servidor.</p></div></div>
+<div class="card">
+  {% for j in jobs_list %}
+  <div class="list-row">
+    <div class="grow"><a class="title" href="/videos/{{ j.video_id }}">#{{ j.id }} · {{ "narração" if j.type == "tts" else "alinhamento" }} · {{ video_titles.get(j.video_id, "vídeo " ~ j.video_id) }}</a>
+      <small>{{ names.get(j.created_by, "sistema") }} · {{ j.created_at.strftime("%d/%m %H:%M") }}{% if j.error %} · {{ j.error[:100] }}{% endif %}</small></div>
+    <span class="badge {{ {'queued':'pending','running':'in_progress','done':'done','failed':'failed','cancelled':'stale'}[j.status] }}">{{ j.status }}</span>
+    {% if j.status in ("queued", "running") %}<form method="post" action="/jobs/{{ j.id }}/cancel"><button class="secondary sm" data-confirm="Cancelar este job?">Cancelar</button></form>{% endif %}
+    {% if j.status in ("failed", "cancelled") %}<form method="post" action="/jobs/{{ j.id }}/retry"><button class="secondary sm">Tentar de novo</button></form>{% endif %}
+  </div>
+  {% else %}
+  {% call empty("clock", "Nenhum job ainda", "Gere uma narração na página de um vídeo com roteiro aprovado.") %}{% endcall %}
+  {% endfor %}
+</div>
+{% endblock %}

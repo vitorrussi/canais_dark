@@ -87,3 +87,16 @@ async def test_errors_are_explanatory(setup: int, session: Session) -> None:
     current_user.set(other)
     with pytest.raises(ToolError, match="reservada por outro"):
         await call("complete_task", {"task_id": task_id, "result_summary": "x"})
+
+
+async def test_job_tools(setup: int, session: Session) -> None:
+    from canaisdark.models import JobType
+    from canaisdark.services import jobs
+
+    job = jobs.create_job(session, setup, JobType.TTS, {"x": 1})
+    jobs.append_log(session, job.id or 0, "linha de log")
+    status = await call("get_job_status", {"job_id": job.id})
+    assert "queued" in str(status) and "linha de log" in str(status)
+    assert str(job.id) in str(await call("list_jobs", {"video_id": setup}))
+    with pytest.raises(ToolError, match="não encontrado"):
+        await call("get_job_status", {"job_id": 999})

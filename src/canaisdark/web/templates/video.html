@@ -46,6 +46,9 @@
       {% endif %}
     </div>
 
+    {% set n = narr %}{% include "_narration_card.html" %}
+    <script src="/static/narration.js"></script>
+
     <div class="card">
       <header><h3>Roteiro</h3></header>
       {% if selected %}

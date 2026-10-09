@@ -237,7 +237,16 @@ class FakeElevenLabs:
         return Subscription(self.used, self.limit)
 
 
-def default_client() -> ElevenLabsClient:
+_demo: "FakeElevenLabs | None" = None
+
+
+def default_client() -> ElevenLabsLike:
     from canaisdark.config import get_settings
 
-    return ElevenLabsClient(get_settings().elevenlabs_api_key)
+    settings = get_settings()
+    if settings.elevenlabs_fake:
+        global _demo
+        if _demo is None:
+            _demo = FakeElevenLabs()
+        return _demo
+    return ElevenLabsClient(settings.elevenlabs_api_key)

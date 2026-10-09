@@ -21,6 +21,11 @@ def hermetic_settings(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         "PUBLIC_URL": "",
         "MCP_ALLOWED_HOSTS": "",
         "SECRET_KEY": "dev-insecure-change-me",
+        "ELEVENLABS_API_KEY": "",
+        "ELEVENLABS_FAKE": "false",
+        "FORCED_ALIGNMENT_ENABLED": "true",
+        "ELEVENLABS_MAX_CHARS_PER_JOB": "2500",
+        "TTS_CHUNK_CHARS": "2500",
     }.items():
         monkeypatch.setenv(key, value)
     get_settings.cache_clear()

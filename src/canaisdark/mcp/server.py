@@ -14,7 +14,7 @@ from canaisdark.mcp.auth import BearerAuthMiddleware
 from canaisdark.mcp.context import current_user
 from canaisdark.models import TaskType, User, VideoStatus
 from canaisdark.schemas.script import SceneIn
-from canaisdark.services import channels, scripts, task_context, tasks, video_status, videos
+from canaisdark.services import channels, jobs, scripts, task_context, tasks, video_status, videos
 from canaisdark.services.errors import DomainError
 
 mcp = MCPServer(
@@ -165,6 +165,41 @@ def list_pending_tasks() -> list[dict[str, Any]]:
     """Tarefas abertas (pendentes ou em andamento) para o Claude, mais antigas primeiro."""
     with _db() as (s, _):
         return [_task_dict(t) for t in tasks.list_tasks(s, open_only=True)]
+
+
+def _job_dict(j: Any, with_log: bool = False) -> dict[str, Any]:
+    out = {
+        "id": j.id,
+        "type": j.type,
+        "video_id": j.video_id,
+        "status": j.status,
+        "progress": j.progress,
+        "error": j.error,
+        "result": j.result,
+        "created_at": j.created_at.isoformat(),
+        "finished_at": j.finished_at.isoformat() if j.finished_at else None,
+    }
+    if with_log:
+        out["log_tail"] = "\n".join(j.log.strip().splitlines()[-15:])
+    return out
+
+
+@mcp.tool()
+@safe
+def get_job_status(job_id: int) -> dict[str, Any]:
+    """Estado de um job (narração/alinhamento): status, progresso 0-100, erro, resultado e fim do log.
+
+    Jobs são disparados por pessoas no site (gastam créditos); aqui você só acompanha."""
+    with _db() as (s, _):
+        return _job_dict(jobs.get_job(s, job_id), with_log=True)
+
+
+@mcp.tool()
+@safe
+def list_jobs(video_id: int | None = None, status: str | None = None) -> list[dict[str, Any]]:
+    """Jobs recentes (mais novos primeiro). Filtros opcionais: video_id, status (queued|running|done|failed|cancelled)."""
+    with _db() as (s, _):
+        return [_job_dict(j) for j in jobs.list_jobs(s, video_id, status, limit=20)]
 
 
 # ----- Tarefas -----

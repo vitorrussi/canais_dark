@@ -108,3 +108,61 @@ def test_rest_transfer(client: TestClient, auth: dict[str, str]) -> None:
     new = client.post("/api/import/channel?name=Novo", json=chan, headers=auth)
     assert new.status_code == 201 and new.json()["slug"] == "novo"
     assert client.post("/api/import/channel?name=Novo", json=chan, headers=auth).status_code == 409
+
+
+def test_rest_jobs_and_narration(
+    client: TestClient,
+    auth: dict[str, str],
+    session: Session,
+    user_token: tuple[User, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from canaisdark.config import get_settings
+    from canaisdark.integrations.elevenlabs import FakeElevenLabs
+    from canaisdark.services import credits
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "elevenlabs_api_key", "KEY")
+    credits.set_client_factory(lambda: FakeElevenLabs(credits=5000))
+    try:
+        cid = client.post(
+            "/api/channels", json={"name": "C", "elevenlabs_voice_id": "v"}, headers=auth
+        ).json()["id"]
+        vid = client.post(f"/api/channels/{cid}/videos", json={"topic": "t"}, headers=auth).json()[
+            "id"
+        ]
+        plan = client.get(f"/api/videos/{vid}/narration/plan?test_scenes=1", headers=auth).json()
+        assert plan["can_start"] is False and "aprovado" in plan["problems"][0]
+        assert (
+            client.post(
+                f"/api/videos/{vid}/narration", json={"test_scenes": 1}, headers=auth
+            ).status_code
+            == 422
+        )
+        client.post(
+            f"/api/videos/{vid}/scripts",
+            json={"scenes": [{"text": "Olá mundo."}, {"text": "Segunda."}], "approve": True},
+            headers=auth,
+        )
+        plan = client.get(f"/api/videos/{vid}/narration/plan?test_scenes=1", headers=auth).json()
+        assert (
+            plan["can_start"]
+            and plan["partial"]
+            and plan["scenes_used"] == 1
+            and plan["balance_remaining"] == 5000
+        )
+        r = client.post(
+            f"/api/videos/{vid}/narration", json={"test_scenes": 1, "align": False}, headers=auth
+        )
+        assert (
+            r.status_code == 201
+            and r.json()["status"] == "queued"
+            and r.json()["params"]["align"] is False
+        )
+        jid = r.json()["id"]
+        assert client.get(f"/api/jobs?video_id={vid}", headers=auth).json()[0]["id"] == jid
+        assert client.post(f"/api/jobs/{jid}/cancel", headers=auth).json()["status"] == "cancelled"
+        assert client.post(f"/api/jobs/{jid}/retry", headers=auth).status_code == 201
+        assert client.get("/api/jobs/999", headers=auth).status_code == 404
+    finally:
+        credits.set_client_factory(None)

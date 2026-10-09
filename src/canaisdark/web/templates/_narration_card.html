@@ -1,0 +1,82 @@
+{% from "_macros.html" import ic %}
+{% set job = n.ali_job if (n.ali_job and n.ali_job.status in ("queued", "running")) else n.tts_job %}
+<div class="card {{ 'accent' if n.active }}" id="narration-card" {% if n.active %}hx-get="/videos/{{ n.video.id }}/narration/card" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
+  <header><h3>{{ ic("play") }} Narração</h3>
+    <div class="actions"><span class="muted" style="font-size:.82rem">{{ n.channel.tts_model }}{% if n.channel.elevenlabs_voice_id %} · voz {{ n.channel.elevenlabs_voice_id[:8] }}…{% endif %}</span></div></header>
+
+  <div class="meta" style="margin:0 0 .75rem">
+    {% if n.demo %}<span class="badge stale" title="ELEVENLABS_FAKE=true: nenhuma chamada real, nenhum crédito gasto; o áudio é sintético">modo demonstração</span>{% endif %}
+    <span class="badge {{ 'done' if n.api_key_set else 'failed' }}">{{ "chave ElevenLabs ✓" if n.api_key_set else "sem chave (ELEVENLABS_API_KEY)" }}</span>
+    {% if n.balance %}<span class="badge info" title="Créditos usados no mês / limite do plano">saldo: {{ "{:,}".format(n.balance.remaining).replace(",", ".") }} créditos</span>{% endif %}
+    <span class="badge {{ 'done' if n.alignment_global else '' }}">Forced Alignment {{ "ligado" if n.alignment_global else "desligado (global)" }}</span>
+    {% if not n.ffmpeg %}<span class="badge stale" title="Necessário só para narrações com mais de um trecho">sem ffmpeg</span>{% endif %}
+  </div>
+
+  {% if n.full.script_version is none %}
+    <p class="muted">Aprove o roteiro para liberar a narração. Isso evita gastar créditos com um texto que ainda vai mudar.</p>
+  {% else %}
+  <form method="post" action="/videos/{{ n.video.id }}/narration/start" data-narr-form
+        data-cum='{{ n.cum_chars|tojson }}' data-mult="{{ n.multiplier }}" data-balance="{{ n.balance.remaining if n.balance else '' }}">
+    <div class="field">
+      <label class="check"><input type="radio" name="mode" value="test" checked> Teste curto — só as primeiras
+        <input type="number" name="test_scenes" value="1" min="1" max="{{ n.full.scenes_total }}" style="width:4.5rem;display:inline-block;padding:.2rem .4rem"> cena(s)</label>
+      <label class="check" style="margin-top:.35rem"><input type="radio" name="mode" value="full"> Narração completa ({{ n.full.scenes_total }} cenas)</label>
+      <div class="help">Comece pelo teste curto: ouve a voz e mede o custo gastando poucos créditos. O áudio de teste fica marcado como <strong>“Só teste”</strong>.</div>
+    </div>
+    <div class="field">
+      <label for="align">Forced Alignment (tempo exato por palavra)</label>
+      <select id="align" name="align">
+        <option value="default">Usar a configuração do canal ({{ "ligado" if n.channel.forced_alignment else "desligado" }})</option>
+        <option value="on">Ligar nesta geração</option>
+        <option value="off">Desligar (tempos estimados, sem custo extra)</option>
+      </select>
+      <div class="help">Desligado: o áudio é gerado normalmente, mas os tempos de cada cena e as legendas são <em>estimados</em> pela duração. {% if not n.alignment_global %}<strong>O interruptor global do servidor está desligado (FORCED_ALIGNMENT_ENABLED=false).</strong>{% endif %}</div>
+    </div>
+    <div class="promptbox" id="narr-estimate" style="font-family:inherit">
+      Estimativa: <strong id="est-chars">{{ n.test.chars }}</strong> caracteres ≈ <strong id="est-credits">{{ n.test.credits_estimated }}</strong> créditos
+      <span class="muted">(completa: {{ n.full.chars }} caracteres ≈ {{ n.full.credits_estimated }} créditos; limite por geração: {{ n.full.max_chars }})</span>
+    </div>
+    {% if n.test.problems %}<div class="alert">{% for p in n.test.problems %}{{ p }}<br>{% endfor %}</div>{% endif %}
+    {% if n.full.problems and not n.test.problems %}<p class="help">Narração completa bloqueada agora: {{ n.full.problems|join(" ") }}</p>{% endif %}
+    <button {{ "disabled" if n.active }} data-confirm="Gerar a narração? Isso GASTA créditos do ElevenLabs.">{{ ic("play") }} Gerar narração</button>
+    {% if n.active %}<span class="muted">Aguarde o job atual terminar.</span>{% endif %}
+  </form>
+  {% endif %}
+
+  {% if job %}
+  <hr>
+  <div class="list-row" style="border:0;padding:0">
+    <div class="grow"><span class="title">Job #{{ job.id }} · {{ "narração" if job.type == "tts" else "alinhamento" }}</span>
+      <small>{{ n.users.get(job.created_by, "") }}{% if job.parent_job_id %} · continuação do #{{ job.parent_job_id }}{% endif %}</small></div>
+    <span class="badge {{ {'queued':'pending','running':'in_progress','done':'done','failed':'failed','cancelled':'stale'}[job.status] }}">{{ {"queued":"na fila","running":"rodando","done":"concluído","failed":"falhou","cancelled":"cancelado"}[job.status] }}</span>
+    {% if job.status in ("queued", "running") %}<form method="post" action="/jobs/{{ job.id }}/cancel"><button class="secondary sm" data-confirm="Cancelar este job?">Cancelar</button></form>{% endif %}
+    {% if job.status in ("failed", "cancelled") %}<form method="post" action="/jobs/{{ job.id }}/retry"><button class="secondary sm">Tentar de novo</button></form>{% endif %}
+  </div>
+  {% if job.status in ("queued", "running") %}<div class="progress"><i style="width: {{ job.progress }}%"></i></div>{% endif %}
+  {% if job.status == "queued" %}<p class="help">Na fila. Se não andar, o worker não está rodando (<code>make worker</code>).</p>{% endif %}
+  {% if job.error %}<div class="alert">{{ job.error }}</div>{% endif %}
+  {% if n.log %}<pre class="promptbox" style="font-size:.78rem;max-height:12rem;overflow:auto">{{ n.log }}</pre>{% endif %}
+  {% endif %}
+
+  {% if n.audio %}
+  <hr>
+  <h4 style="margin:.2rem 0 .5rem">Áudio {% if n.audio.meta.partial %}<span class="badge partial">só teste</span>{% endif %}
+    {% if n.audio.based_on_script_version_id != n.video.approved_script_version_id %}<span class="badge stale">desatualizado — o roteiro aprovado mudou</span>{% endif %}</h4>
+  <audio controls preload="metadata" src="{{ n.audio_url }}" style="width:100%"></audio>
+  <p class="help">{{ n.audio.meta.duration }}s · {{ n.audio.meta.chars }} caracteres · {{ n.audio.meta.model_id }} · {{ n.audio.meta.parts }} trecho(s)
+    · tempos {{ "exatos (Forced Alignment)" if n.doc and n.doc.timing == "forced" else "estimados" }}</p>
+  <div class="stack-inline">{% for label, aid in n.downloads %}<a class="btn secondary sm" href="/assets/{{ aid }}/file?download=1" hx-boost="false">{{ ic("download") }} {{ label }}</a>{% endfor %}</div>
+
+  {% if n.doc %}
+  <h4 style="margin:1rem 0 .4rem">Tempo por cena</h4>
+  {% for sc in n.doc.scenes %}
+  <div class="scene" style="grid-template-columns:2.2rem 5.5rem 1fr;padding:.35rem 0"><span class="n">{{ sc.index + 1 }}</span>
+    <span class="muted mono" style="font-size:.8rem">{{ "%.1f"|format(sc.start) }}–{{ "%.1f"|format(sc.end) }}s</span><span>{{ sc.text[:90] }}{{ "…" if sc.text|length > 90 }}</span></div>
+  {% endfor %}
+  {% if n.doc.low_confidence %}
+  <h4 style="margin:1rem 0 .4rem">Palavras para revisar <span class="tip" tabindex="0" data-tip="O alinhamento teve dificuldade com estas palavras (loss alto): pode haver erro de pronúncia, número por extenso, sigla ou nome estrangeiro. Ouça o trecho.">?</span></h4>
+  <div class="chips">{% for w in n.doc.low_confidence %}<span class="chip" title="loss {{ '%.2f'|format(w.loss) }} em {{ '%.1f'|format(w.start) }}s">{{ w.text }}</span>{% endfor %}</div>
+  {% endif %}
+  {% endif %}
+  {% endif %}
+</div>

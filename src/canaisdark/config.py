@@ -20,12 +20,18 @@ class Settings(BaseSettings):
     public_url: str = ""
     # ElevenLabs (Fase 3). A chave fica só no .env; nunca é exibida nem gravada no banco.
     elevenlabs_api_key: str = ""
+    # Modo demonstração: usa um ElevenLabs FALSO (sem rede, sem créditos; o áudio é sintético/mudo)
+    elevenlabs_fake: bool = False
     elevenlabs_max_chars_per_job: int = 2500
     # Tamanho máximo de cada requisição de TTS (trechos cortados em fronteiras de cena)
     tts_chunk_chars: int = 2500
     # Interruptor geral do Forced Alignment (false = nunca chama; tempos das cenas são estimados)
     forced_alignment_enabled: bool = True
     worker_poll_seconds: float = 2.0
+
+    @property
+    def elevenlabs_ready(self) -> bool:
+        return bool(self.elevenlabs_api_key) or self.elevenlabs_fake
 
 
 @lru_cache

@@ -29,6 +29,7 @@ from canaisdark.web.common import (
     redirect,
     render,
 )
+from canaisdark.web.narration import narration_ctx
 from canaisdark.web.presets import CHANNEL_PRESETS
 from canaisdark.web.settings import PROCESS_ALL_PROMPT
 
@@ -318,6 +319,7 @@ def video_page(
         channel=channel,
         crumbs=[("Canais", "/"), (channel.name, f"/channels/{channel.slug}")],
         claude_prompt=claude_prompt,
+        narr=narration_ctx(session, video),
         stages=video_status.get_stages(session, video),
         versions=versions,
         selected=selected,

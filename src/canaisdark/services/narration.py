@@ -119,7 +119,7 @@ def plan(
         texts = [s.text for s in used]
     if not channel.elevenlabs_voice_id.strip():
         problems.append("Defina o voice_id do ElevenLabs nas configurações do canal.")
-    if not settings.elevenlabs_api_key:
+    if not settings.elevenlabs_ready:
         problems.append("ELEVENLABS_API_KEY não está configurada no .env do servidor.")
     max_chars = settings.elevenlabs_max_chars_per_job
     chars = sum(len(t) for t in texts) + max(0, len(texts) - 1)
@@ -148,7 +148,7 @@ def plan(
         will_align=will_align,
         max_chars=max_chars,
         balance=balance,
-        api_key_set=bool(settings.elevenlabs_api_key),
+        api_key_set=settings.elevenlabs_ready,
         problems=problems,
     )
 
