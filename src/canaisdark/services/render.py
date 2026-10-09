@@ -29,7 +29,7 @@ from canaisdark.services import channels, narration, storage, videos
 from canaisdark.services import timeline as tl_service
 from canaisdark.services.errors import InvalidState
 
-ALGO_VERSION = 1  # muda quando a forma de montar os segmentos muda (invalida o cache)
+ALGO_VERSION = 2  # muda quando a forma de montar os segmentos muda (invalida o cache)
 BLANK_COLOR = "0x0b0d12"
 SUPERSAMPLE = 2
 
@@ -47,6 +47,11 @@ class Quality:
 PREVIEW = Quality("preview", 1280, 720, 24, "veryfast", 26)
 FINAL = Quality("final", 1920, 1080, 30, "fast", 18)
 QUALITIES = {q.name: q for q in (PREVIEW, FINAL)}
+# Shorts 9:16 (reusam o mesmo construtor de segmentos)
+SHORT_PREVIEW = Quality("preview", 720, 1280, 24, "veryfast", 26)
+SHORT_FINAL = Quality("final", 1080, 1920, 30, "fast", 18)
+SHORT_QUALITIES = {q.name: q for q in (SHORT_PREVIEW, SHORT_FINAL)}
+BLUR_BAND_RATIO = 9 / 16  # a imagem 16:9 ocupa a largura toda do quadro vertical
 
 
 class RenderCancelled(Exception):
@@ -89,6 +94,8 @@ class RenderPlan:
     ducking: bool
     warnings: list[str] = field(default_factory=list)
     missing: list[int] = field(default_factory=list)
+    audio_start: float = 0.0  # início (s) da fatia usada da narração (Shorts)
+    audio_fade: bool = False  # fade curto de entrada/saída na narração (Shorts)
 
 
 def ffmpeg_ok() -> None:
@@ -197,6 +204,43 @@ def _camera(kind: str, intensity: float, frames: int, offset: int) -> tuple[str,
     return "1", cx, cy
 
 
+def _blur_chain(
+    src: dict[str, Any],
+    motion: dict[str, Any],
+    scene_frames: int,
+    offset: int,
+    q: Quality,
+    label_in: str,
+    label_out: str,
+) -> str:
+    """Quadro vertical com a imagem 16:9 centralizada em largura total sobre o próprio fundo desfocado."""
+    w, h = q.width, q.height
+    band = round(w * BLUR_BAND_RATIO / 2) * 2
+    o = label_out
+    bg = (
+        f"[{label_in}]split[{o}s1][{o}s2];"
+        f"[{o}s1]scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},"
+        f"boxblur=40:4,eq=brightness=-0.18,setsar=1[{o}bg];"
+    )
+    animated = src["kind"] != "clip" and motion["kind"] != MotionKind.STATIC
+    if animated:
+        z, x, y = _camera(motion["kind"], float(motion["intensity"]), scene_frames, offset)
+        bw, bh = w * SUPERSAMPLE, band * SUPERSAMPLE
+        fg = (
+            f"[{o}s2]scale={bw}:{bh}:force_original_aspect_ratio=increase,crop={bw}:{bh},"
+            f"zoompan=z='{z}':x='{x}':y='{y}':d=1:s={w}x{band}:fps={q.fps},setsar=1[{o}fg];"
+        )
+    else:
+        fg = (
+            f"[{o}s2]scale={w}:{band}:force_original_aspect_ratio=increase,crop={w}:{band},"
+            f"fps={q.fps},setsar=1[{o}fg];"
+        )
+    return (
+        f"{bg}{fg}[{o}bg]fps={q.fps}[{o}bgf];"
+        f"[{o}bgf][{o}fg]overlay=(W-w)/2:(H-h)/2,format=yuv420p[{o}]"
+    )
+
+
 def _video_chain(
     src: dict[str, Any],
     motion: dict[str, Any],
@@ -207,6 +251,8 @@ def _video_chain(
     label_out: str,
 ) -> str:
     w, h = q.width, q.height
+    if src["kind"] != "blank" and src.get("layout") == "blur":
+        return _blur_chain(src, motion, scene_frames, offset, q, label_in, label_out)
     if src["kind"] == "clip":
         return (
             f"[{label_in}]scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},"
@@ -309,23 +355,36 @@ def _ass_time(t: float) -> str:
 
 OVERLAY_HEADER = """[Script Info]
 ScriptType: v4.00+
-PlayResX: 1920
-PlayResY: 1080
+PlayResX: {w}
+PlayResY: {h}
 WrapStyle: 0
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: top,Arial,84,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,2,8,100,100,90,1
-Style: center,Arial,96,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,2,5,100,100,40,1
-Style: bottom,Arial,84,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,2,2,100,100,90,1
+Style: top,Arial,{size},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,2,8,{side},{side},{mtop},1
+Style: center,Arial,{size_c},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,2,5,{side},{side},40,1
+Style: bottom,Arial,{size},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,2,2,{side},{side},{mbottom},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
 
 
-def overlay_ass(texts: list[tuple[float, float, str, str]]) -> str:
-    lines = [OVERLAY_HEADER.rstrip("\n")]
+def overlay_header(width: int = 1920, height: int = 1080) -> str:
+    """Estilos dos textos na tela; no quadro vertical ficam fora da zona coberta pela interface do Shorts."""
+    if height > width:
+        return OVERLAY_HEADER.format(
+            w=width, h=height, size=72, size_c=80, side=60, mtop=260, mbottom=420
+        )
+    return OVERLAY_HEADER.format(
+        w=width, h=height, size=84, size_c=96, side=100, mtop=90, mbottom=90
+    )
+
+
+def overlay_ass(
+    texts: list[tuple[float, float, str, str]], width: int = 1920, height: int = 1080
+) -> str:
+    lines = [overlay_header(width, height).rstrip("\n")]
     for start, end, text, position in texts:
         safe = text.replace("\\", "").replace("{", "(").replace("}", ")").replace("\n", "\\N")
         lines.append(f"Dialogue: 0,{_ass_time(start)},{_ass_time(end)},{position},,0,0,0,,{safe}")
@@ -347,6 +406,8 @@ def final_command(
     q = plan.quality
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-threads", str(threads)]
     cmd += ["-f", "concat", "-safe", "0", "-i", str(segments_list)]
+    if plan.audio_start:
+        cmd += ["-ss", f"{plan.audio_start:.3f}"]
     cmd += ["-i", str(plan.audio)]
     if plan.music:
         cmd += ["-stream_loop", "-1", "-i", str(plan.music)]
@@ -357,8 +418,15 @@ def final_command(
     if overlay_file:
         vf.append(f"ass='{_filter_path(overlay_file)}'")
     parts: list[str] = []
+    fades = (
+        f",afade=t=in:st=0:d=0.15,afade=t=out:st={max(dur - 0.25, 0):.3f}:d=0.25"
+        if plan.audio_fade
+        else ""
+    )
     if plan.music:
-        parts.append(f"[1:a]aresample=48000,apad,atrim=0:{dur:.3f},asetpts=PTS-STARTPTS[nar]")
+        parts.append(
+            f"[1:a]aresample=48000,apad,atrim=0:{dur:.3f},asetpts=PTS-STARTPTS{fades}[nar]"
+        )
         music = (
             f"[2:a]aresample=48000,atrim=0:{dur:.3f},asetpts=PTS-STARTPTS,"
             f"volume={plan.music_db}dB,afade=t=out:st={max(dur - 2.0, 0):.3f}:d=2[mus]"
@@ -374,7 +442,7 @@ def final_command(
             parts.append("[nar][mus]amix=inputs=2:duration=first:normalize=0[a]")
         amap = "[a]"
     else:
-        parts.append(f"[1:a]aresample=48000,apad,atrim=0:{dur:.3f},asetpts=PTS-STARTPTS[a]")
+        parts.append(f"[1:a]aresample=48000,apad,atrim=0:{dur:.3f},asetpts=PTS-STARTPTS{fades}[a]")
         amap = "[a]"
     if vf:
         parts.append(f"[0:v]{','.join(vf)}[v]")
@@ -647,7 +715,9 @@ def execute(
     overlay_file: Path | None = None
     if plan_.overlay_texts:
         overlay_file = out_dir / f"{out_name}.overlay.ass"
-        overlay_file.write_text(overlay_ass(plan_.overlay_texts), encoding="utf-8")
+        overlay_file.write_text(
+            overlay_ass(plan_.overlay_texts, q.width, q.height), encoding="utf-8"
+        )
     out = out_dir / out_name
     tmp_out = out.with_suffix(".part.mp4")
     if on_progress:

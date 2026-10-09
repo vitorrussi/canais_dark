@@ -296,3 +296,77 @@ def test_music_upload_validation_and_reuse(
     assert [m.id for m in music.list_music(session, a["video_id"])] == [got.id]
     music.remove(session, a["video_id"], got.id)  # type: ignore[arg-type]
     assert not (get_settings().data_dir / got.path).exists()
+
+
+VTINY = render.Quality("vtiny", 180, 320, 12, "ultrafast", 32)
+
+
+def _vspec(layout: str, kind: str = "image") -> render.SegmentSpec:
+    src = {"kind": kind, "path": "/x/a.jpg", "stamp": [1, 2], "scene_index": 0, "layout": layout}
+    return render.SegmentSpec(
+        position=0,
+        scene_index=0,
+        source=src,
+        motion={"kind": "zoom_in", "intensity": 0.1},
+        frames=24,
+        scene_frames=24,
+        scene_offset=0,
+        blend_frames=0,
+    )
+
+
+def test_blur_layout_command_and_cache_key() -> None:
+    blur = " ".join(render.segment_command(_vspec("blur"), VTINY, Path("/o.mp4")))
+    assert "boxblur" in blur and "overlay=(W-w)/2:(H-h)/2" in blur and "zoompan" in blur
+    fill = " ".join(render.segment_command(_vspec("fill"), VTINY, Path("/o.mp4")))
+    assert "boxblur" not in fill and "overlay" not in fill
+    assert render.segment_key(_vspec("blur"), VTINY) != render.segment_key(_vspec("fill"), VTINY)
+    clip = " ".join(render.segment_command(_vspec("blur", "clip"), VTINY, Path("/o.mp4")))
+    assert "boxblur" in clip and "zoompan" not in clip
+
+
+def test_overlay_header_vertical_keeps_text_out_of_ui_zone() -> None:
+    head = render.overlay_ass([(0, 1, "oi", "top")], 1080, 1920)
+    assert "PlayResX: 1080" in head and "PlayResY: 1920" in head
+    assert "PlayResX: 1920" in render.overlay_ass([(0, 1, "oi", "top")])
+
+
+def test_final_command_audio_slice_and_fades(
+    session: Session, user_token: tuple[User, str], cfg: Path
+) -> None:
+    ids = setup_video(session, user_token[0], [2.0, 2.0])
+    video = videos.get_video(session, ids["video_id"])
+    p = render.plan(session, video, timeline.build_default(session, video), TINY)
+    p.audio_start, p.audio_fade = 12.5, True
+    cmd = render.final_command(p, Path("/l.txt"), Path("/o.mp4"), None)
+    i = cmd.index("-ss")
+    assert cmd[i + 1] == "12.500" and cmd[i + 2] == "-i" and cmd[i + 3] == str(p.audio)
+    assert "afade=t=in" in " ".join(cmd)
+
+
+@needs_ffmpeg
+def test_real_vertical_blur_segment(tmp_path: Path) -> None:
+    from PIL import Image
+
+    img = tmp_path / "wide.jpg"
+    Image.new("RGB", (320, 180), (200, 40, 40)).save(img)
+    spec = _vspec("blur")
+    spec.source["path"] = str(img)
+    out = tmp_path / "seg.mp4"
+    subprocess.run(render.segment_command(spec, VTINY, out), check=True)
+    info = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "stream=width,height,nb_frames",
+            "-of",
+            "csv=p=0",
+            str(out),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    assert info.startswith("180,320")
