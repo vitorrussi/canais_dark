@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from canaisdark.api import (
     channels,
+    drive,
     jobs,
     metadata,
     render,
@@ -34,3 +35,4 @@ router.include_router(render.router)
 router.include_router(metadata.router)
 router.include_router(shorts.router)
 router.include_router(youtube.router)
+router.include_router(drive.router)

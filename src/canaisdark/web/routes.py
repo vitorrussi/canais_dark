@@ -31,6 +31,7 @@ from canaisdark.web.common import (
     redirect,
     render,
 )
+from canaisdark.web.drive import drive_ctx
 from canaisdark.web.narration import narration_ctx
 from canaisdark.web.presets import CHANNEL_PRESETS
 from canaisdark.web.render import render_ctx
@@ -341,6 +342,7 @@ def video_page(
         rnd=render_ctx(session, video) if video.approved_script_version_id else None,
         shr=shorts_ctx(session, video) if video.approved_script_version_id else None,
         yts=youtube_ctx(session, video) if video.approved_script_version_id else None,
+        drv=drive_ctx(session, video) if video.approved_script_version_id else None,
         cov=_coverage(session, video),
         stages=video_status.get_stages(session, video),
         versions=versions,

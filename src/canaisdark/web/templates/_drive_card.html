@@ -1,0 +1,49 @@
+{% from "_macros.html" import ic %}
+{% set v = d.video %}
+<details class="card step {{ 'accent' if d.active }}" id="drive-card" {% if d.open %}open{% endif %} {% if d.active %}hx-get="/videos/{{ v.id }}/drive/card" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
+  <summary class="step-head" style="cursor:pointer;list-style:none"><span class="step-n">7</span><h3>Google Drive <span class="badge">opcional</span></h3>
+    {% if d.pending and v.drive_folder_id %}<span class="badge stale">{{ d.pending }} para enviar</span>{% elif v.drive_folder_id %}<span class="badge done">sincronizado</span>{% endif %}</summary>
+
+  <p class="muted">Cópia dos arquivos finais no seu Drive (pasta criada pelo sistema). Só envia o que mudou desde a última vez. Nada depende desta etapa.</p>
+
+  {% if d.setup.fake %}<div class="alert">Modo demonstração: nada é enviado ao Google.</div>{% endif %}
+  {% if not d.connected %}
+    <div class="alert">{% if d.account %}A autorização do Drive deste canal expirou.{% else %}O canal “{{ d.channel.name }}” ainda não está conectado ao Google Drive.{% endif %}
+      <a href="/channels/{{ d.channel.slug }}?tab=settings">Conectar na página do canal</a>.</div>
+  {% else %}
+    <p class="help">Conta: <b>{{ d.account.account_email or "conectada" }}</b>{% if d.folder_url %} · <a href="{{ d.folder_url }}" target="_blank" rel="noopener">abrir a pasta do vídeo no Drive</a>{% endif %}</p>
+  {% endif %}
+
+  <form method="post" action="/videos/{{ v.id }}/drive/sync">
+    <div class="field"><label>O que enviar</label>
+      {% for key, label, checked in d.options %}
+      <label class="check"><input type="checkbox" name="options" value="{{ key }}" {{ "checked" if checked }}> {{ label }}{% if key == "media" %} <span class="muted">(arquivos grandes)</span>{% endif %}</label>
+      {% endfor %}
+    </div>
+    <div class="form-actions"><button {{ "disabled" if d.active or not d.connected }}>{{ ic("upload") }} Sincronizar com o Drive</button></div>
+  </form>
+
+  {% if d.rows %}
+  <h4 class="subhead" style="margin-top:1rem">Arquivos</h4>
+  {% for r in d.rows %}
+  <div class="list-row">
+    <div class="grow"><span class="title">{{ r.folder }}/{{ r.name }}</span>
+      {% if r.url %}<small><a href="{{ r.url }}" target="_blank" rel="noopener">abrir no Drive</a></small>{% endif %}</div>
+    <span class="badge {{ {'synced':'done','changed':'stale','new':'pending'}[r.state] }}">{{ {"synced":"sincronizado","changed":"alterado","new":"novo"}[r.state] }}</span>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if d.job %}
+  <hr>
+  <div class="list-row" style="border:0;padding:0">
+    <div class="grow"><span class="title">Job #{{ d.job.id }} · sincronização</span></div>
+    <span class="badge {{ {'queued':'pending','running':'in_progress','done':'done','failed':'failed','cancelled':'stale'}[d.job.status] }}">{{ {"queued":"na fila","running":"enviando","done":"concluído","failed":"falhou","cancelled":"cancelado"}[d.job.status] }}</span>
+    {% if d.job.status in ("queued", "running") %}<form method="post" action="/jobs/{{ d.job.id }}/cancel"><button class="secondary sm" data-confirm="Cancelar a sincronização?">Cancelar</button></form>{% endif %}
+    {% if d.job.status in ("failed", "cancelled") %}<form method="post" action="/jobs/{{ d.job.id }}/retry"><button class="secondary sm">Tentar de novo</button></form>{% endif %}
+  </div>
+  {% if d.job.status in ("queued", "running") %}<div class="progress"><i style="width: {{ d.job.progress }}%"></i></div>{% endif %}
+  {% if d.job.error %}<div class="alert">{{ d.job.error }}</div>{% endif %}
+  {% if d.log %}<details {{ "open" if d.job.status in ("running", "queued", "failed") }}><summary class="muted" style="cursor:pointer">Ver log</summary><pre class="promptbox" style="font-size:.78rem;max-height:10rem;overflow:auto">{{ d.log }}</pre></details>{% endif %}
+  {% endif %}
+</details>
