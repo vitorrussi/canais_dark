@@ -17,6 +17,8 @@ class AssetType(StrEnum):
     TIMELINE = "timeline"
     RENDER = "render"
     MUSIC = "music"
+    SHORTS_PLAN = "shorts_plan"
+    SHORT = "short"
 
 
 class Asset(SQLModel, table=True):

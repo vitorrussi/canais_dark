@@ -12,6 +12,7 @@ class JobType(StrEnum):
     TTS = "tts"
     ALIGNMENT = "alignment"
     RENDER = "render"
+    SHORTS = "shorts"
 
 
 class JobStatus(StrEnum):
