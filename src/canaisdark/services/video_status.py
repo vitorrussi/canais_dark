@@ -47,7 +47,7 @@ STAGES: list[tuple[str, str]] = [
     ("metadata", "Metadados"),
     ("shorts", "Shorts (opcional)"),
     ("youtube", "Upload YouTube (privado)"),
-    ("drive", "Google Drive"),
+    ("drive", "Google Drive (opcional)"),
 ]
 
 
@@ -293,6 +293,28 @@ def jobs_latest(session: Session, video_id: int) -> Job | None:
     return jobs.latest_job(session, video_id, JobType.YOUTUBE_UPLOAD)
 
 
+def _drive_state(session: Session, video: Video) -> StageState:
+    from canaisdark.services import drive, jobs
+
+    assert video.id is not None
+    job = jobs.latest_job(session, video.id, JobType.DRIVE_SYNC)
+    if (running := _job_state(job.status if job else None)) is not None:
+        return running
+    reg = drive.registry(session, video.id)
+    if not reg:
+        return (
+            StageState.FAILED
+            if job and job.status == JobStatus.FAILED.value
+            else StageState.NOT_STARTED
+        )
+    rows = drive.overview(session, video)
+    if any(r["state"] != "synced" for r in rows):
+        if job and job.status == JobStatus.FAILED.value:
+            return StageState.FAILED
+        return StageState.STALE
+    return StageState.DONE
+
+
 def _shorts_state(session: Session, video: Video) -> StageState:
     """Etapa OPCIONAL: nada depende dela; SKIPPED = dispensada de propósito."""
     from canaisdark.services import jobs, shorts, shorts_render
@@ -328,6 +350,7 @@ _STATE_CALCULATORS: dict[str, Callable[[Session, Video], StageState]] = {
     "shorts": _shorts_state,
     "metadata": _metadata_state,
     "youtube": _youtube_state,
+    "drive": _drive_state,
     "prompts": _prompts_state,
     "assets": _assets_state,
     "script": _script_state,

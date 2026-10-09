@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlmodel import Session
 
+from canaisdark.integrations.drive import DriveCancelled
 from canaisdark.integrations.elevenlabs import ElevenLabsLike, GenerationCancelled
 from canaisdark.integrations.youtube import UploadCancelled
 from canaisdark.models import Asset, AssetType, Job, JobType, Scene
@@ -13,6 +14,7 @@ from canaisdark.models.channel import utcnow
 from canaisdark.services import (
     alignment,
     audio,
+    drive,
     jobs,
     narration,
     render,
@@ -305,6 +307,13 @@ def run_youtube_upload(session: Session, job: Job, make_client: ClientFactory) -
         raise JobCancelled from e
 
 
+def run_drive_sync(session: Session, job: Job, make_client: ClientFactory) -> None:
+    try:
+        drive.run_job(session, job)
+    except DriveCancelled as e:
+        raise JobCancelled from e
+
+
 def run_shorts(session: Session, job: Job, make_client: ClientFactory) -> None:
     try:
         shorts_render.run_job(session, job)
@@ -318,4 +327,5 @@ HANDLERS: dict[str, Callable[[Session, Job, ClientFactory], None]] = {
     JobType.RENDER.value: run_render,
     JobType.SHORTS.value: run_shorts,
     JobType.YOUTUBE_UPLOAD.value: run_youtube_upload,
+    JobType.DRIVE_SYNC.value: run_drive_sync,
 }
