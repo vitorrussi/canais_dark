@@ -115,3 +115,10 @@ def test_concurrent_claim_gives_task_to_only_one(
     [t.start() for t in threads]
     [t.join() for t in threads]
     assert sorted(r is not None for r in results) == [False, True]
+
+
+def test_claim_filters_by_video(
+    session: Session, user_token: tuple[User, str], video_id: int
+) -> None:
+    assert tasks.claim_next(session, user_token[0], video_id=video_id + 1) is None
+    assert tasks.claim_next(session, user_token[0], video_id=video_id) is not None

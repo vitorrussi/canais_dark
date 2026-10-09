@@ -39,6 +39,7 @@ def test_full_flow(logged: TestClient) -> None:
     )  # seguiu redirect p/ /channels/canal-teste
     r = logged.post("/channels/canal-teste/videos", data={"topic": "Um tema"})
     assert r.status_code == 200 and "Roteiro" in r.text and "Não iniciada" in r.text
+    assert "Copiar prompt" in r.text and "claim_next_task(video_id=" in r.text
     assert "Um tema" in r.text
     r = logged.post(
         "/channels/canal-teste",

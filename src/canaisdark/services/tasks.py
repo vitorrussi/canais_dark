@@ -71,7 +71,9 @@ def is_claim_expired(task: ClaudeTask) -> bool:
     return claimed < utcnow().replace(tzinfo=None) - CLAIM_TTL
 
 
-def claim_next(session: Session, actor: User, task_type: str | None = None) -> ClaudeTask | None:
+def claim_next(
+    session: Session, actor: User, task_type: str | None = None, video_id: int | None = None
+) -> ClaudeTask | None:
     """Reserva atomicamente a próxima tarefa (pendente ou com reserva expirada)."""
     assert actor.id is not None
     for _ in range(5):
@@ -87,6 +89,8 @@ def claim_next(session: Session, actor: User, task_type: str | None = None) -> C
         stmt = select(ClaudeTask.id).where(available).order_by(col(ClaudeTask.id)).limit(1)
         if task_type:
             stmt = stmt.where(ClaudeTask.type == task_type)
+        if video_id is not None:
+            stmt = stmt.where(ClaudeTask.video_id == video_id)
         task_id = session.exec(stmt).first()
         if task_id is None:
             return None

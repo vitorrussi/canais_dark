@@ -169,15 +169,15 @@ def list_pending_tasks() -> list[dict[str, Any]]:
 
 @mcp.tool()
 @safe
-def claim_next_task(type: str | None = None) -> dict[str, Any]:
+def claim_next_task(type: str | None = None, video_id: int | None = None) -> dict[str, Any]:
     """Reserva a próxima tarefa pendente e devolve o contexto completo para executá-la.
 
     A reserva dura 30 minutos e evita que outra pessoa processe a mesma tarefa. `type` opcional
-    (ex.: 'generate_script'). Se não houver tarefas, retorna {"task": null}."""
+    (ex.: 'generate_script') e `video_id` opcional restringem a busca. Se não houver tarefas, retorna {"task": null}."""
     with _db() as (s, user):
         if type and type not in {t.value for t in TaskType}:
             raise ToolError(f"type inválido '{type}'. Valores: {[t.value for t in TaskType]}")
-        task = tasks.claim_next(s, user, type)
+        task = tasks.claim_next(s, user, type, video_id)
         if task is None:
             return {"task": None, "message": "Nenhuma tarefa pendente."}
         return task_context.build_task_context(s, task)

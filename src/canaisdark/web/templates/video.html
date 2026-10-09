@@ -28,7 +28,22 @@
   </form>
 </details>
 {% endif %}
-<p><small>No Claude, diga: "processa as pendências".</small></p>
+{% if claude_prompt %}
+<article>
+  <header><strong>Prompt para o Claude Code</strong></header>
+  <pre id="claude-prompt" style="white-space:pre-wrap">{{ claude_prompt }}</pre>
+  <button type="button" onclick="copyPrompt(this)">Copiar prompt</button>
+</article>
+<script>
+function copyPrompt(btn) {
+  const text = document.getElementById("claude-prompt").innerText;
+  const done = () => { btn.textContent = "Copiado ✓"; setTimeout(() => btn.textContent = "Copiar prompt", 2000); };
+  if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(done); return; }
+  const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta);
+  ta.select(); document.execCommand("copy"); ta.remove(); done();
+}
+</script>
+{% endif %}
 
 <h3>Roteiro</h3>
 {% if selected %}

@@ -11,7 +11,15 @@ from canaisdark.db import get_engine, get_session
 from canaisdark.models import User
 from canaisdark.schemas.channel import ChannelCreate, ChannelUpdate
 from canaisdark.schemas.video import VideoCreate
-from canaisdark.services import channels, scripts, tasks, users, video_status, videos
+from canaisdark.services import (
+    channels,
+    scripts,
+    task_context,
+    tasks,
+    users,
+    video_status,
+    videos,
+)
 from canaisdark.services.errors import DomainError
 
 BASE = Path(__file__).parent
@@ -245,12 +253,19 @@ def video_page(
     open_tasks = tasks.list_tasks(session, video_id=video_id, open_only=True)
     failed = [t for t in tasks.list_tasks(session, video_id=video_id, status="failed")][-1:]
     claimers = {u.id: u.name for u in session.exec(select(User))}
+    channel = channels.get_channel(session, video.channel_id)
+    claude_prompt = (
+        task_context.build_user_prompt(video_id, video.topic, channel.name, open_tasks[0].type)
+        if open_tasks
+        else None
+    )
     return _render(
         request,
         "video.html",
         user,
         video=video,
-        channel=channels.get_channel(session, video.channel_id),
+        channel=channel,
+        claude_prompt=claude_prompt,
         stages=video_status.get_stages(session, video),
         versions=versions,
         selected=selected,

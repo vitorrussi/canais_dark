@@ -26,7 +26,7 @@ ferramenta de escrita → `complete_task` (ou `fail_task` / `release_task`). A a
 | `get_video(video_id)` | tema, metadados, etapas, versões do roteiro (sem texto das cenas) |
 | `get_script(video_id, version?)` | cenas da versão (padrão: mais recente) |
 | `list_pending_tasks()` | tarefas abertas (pending/in_progress) |
-| `claim_next_task(type?)` | reserva e devolve `{task, how_to, video, channel, previous_script}`; `{"task": null}` se vazio |
+| `claim_next_task(type?, video_id?)` | reserva e devolve `{task, how_to, video, channel, previous_script}`; `{"task": null}` se vazio |
 | `complete_task(task_id, result_summary)` | só quem reservou (ou reserva expirada) |
 | `fail_task(task_id, reason)` | idem |
 | `release_task(task_id)` | devolve à fila |

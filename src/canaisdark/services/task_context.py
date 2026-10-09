@@ -58,3 +58,17 @@ def build_task_context(session: Session, task: ClaudeTask) -> dict[str, Any]:
         },
         "previous_script": previous,
     }
+
+
+def build_user_prompt(video_id: int, video_topic: str, channel_name: str, task_type: str) -> str:
+    """Texto pronto para o usuário colar no Claude Code (com o MCP `canais` conectado)."""
+    topic = " ".join(video_topic.split())
+    topic = topic if len(topic) <= 200 else topic[:197] + "..."
+    return (
+        f"Use o MCP `canais` para processar a tarefa `{task_type}` do vídeo #{video_id} "
+        f'(canal "{channel_name}"; tema: {topic}).\n'
+        f"1. Chame claim_next_task(video_id={video_id}) e leia o contexto e o campo how_to.\n"
+        "2. Execute o trabalho e salve com a ferramenta de escrita indicada (ex.: save_script).\n"
+        "3. Chame complete_task com um resumo curto (ou fail_task se não for possível).\n"
+        "Não aprove nada: a aprovação é feita no site."
+    )
