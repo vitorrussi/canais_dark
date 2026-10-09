@@ -184,6 +184,17 @@ async def create_channel(request: Request, user: WebUser, session: SessionDep) -
     return back(request, f"/channels/{channel.slug}", ok=f"Canal “{channel.name}” criado")
 
 
+def _coverage(session: Session, video: Any) -> dict[str, int]:
+    from canaisdark.services import scene_assets, scene_prompts
+
+    if video.approved_script_version_id is None:
+        return {"prompts": 0, "total": 0, "files": 0, "needed": 0}
+    scenes = scene_prompts.approved_scenes(session, video.id)
+    have, total = scene_prompts.prompt_coverage(scenes)
+    files, needed = scene_assets.coverage(session, scenes)
+    return {"prompts": have, "total": total, "files": files, "needed": needed}
+
+
 def _parse_status(value: str | None) -> VideoStatus | None:
     try:
         return VideoStatus(value) if value else None
@@ -320,6 +331,7 @@ def video_page(
         crumbs=[("Canais", "/"), (channel.name, f"/channels/{channel.slug}")],
         claude_prompt=claude_prompt,
         narr=narration_ctx(session, video),
+        cov=_coverage(session, video),
         stages=video_status.get_stages(session, video),
         versions=versions,
         selected=selected,

@@ -10,6 +10,13 @@
     box.appendChild(t); setTimeout(() => t.remove(), kind === "error" ? 8000 : 4000);
   }
   window.studioToast = toast;
+  window.studioCopyText = async function (text) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(text);
+      else { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
+      toast("Copiado para a área de transferência", "success"); return true;
+    } catch (err) { toast("Não foi possível copiar", "error"); return false; }
+  };
 
   function flushFlash() { const f = document.getElementById("flash-data"); if (f) { toast(f.dataset.msg, f.dataset.kind); f.remove(); } }
   // Barra de carregamento (htmx) e proteção contra envio duplo

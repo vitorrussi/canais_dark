@@ -14,7 +14,7 @@ from PIL import Image, UnidentifiedImageError
 from sqlmodel import Session, col, select
 
 from canaisdark.config import get_settings
-from canaisdark.models import Asset, AssetType
+from canaisdark.models import Asset, AssetType, Scene
 from canaisdark.services import channels, scene_prompts, storage, videos
 from canaisdark.services.errors import InvalidState, NotFound
 
@@ -293,3 +293,17 @@ def map_filenames(filenames: list[str], scene_count: int, filled: set[int]) -> l
         else:
             result[i]["reason"] = "Não há mais cenas sem imagem para este arquivo."
     return result
+
+
+def coverage(session: Session, scenes: list[Scene]) -> tuple[int, int]:
+    """(arquivos presentes, necessários): 1 principal por cena + 1 vertical onde pedido."""
+    amap = scene_assets(session, [s.id for s in scenes if s.id])
+    needed = have = 0
+    for s in scenes:
+        present = amap.get(s.id or 0, {})
+        needed += 1
+        have += "main" in present
+        if s.wants_vertical:
+            needed += 1
+            have += "vertical" in present
+    return have, needed

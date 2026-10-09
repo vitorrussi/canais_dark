@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ic %}
+{% block title %}Cenas e imagens — vídeo #{{ video.id }}{% endblock %}
+{% block crumb %}Cenas e imagens{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Cenas, prompts e imagens</h1>
+  <p class="muted">O Claude escreve os prompts; você gera as imagens (ChatGPT, Gemini…) e envia aqui, uma por cena. O estilo do canal é adicionado automaticamente a cada prompt.</p></div>
+  <div class="actions"><a class="btn secondary" href="/videos/{{ video.id }}">Voltar ao vídeo</a></div></div>
+
+{% if blocked %}
+<div class="card"><div class="empty">{{ ic("file") }}<h3>Roteiro ainda não aprovado</h3><p>{{ blocked }}</p><a class="btn" href="/videos/{{ video.id }}">Ir ao roteiro</a></div></div>
+{% else %}
+<div id="scenes-root" data-video="{{ video.id }}" data-max-mb="{{ max_mb }}">
+<div class="card {{ 'accent' if open_task }}" style="margin-bottom:1rem">
+  <div class="meta" style="margin:0 0 .75rem"><span class="badge {{ 'done' if have_prompts == total else 'info' }}">{{ have_prompts }}/{{ total }} prompts</span>
+    <span class="badge {{ 'done' if have_files == needed_files else 'info' }}">{{ have_files }}/{{ needed_files }} imagens</span>
+    <a class="btn ghost sm" href="/videos/{{ video.id }}/scenes{{ '' if only == 'pending' else '?only=pending' }}">{{ "Mostrar todas" if only == "pending" else "Só pendentes" }}</a></div>
+  <div class="stack-inline">
+    {% if not open_task %}
+    <details class="menu"><summary class="btn sm">{{ ic("sparkles") }} Pedir prompts ao Claude ▾</summary>
+      <div class="menu-body" style="min-width:300px;padding:.7rem">
+        <form method="post" action="/videos/{{ video.id }}/prompts/request"><div class="field"><label for="instr">Instruções extras (opcional)</label>
+          <textarea id="instr" name="instructions" rows="2" placeholder="Ex.: mais planos de detalhe, sem pessoas em primeiro plano"></textarea></div><button class="sm">Enfileirar</button></form></div></details>
+    {% endif %}
+    <button type="button" class="secondary sm" id="copy-all">{{ ic("copy") }} Copiar todos os prompts</button>
+    <details class="menu"><summary class="btn secondary sm">{{ ic("download") }} Baixar pacote ▾</summary><div class="menu-body">
+      <a class="btn ghost sm" href="/videos/{{ video.id }}/prompts.txt" hx-boost="false">Texto (.txt)</a>
+      <a class="btn ghost sm" href="/videos/{{ video.id }}/prompts.md" hx-boost="false">Markdown (.md)</a>
+      <a class="btn ghost sm" href="/videos/{{ video.id }}/prompts.json" hx-boost="false">JSON (.json)</a></div></details>
+  </div>
+  {% if open_task %}
+  <hr><strong>Tarefa de prompts {{ "aguardando o Claude" if open_task.status == "pending" else "em andamento" }}.</strong>
+  <p class="muted">Copie e cole no Claude Code:</p><div id="claude-prompt" class="promptbox">{{ claude_prompt }}</div>
+  <button type="button" data-copy="#claude-prompt">{{ ic("copy") }} Copiar prompt</button>
+  <form method="post" action="/tasks/{{ open_task.id }}/cancel" style="display:inline"><button class="secondary sm" data-confirm="Cancelar esta tarefa?">Cancelar tarefa</button></form>
+  {% endif %}
+</div>
+
+<div class="card" id="batch-drop" style="margin-bottom:1rem;border-style:dashed;text-align:center">
+  <strong>Envio em lote</strong> — arraste várias imagens aqui ou <label style="display:inline;color:var(--accent);cursor:pointer">escolha arquivos<input type="file" id="batch-input" multiple accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime" hidden></label>
+  <div class="help">O número no nome define a cena (<code>03.png</code>, <code>cena-3.jpg</code>); sem número, preenche as cenas ainda sem imagem, em ordem.
+    <select id="batch-variant" style="width:auto;display:inline-block;padding:.2rem 1.6rem .2rem .5rem"><option value="main">Versão 16:9 (principal)</option><option value="vertical">Versão 9:16 (Shorts)</option></select> · até {{ max_mb }} MB por arquivo.</div>
+  <div id="batch-report" class="help" style="text-align:left"></div>
+</div>
+
+{% for r in rows %}
+{% set s = r.scene %}
+<div class="card scene-row" style="margin-bottom:.9rem" data-scene-id="{{ s.id }}" data-index="{{ s.index }}">
+  <div class="scene-head"><span class="n">{{ s.index + 1 }}</span>
+    <span class="metrics">{% if s.start_s is not none %}{{ "%.1f"|format(s.start_s) }}–{{ "%.1f"|format(s.end_s) }}s · {% endif %}{{ s.text.split()|length }} palavras</span>
+    <span class="badge {{ 'done' if r.complete else '' }}" data-status>{{ "completa" if r.complete else "pendente" }}</span>
+    <div class="scene-tools" style="gap:.6rem"><label class="check"><input type="checkbox" class="flag" data-field="wants_vertical" {{ "checked" if s.wants_vertical }}> 9:16 (Shorts)</label>
+      <label class="check"><input type="checkbox" class="flag" data-field="is_key_scene" {{ "checked" if s.is_key_scene }}> cena-chave (vídeo)</label></div></div>
+  <p class="muted" style="margin:.2rem 0 .6rem">{{ s.text }}</p>
+  <div class="layout-2" style="grid-template-columns:minmax(0,1fr) auto">
+    <div>
+      <label class="muted" style="font-size:.8rem">Prompt da cena (inglês; o estilo do canal entra sozinho)</label>
+      <textarea class="prompt-input" rows="3" data-field="image_prompt" placeholder="Ainda sem prompt — peça ao Claude ou escreva aqui…">{{ s.image_prompt }}</textarea>
+      <div class="stack-inline" style="margin-top:.35rem">
+        <button type="button" class="secondary sm" data-copy="{{ r.full }}" data-full {{ "disabled" if not r.full }}>{{ ic("copy") }} Copiar prompt completo</button>
+        <button type="button" class="secondary sm" data-copy="{{ r.full_vertical }}" data-full-vertical {{ "hidden" if not s.wants_vertical }} {{ "disabled" if not r.full }}>{{ ic("copy") }} Copiar 9:16</button>
+      </div>
+      <div class="video-prompt" {{ "hidden" if not s.is_key_scene }} style="margin-top:.5rem">
+        <label class="muted" style="font-size:.8rem">Prompt de vídeo (movimento, para clipe de IA)</label>
+        <textarea class="prompt-input" rows="2" data-field="video_prompt" placeholder="Ex.: slow push-in, fog drifting">{{ s.video_prompt }}</textarea></div>
+    </div>
+    <div class="slots">
+      {% for variant, label in (("main", "16:9"), ("vertical", "9:16")) %}
+      {% set a = r.assets.get(variant) %}
+      <div class="slot" data-variant="{{ variant }}" {{ "hidden" if variant == "vertical" and not s.wants_vertical }}>
+        <div class="slot-body {{ 'v' if variant == 'vertical' }}" title="Clique ou arraste um arquivo">
+          {% if a %}{% if a.thumb_url %}<img src="{{ a.thumb_url }}" alt="Cena {{ s.index + 1 }}" loading="lazy">{% else %}<video src="{{ a.file_url }}" muted preload="metadata"></video>{% endif %}
+          {% else %}<span class="muted">{{ label }}<br><small>soltar aqui</small></span>{% endif %}
+        </div>
+        <input type="file" hidden accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime">
+        <div class="slot-info">{% if a %}<small>{{ a.width }}×{{ a.height }}{% if a.duration %} · {{ a.duration }}s{% endif %}</small>{% for w in a.warnings %}<small class="warn-text">⚠ {{ w }}</small>{% endfor %}{% endif %}</div>
+        <div class="stack-inline"><button type="button" class="secondary sm" data-pick>{{ "Trocar" if a else "Enviar" }} {{ label }}</button>
+          {% if a %}<button type="button" class="ghost sm" data-remove data-asset="{{ a.id }}">Remover</button>{% endif %}</div>
+        <div class="progress" hidden><i style="width:0%"></i></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="card"><div class="empty">{{ ic("film") }}<h3>Nada pendente</h3><p>Todas as cenas têm prompt e imagem.</p></div></div>
+{% endfor %}
+</div>
+<script src="/static/scenes.js"></script>
+{% endif %}
+{% endblock %}
