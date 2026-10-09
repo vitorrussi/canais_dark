@@ -23,9 +23,9 @@ from typing import Any
 from sqlmodel import Session, col, select
 
 from canaisdark.config import get_settings
-from canaisdark.models import Asset, AssetType, Video
+from canaisdark.models import Asset, AssetType, Job, User, Video
 from canaisdark.schemas.timeline import MotionKind, Timeline
-from canaisdark.services import channels, narration, storage
+from canaisdark.services import channels, narration, storage, videos
 from canaisdark.services import timeline as tl_service
 from canaisdark.services.errors import InvalidState
 
@@ -525,7 +525,14 @@ class _Procs:
         self._procs: set[subprocess.Popen[str]] = set()
         self.cancelled = False
 
-    def run(self, cmd: list[str], timeout: float = 1800) -> None:
+    def run(
+        self,
+        cmd: list[str],
+        timeout: float = 1800,
+        tick: Callable[[], None] | None = None,
+        is_cancelled: Callable[[], bool] | None = None,
+    ) -> None:
+        """Executa o ffmpeg; `tick` (a cada ~5 s) mantém o job vivo e `is_cancelled` permite interromper."""
         with self._lock:
             if self.cancelled:
                 raise RenderCancelled
@@ -533,12 +540,24 @@ class _Procs:
                 cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True
             )
             self._procs.add(proc)
+        started = time.monotonic()
+        err = ""
         try:
-            _, err = proc.communicate(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.communicate()
-            raise InvalidState("O ffmpeg demorou demais e foi interrompido.") from None
+            while True:
+                try:
+                    _, err = proc.communicate(timeout=5)
+                    break
+                except subprocess.TimeoutExpired:
+                    if self.cancelled or (is_cancelled and is_cancelled()):
+                        self.cancel()
+                        proc.communicate()
+                        raise RenderCancelled from None
+                    if time.monotonic() - started > timeout:
+                        proc.kill()
+                        proc.communicate()
+                        raise InvalidState("O ffmpeg demorou demais e foi interrompido.") from None
+                    if tick:
+                        tick()
         finally:
             with self._lock:
                 self._procs.discard(proc)
@@ -635,7 +654,12 @@ def execute(
         on_progress(done, total, "Juntando vídeo e áudio…")
     final = _Procs()
     try:
-        final.run(final_command(plan_, listing, tmp_out, overlay_file), timeout=3600)
+        final.run(
+            final_command(plan_, listing, tmp_out, overlay_file),
+            timeout=7200,
+            tick=lambda: on_progress(done, total, "") if on_progress else None,
+            is_cancelled=is_cancelled,
+        )
         tmp_out.replace(out)
     finally:
         listing.unlink(missing_ok=True)
@@ -706,3 +730,103 @@ def store_result(
     session.commit()
     session.refresh(asset)
     return asset
+
+
+# ----- Job -----
+
+
+def start(
+    session: Session,
+    video_id: int,
+    actor: User,
+    quality: str = "preview",
+    subtitles: bool | None = None,
+    allow_missing: bool = False,
+) -> Job:
+    """Valida tudo que dá para validar agora (erros claros) e enfileira o job de render."""
+    from canaisdark.models import JobType
+    from canaisdark.services import jobs
+
+    ffmpeg_ok()
+    if quality not in QUALITIES:
+        raise InvalidState("Qualidade inválida. Use: preview ou final.")
+    video = videos.get_video(session, video_id)
+    asset, tl = tl_service.ensure_timeline(session, video_id, f"user:{actor.id}")
+    plan(session, video, tl, QUALITIES[quality], subtitles, allow_missing)  # só valida
+    return jobs.create_job(
+        session,
+        video_id,
+        JobType.RENDER,
+        {
+            "quality": quality,
+            "subtitles": subtitles,
+            "allow_missing": allow_missing,
+            "timeline_asset_id": asset.id,
+        },
+        actor,
+    )
+
+
+def run_job(session: Session, job: Job) -> None:
+    """Corpo do job (chamado pelo worker): planeja, executa com progresso e guarda o resultado."""
+    from canaisdark.services import jobs
+
+    assert job.id is not None
+    p = job.params
+    video = videos.get_video(session, job.video_id)
+    asset = session.get(Asset, p["timeline_asset_id"])
+    if asset is None:
+        raise InvalidState("A timeline deste render não existe mais.")
+    tl = tl_service.load(asset)
+    quality = QUALITIES[p["quality"]]
+    rplan = plan(session, video, tl, quality, p.get("subtitles"), bool(p.get("allow_missing")))
+    for w in rplan.warnings:
+        jobs.append_log(session, job.id, f"Aviso: {w}")
+    jobs.append_log(
+        session,
+        job.id,
+        f"Render {quality.name} {quality.width}x{quality.height}@{quality.fps}: "
+        f"{len(rplan.segments)} cenas, {rplan.duration:.1f}s.",
+    )
+    last_logged = [""]
+
+    def progress(done: int, total: int, message: str) -> None:
+        jobs.heartbeat(session, job.id or 0, int(done * 100 / max(total, 1)))
+        if message and message != last_logged[0]:
+            last_logged[0] = message
+            jobs.append_log(session, job.id or 0, message)
+
+    inputs = tl_service.inputs_hash(session, video)
+    started = time.monotonic()
+    result = execute(
+        rplan,
+        render_dir(session, video),
+        f"{quality.name}-{int(time.time())}.mp4",
+        on_progress=progress,
+        is_cancelled=lambda: jobs.is_cancelled(session, job.id or 0),
+    )
+    out = store_result(
+        session,
+        video,
+        result,
+        quality.name,
+        {
+            "timeline_asset_id": asset.id,
+            "inputs_hash": inputs,
+            "subtitles": rplan.subtitles_ass is not None,
+            "music": rplan.music is not None,
+            "partial": rplan.partial,
+            "width": quality.width,
+            "height": quality.height,
+            "fps": quality.fps,
+            "missing": rplan.missing,
+        },
+        job.id,
+    )
+    elapsed = time.monotonic() - started
+    jobs.append_log(
+        session,
+        job.id,
+        f"Pronto em {elapsed:.0f}s: {result.size / 1e6:.1f} MB ({result.segments_cached} cenas reaproveitadas).",
+    )
+    jobs.complete(session, job.id, {"asset_id": out.id, "seconds": round(elapsed, 1)})

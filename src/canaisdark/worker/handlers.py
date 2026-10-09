@@ -9,7 +9,16 @@ from sqlmodel import Session
 from canaisdark.integrations.elevenlabs import ElevenLabsLike, GenerationCancelled
 from canaisdark.models import Asset, AssetType, Job, JobType, Scene
 from canaisdark.models.channel import utcnow
-from canaisdark.services import alignment, audio, jobs, narration, scripts, subtitles, videos
+from canaisdark.services import (
+    alignment,
+    audio,
+    jobs,
+    narration,
+    render,
+    scripts,
+    subtitles,
+    videos,
+)
 from canaisdark.services.errors import InvalidState
 
 ClientFactory = Callable[[], ElevenLabsLike]
@@ -279,7 +288,15 @@ def run_alignment(session: Session, job: Job, make_client: ClientFactory) -> Non
     )
 
 
+def run_render(session: Session, job: Job, make_client: ClientFactory) -> None:
+    try:
+        render.run_job(session, job)
+    except render.RenderCancelled as e:
+        raise JobCancelled from e
+
+
 HANDLERS: dict[str, Callable[[Session, Job, ClientFactory], None]] = {
     JobType.TTS.value: run_tts,
     JobType.ALIGNMENT.value: run_alignment,
+    JobType.RENDER.value: run_render,
 }

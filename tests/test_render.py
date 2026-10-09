@@ -183,3 +183,42 @@ def test_real_render_with_subtitles_texts_and_music(
     res = render.execute(p, render.render_dir(session, video), "s.mp4", workers=2)
     kinds = sorted(s["codec_type"] for s in probe(res.path)["streams"])  # type: ignore[index,attr-defined]
     assert kinds == ["audio", "video"]
+
+
+@needs_ffmpeg
+def test_render_job_through_worker(
+    session: Session, user_token: tuple[User, str], cfg: Path
+) -> None:
+    from canaisdark.models import JobStatus
+    from canaisdark.services import jobs
+    from canaisdark.worker.runner import Worker
+
+    ids = setup_video(session, user_token[0], [2.0, 2.0], real_audio=True)
+    job = render.start(session, ids["video_id"], user_token[0], "preview")
+    assert job.type == "render" and job.params["quality"] == "preview"
+    with pytest.raises(Exception, match="em andamento"):
+        render.start(session, ids["video_id"], user_token[0], "preview")
+    Worker(poll_seconds=0).run_once()
+    session.expire_all()
+    done = jobs.get_job(session, job.id)  # type: ignore[arg-type]
+    assert done.status == JobStatus.DONE.value, done.error + done.log
+    out = render.latest_render(session, ids["video_id"], "preview")
+    assert out and (get_settings().data_dir / out.path).is_file()
+    assert out.meta["kind"] == "preview" and out.meta["width"] == 1280
+    # novo render do mesmo tipo substitui o arquivo antigo
+    old_path = get_settings().data_dir / out.path
+    j2 = render.start(session, ids["video_id"], user_token[0], "preview")
+    Worker(poll_seconds=0).run_once()
+    session.expire_all()
+    assert jobs.get_job(session, j2.id).status == JobStatus.DONE.value  # type: ignore[arg-type]
+    assert not old_path.exists() and render.latest_render(session, ids["video_id"], "preview")
+
+
+def test_render_start_validations(
+    session: Session, user_token: tuple[User, str], cfg: Path
+) -> None:
+    ids = setup_video(session, user_token[0], [2.0], images=False)
+    with pytest.raises(InvalidState, match="Faltam imagens"):
+        render.start(session, ids["video_id"], user_token[0], "preview")
+    with pytest.raises(InvalidState, match="Qualidade inválida"):
+        render.start(session, ids["video_id"], user_token[0], "8k")
