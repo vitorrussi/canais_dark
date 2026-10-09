@@ -1,0 +1,98 @@
+{% from "_macros.html" import ic %}
+{% set v = s.video %}
+<details class="card step" id="shorts-card" {% if s.open %}open{% endif %} {% if s.active %}hx-get="/videos/{{ v.id }}/shorts/card" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
+  <summary class="step-head" style="cursor:pointer;list-style:none"><span class="step-n">5</span><h3>Shorts 9:16 <span class="badge">opcional</span></h3>
+    {% if s.plan.skipped %}<span class="badge stale">dispensado</span>{% elif s.plan.shorts %}<span class="badge">{{ s.plan.shorts|length }} trecho(s)</span>{% endif %}</summary>
+
+  <p class="muted">Etapa opcional: o vídeo longo segue sem ela. Cada Short usa um trecho da narração, em 9:16, com legendas grandes palavra a palavra.</p>
+
+  {% if s.problem %}<div class="alert">{{ s.problem }}</div>{% endif %}
+  {% if not s.ffmpeg %}<div class="alert">O ffmpeg não está instalado: <code>sudo apt install ffmpeg</code>.</div>{% endif %}
+  {% if s.stale %}<div class="alert">O roteiro aprovado mudou depois desta seleção: confira se os trechos ainda existem.</div>{% endif %}
+  {% if s.plan.timing == "estimated" and s.plan.shorts %}<p class="help warn-text">Tempos estimados (sem Forced Alignment): o corte pode cair um pouco fora da palavra.</p>{% endif %}
+
+  {% if s.plan.skipped %}
+  <form method="post" action="/videos/{{ v.id }}/shorts/skip"><input type="hidden" name="undo" value="1">
+    <p class="muted">Você dispensou os Shorts deste vídeo.</p><button class="secondary sm">Reativar Shorts</button></form>
+  {% elif not s.problem %}
+
+  {% for sel in s.plan.shorts %}
+  {% set r = s.rendered.get(loop.index0) %}
+  <div class="list-row" style="align-items:flex-start;flex-wrap:wrap">
+    <div class="grow">
+      <span class="title">{{ loop.index }}. {{ sel.title }}</span>
+      <small>{{ "%.0f"|format(sel.end_s - sel.start_s) }} s · {{ "%.1f"|format(sel.start_s) }}–{{ "%.1f"|format(sel.end_s) }} s{% if sel.hook_override %} · gancho “{{ sel.hook_override }}”{% endif %}{% if sel.located == "fuzzy" %} · texto aproximado{% endif %} · {{ "Claude" if sel.source == "claude" else "você" }}</small>
+      <p class="muted" style="margin:.3rem 0 0">{{ sel.exact_text }}</p>
+    </div>
+    <div class="stack-inline">
+      <form method="post" action="/videos/{{ v.id }}/shorts/render"><input type="hidden" name="index" value="{{ loop.index0 }}"><button name="quality" value="preview" class="secondary sm" {{ "disabled" if s.active or not s.ffmpeg }}>{{ ic("play") }} Prévia</button>
+        <button name="quality" value="final" class="secondary sm" {{ "disabled" if s.active or not s.ffmpeg }}>Final</button></form>
+      <form method="post" action="/videos/{{ v.id }}/shorts/{{ loop.index0 }}/remove"><button class="ghost sm" data-confirm="Remover este trecho?">Remover</button></form>
+    </div>
+    {% if r %}
+    <div style="flex-basis:100%">
+      <video controls preload="metadata" playsinline src="/assets/{{ r.id }}/file" style="max-width:15rem;width:100%;border-radius:.5rem;background:#000"></video>
+      <p class="help">{{ "final 1080×1920" if r.meta.kind == "final" else "prévia 720×1280" }} · {{ r.meta.duration }}s · {{ "%.1f"|format(r.meta.bytes / 1000000) }} MB
+        · <a href="/assets/{{ r.id }}/file?download=1" hx-boost="false">{{ ic("download") }} baixar .mp4</a></p>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  {% if s.plan.shorts %}
+  <form method="post" action="/videos/{{ v.id }}/shorts/render" style="margin-top:.8rem">
+    <label class="check"><input type="checkbox" name="allow_missing" value="1"> Cenas sem imagem: preencher com fundo escuro (só para teste)</label>
+    <div class="form-actions">
+      <button name="quality" value="preview" class="secondary" {{ "disabled" if s.active or not s.ffmpeg }}>{{ ic("play") }} Prévia de todos (720×1280)</button>
+      <button name="quality" value="final" {{ "disabled" if s.active or not s.ffmpeg }}>{{ ic("film") }} Render final de todos (1080×1920)</button>
+    </div>
+    <p class="help">Usa a imagem 9:16 da cena quando existe; senão, a imagem 16:9 sobre fundo desfocado.</p>
+  </form>
+  {% endif %}
+
+  {% if s.open_task %}
+  <div class="claude-box accent"><h4 class="subhead">{{ ic("sparkles") }} Claude escolhendo os trechos</h4>
+    <p class="muted">{{ "Aguardando o Claude." if s.open_task.status == "pending" else "Em andamento." }} Copie e cole no Claude Code:</p>
+    <div id="shorts-claude-prompt" class="promptbox">{{ s.claude_prompt }}</div>
+    <button type="button" data-copy="#shorts-claude-prompt">{{ ic("copy") }} Copiar prompt</button>
+    <form method="post" action="/tasks/{{ s.open_task.id }}/cancel" style="display:inline"><button class="secondary sm" data-confirm="Cancelar esta tarefa?">Cancelar tarefa</button></form></div>
+  {% else %}
+  <details class="claude-fold" style="margin-top:.8rem"><summary class="btn secondary sm">{{ ic("sparkles") }} Pedir ao Claude para escolher os trechos</summary>
+    <form method="post" action="/videos/{{ v.id }}/shorts/request" style="margin-top:.6rem">
+      <div class="field"><label for="sh-instr">Instruções (opcional)</label>
+        <textarea id="sh-instr" name="instructions" rows="2" placeholder="Ex.: 3 trechos, um deles sobre o mistério do farol"></textarea>
+        <div class="help">O Claude propõe 2 a 3 trechos de 25 a 55 s; nada é renderizado sem você pedir.</div></div>
+      <button class="secondary sm">Enfileirar</button></form></details>
+  {% endif %}
+
+  <details class="claude-fold" style="margin-top:.6rem"><summary class="btn secondary sm">{{ ic("edit") }} Adicionar trecho manualmente</summary>
+    <form method="post" action="/videos/{{ v.id }}/shorts/add" style="margin-top:.6rem">
+      <div class="field"><label for="sh-title">Título do Short</label>
+        <input id="sh-title" name="title" maxlength="100" required placeholder="Ex.: Quem acendia o farol?"></div>
+      <div class="field"><label for="sh-text">Trecho da narração</label>
+        <textarea id="sh-text" name="exact_text" rows="5" required placeholder="Cole aqui as frases, exatamente como estão no roteiro."></textarea>
+        <div class="help">De 15 a 59 segundos (cerca de 40 a 150 palavras). O sistema localiza o trecho no áudio e avisa se não achar.</div></div>
+      <div class="field"><label for="sh-hook">Texto de gancho no topo (opcional)</label>
+        <input id="sh-hook" name="hook_override" maxlength="80" placeholder="Ex.: NINGUÉM SABIA"></div>
+      <button class="secondary sm">Adicionar trecho</button></form>
+    <details style="margin-top:.6rem"><summary class="muted" style="cursor:pointer">Ver o texto narrado por cena (para copiar)</summary>
+      {% for sc in s.scenes %}<p class="help"><b>{{ sc.index + 1 }}</b> · {{ "%.0f"|format(sc.start) }}s — {{ sc.text }}</p>{% endfor %}</details>
+  </details>
+
+  {% if s.job %}
+  <hr>
+  <div class="list-row" style="border:0;padding:0">
+    <div class="grow"><span class="title">Job #{{ s.job.id }} · Shorts {{ s.job.params.quality }}</span></div>
+    <span class="badge {{ {'queued':'pending','running':'in_progress','done':'done','failed':'failed','cancelled':'stale'}[s.job.status] }}">{{ {"queued":"na fila","running":"renderizando","done":"concluído","failed":"falhou","cancelled":"cancelado"}[s.job.status] }}</span>
+    {% if s.job.status in ("queued", "running") %}<form method="post" action="/jobs/{{ s.job.id }}/cancel"><button class="secondary sm" data-confirm="Cancelar o render dos Shorts?">Cancelar</button></form>{% endif %}
+    {% if s.job.status in ("failed", "cancelled") %}<form method="post" action="/jobs/{{ s.job.id }}/retry"><button class="secondary sm">Tentar de novo</button></form>{% endif %}
+  </div>
+  {% if s.job.status in ("queued", "running") %}<div class="progress"><i style="width: {{ s.job.progress }}%"></i></div>{% endif %}
+  {% if s.job.error %}<div class="alert">{{ s.job.error }}</div>{% endif %}
+  {% if s.log %}<details {{ "open" if s.job.status in ("running", "queued", "failed") }}><summary class="muted" style="cursor:pointer">Ver log</summary><pre class="promptbox" style="font-size:.78rem;max-height:10rem;overflow:auto">{{ s.log }}</pre></details>{% endif %}
+  {% endif %}
+
+  <hr>
+  <form method="post" action="/videos/{{ v.id }}/shorts/skip"><button class="ghost sm" data-confirm="Dispensar os Shorts deste vídeo? Você pode reativar depois.">Não vou fazer Shorts deste vídeo</button></form>
+  {% endif %}
+</details>

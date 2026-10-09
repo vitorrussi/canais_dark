@@ -92,6 +92,7 @@
       <p class="muted">{{ cov.prompts }}/{{ cov.total }} prompts · {{ cov.files }}/{{ cov.needed }} imagens</p>
       <a class="btn secondary" href="/videos/{{ video.id }}/scenes">Abrir storyboard</a></div>
     {% if rnd %}{% set r = rnd %}{% include "_render_card.html" %}{% endif %}
+    {% if shr %}{% set s = shr %}{% include "_shorts_card.html" %}{% endif %}
     {% endif %}
 
   </div>
