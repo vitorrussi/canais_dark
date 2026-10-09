@@ -33,6 +33,18 @@ class Settings(BaseSettings):
     # Upload de imagens/clipes por cena (o Cloudflare limita a 100 MB por requisição)
     max_upload_mb: int = 100
 
+    # YouTube (Fase 7): cliente OAuth "Aplicativo da Web" do Google Cloud. Só no .env.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    # Demonstração: YouTube FALSO (sem rede, sem Google); o "upload" só grava o resultado no banco
+    youtube_fake: bool = False
+    # Cota diária da YouTube Data API (padrão do Google: 10.000 unidades; cada upload custa ~1.650)
+    youtube_daily_quota: int = 10_000
+
+    @property
+    def youtube_ready(self) -> bool:
+        return self.youtube_fake or bool(self.google_client_id and self.google_client_secret)
+
     @property
     def elevenlabs_ready(self) -> bool:
         return bool(self.elevenlabs_api_key) or self.elevenlabs_fake

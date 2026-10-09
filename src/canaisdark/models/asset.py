@@ -19,6 +19,9 @@ class AssetType(StrEnum):
     MUSIC = "music"
     SHORTS_PLAN = "shorts_plan"
     SHORT = "short"
+    METADATA = "metadata"
+    THUMBNAIL = "thumbnail"
+    UPLOAD = "upload"
 
 
 class Asset(SQLModel, table=True):

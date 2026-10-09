@@ -13,6 +13,7 @@ class JobType(StrEnum):
     ALIGNMENT = "alignment"
     RENDER = "render"
     SHORTS = "shorts"
+    YOUTUBE_UPLOAD = "youtube_upload"
 
 
 class JobStatus(StrEnum):

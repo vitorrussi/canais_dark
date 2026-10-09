@@ -29,6 +29,7 @@ class Channel(SQLModel, table=True):
     script_rules: str = ""
     default_script_instructions: str = ""
     drive_folder_id: str = ""
+    youtube_category_id: str = "24"  # 24 = Entretenimento; ver docs/youtube.md
     is_archived: bool = False
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)

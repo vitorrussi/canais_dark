@@ -5,6 +5,7 @@ from canaisdark.models.job import Job, JobStatus, JobType
 from canaisdark.models.script import Scene, ScriptVersion
 from canaisdark.models.user import User
 from canaisdark.models.video import Video, VideoStatus
+from canaisdark.models.youtube import YouTubeAccount
 
 __all__ = [
     "Asset",
@@ -21,4 +22,5 @@ __all__ = [
     "User",
     "Video",
     "VideoStatus",
+    "YouTubeAccount",
 ]
