@@ -17,6 +17,7 @@ from canaisdark.services.errors import Conflict, DomainError, Forbidden, Invalid
 from canaisdark.web.admin import router as web_admin_router
 from canaisdark.web.common import BASE as WEB_BASE
 from canaisdark.web.common import NotLoggedIn, templates
+from canaisdark.web.drive import router as web_drive_router
 from canaisdark.web.narration import router as web_narration_router
 from canaisdark.web.render import router as web_render_router
 from canaisdark.web.routes import router as web_router
@@ -87,6 +88,7 @@ def create_app() -> FastAPI:
     app.include_router(web_render_router)
     app.include_router(web_shorts_router)
     app.include_router(web_youtube_router)
+    app.include_router(web_drive_router)
     app.include_router(web_voices_router)
     app.include_router(web_admin_router)
     # Último: o app MCP atende apenas /mcp; demais caminhos caem em 404.

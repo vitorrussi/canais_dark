@@ -6,7 +6,10 @@
   {{ field("description", "Descrição", c.description or "", "Para você se lembrar do foco do canal. O Claude também lê isso.", "Casos reais não resolvidos, contados com tom sombrio e sem sensacionalismo.", kind="textarea", rows=2) }}
   <div class="row">
     {{ field("youtube_url", "Link do canal no YouTube", c.youtube_url or "", "Opcional. Só referência por enquanto.", "https://youtube.com/@meucanal", placeholder="https://youtube.com/@...") }}
-    {{ field("drive_folder_id", "Pasta do Google Drive (ID)", c.drive_folder_id or "", "É o trecho final da URL da pasta no Drive. Usado na sincronização (Fase 8).", "…/folders/1AbCdEfGh → 1AbCdEfGh", tip="Abra a pasta no Drive e copie o que vem depois de /folders/ na barra de endereço.") }}
+    <input type="hidden" name="drive_folder_id" value="{{ c.drive_folder_id or '' }}">
+    <div class="field"><label>Pasta no Google Drive</label>
+      <p class="muted" style="margin:0">{% if c.drive_folder_id %}Criada pelo sistema (ID <code>{{ c.drive_folder_id }}</code>).{% else %}Será criada pelo sistema na primeira sincronização.{% endif %}</p>
+      <div class="help">Conecte o Drive na aba abaixo (Configurações → Google Drive) e use "Sincronizar" no vídeo.</div></div>
   </div>
 </div>
 

@@ -1,0 +1,27 @@
+{% from "_macros.html" import ic %}
+<div class="card" style="margin-top:1rem" id="drive-card">
+  <header><h3>Google Drive (cópia e compartilhamento)</h3></header>
+  <p class="muted" style="margin-top:0">O sistema cria as pastas <code>Estúdio de Canais Dark / {{ channel.name }} / #vídeo</code> no seu Drive e guarda ali os arquivos finais. Ele só enxerga o que criou (permissão mínima).</p>
+
+  {% if dr.setup.fake %}<div class="alert">Modo demonstração (<code>DRIVE_FAKE=true</code>): nada é enviado ao Google.</div>{% endif %}
+  {% if not dr.setup.ready %}
+  <div class="alert"><b>Falta configurar:</b>
+    <ul style="margin:.4rem 0 0 1.1rem">{% for i in dr.setup["items"] if not i.ok %}<li>{{ i.label }}</li>{% endfor %}</ul>
+    <span class="help">Passo a passo em <code>docs/drive.md</code>. URI de redirecionamento a cadastrar no Google: <code>{{ dr.setup.redirect_uri }}</code></span></div>
+  {% endif %}
+
+  {% if dr.account %}
+  <div class="list-row" style="border:0;padding:0 0 .6rem">
+    <div class="grow"><span class="title">{{ dr.account.account_email or "Conta conectada" }}</span>
+      <small>conectado em {{ dr.account.connected_at.strftime('%d/%m/%Y %H:%M') }}</small></div>
+    <span class="badge {{ 'failed' if dr.needs_reconnect else 'done' }}">{{ "reconectar" if dr.needs_reconnect else "conectado" }}</span>
+  </div>
+  {% if dr.needs_reconnect %}<div class="alert">A autorização expirou ou foi revogada. Conecte de novo.</div>{% endif %}
+  {% endif %}
+
+  <div class="stack-inline">
+    {% if dr.setup.ready %}<a class="btn {{ 'secondary' if dr.connected }}" href="/channels/{{ channel.slug }}/drive/connect" hx-boost="false">{{ "Reconectar" if dr.account else "Conectar Google Drive" }}</a>{% endif %}
+    {% if dr.account %}<form method="post" action="/channels/{{ channel.slug }}/drive/disconnect"><button class="secondary" data-confirm="Desconectar o Drive deste canal? Os arquivos já enviados continuam lá.">Desconectar</button></form>{% endif %}
+  </div>
+  {% if dr.folder_id %}<p class="help">Pasta do canal: <a href="https://drive.google.com/drive/folders/{{ dr.folder_id }}" target="_blank" rel="noopener">abrir no Drive</a></p>{% endif %}
+</div>

@@ -68,6 +68,7 @@
   <div class="form-actions sticky-save"><button>Salvar alterações</button><span class="muted">Mudanças valem para os próximos roteiros.</span></div>
 </form>
 {% if yt %}{% include "_youtube_channel.html" %}{% endif %}
+{% if dr %}{% include "_drive_channel.html" %}{% endif %}
 {% if channel.is_archived %}
 <div class="card" style="margin-top:1rem"><header><h3>Canal arquivado</h3></header>
   <form method="post" action="/channels/{{ channel.slug }}/unarchive"><button>Reativar canal</button></form></div>
