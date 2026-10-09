@@ -134,7 +134,7 @@ def prompt_batches(
     """Parcial HTMX: prompts em lote (uma mensagem por lote) para colar no Gemini/ChatGPT."""
     size = max(0, min(size, 200))
     data = scene_prompts.batch_prompts(
-        session, video_id, size, variant == "vertical", bool(only_missing)
+        session, video_id, size, variant == "vertical", bool(only_missing), max(0, min(per, 50))
     )
     return templates.TemplateResponse(
         request,
@@ -143,11 +143,28 @@ def prompt_batches(
             "user": user,
             "video_id": video_id,
             "size": size,
+            "per": per,
             "variant": variant,
             "only_missing": only_missing,
             **data,
         },
     )
+
+
+@router.post("/videos/{video_id}/scenes/vertical")
+def set_all_vertical(
+    request: Request,
+    user: WebUser,
+    session: SessionDep,
+    video_id: int,
+    enabled: Annotated[int, Form()] = 0,
+) -> Response:
+    try:
+        n = scene_prompts.set_all_vertical(session, video_id, bool(enabled))
+    except DomainError as e:
+        return back(request, f"/videos/{video_id}/scenes", error=e)
+    msg = f"9:16 marcado em {n} cenas" if enabled else f"9:16 desmarcado em {n} cenas"
+    return back(request, f"/videos/{video_id}/scenes", ok=msg)
 
 
 @router.post("/videos/{video_id}/prompts/request")

@@ -82,6 +82,18 @@ def update_scene(session: Session, video_id: int, scene_id: int, data: SceneUpda
     return scene
 
 
+def set_all_vertical(session: Session, video_id: int, enabled: bool) -> int:
+    """Marca/desmarca a versão 9:16 em todas as cenas; devolve quantas mudaram. Assets já enviados são mantidos."""
+    changed = 0
+    for scene in approved_scenes(session, video_id):
+        if scene.wants_vertical != enabled:
+            scene.wants_vertical = enabled
+            session.add(scene)
+            changed += 1
+    session.commit()
+    return changed
+
+
 def prompt_coverage(scenes: list[Scene]) -> tuple[int, int]:
     return sum(1 for s in scenes if s.image_prompt.strip()), len(scenes)
 

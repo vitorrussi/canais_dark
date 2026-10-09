@@ -241,3 +241,16 @@ def test_batch_prompts_per_reply_wording(session: Session, env: dict[str, object
         "text"
     ]  # type: ignore[index]
     assert "grupos de" not in big  # per_reply >= tamanho do lote: vira "todas de uma vez"
+
+
+def test_set_all_vertical(session: Session, env: dict[str, object]) -> None:
+    _approve(session, env, ["Um", "Dois", "Três"])
+    scene_prompts.save_prompts(
+        session,
+        env["video_id"],  # type: ignore[arg-type]
+        [PromptIn(scene_index=0, image_prompt="a", vertical=True)],
+    )
+    assert scene_prompts.set_all_vertical(session, env["video_id"], True) == 2  # type: ignore[arg-type]
+    assert scene_prompts.set_all_vertical(session, env["video_id"], False) == 3  # type: ignore[arg-type]
+    scenes = scene_prompts.approved_scenes(session, env["video_id"])  # type: ignore[arg-type]
+    assert not any(s.wants_vertical for s in scenes)

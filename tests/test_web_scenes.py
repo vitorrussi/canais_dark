@@ -179,6 +179,8 @@ def test_prompt_batches_partial_and_plan_mtimes(ctx: dict[str, object]) -> None:
         and "Cena 01: p0" in html
     )
     assert "4 cena(s) em 1 mensagem" in c.get(f"/videos/{vid}/scenes/batches?size=0").text
+    per = c.get(f"/videos/{vid}/scenes/batches?size=0&per=2").text
+    assert "grupos de 2 por resposta" in per and "continue" in per
     assert "Nenhuma cena" in c.get(f"/videos/{vid}/scenes/batches?size=5&variant=vertical").text
     page = c.get(f"/videos/{vid}/scenes").text
     assert "Pedir várias imagens numa só mensagem" in page and 'name="size"' in page
@@ -187,3 +189,14 @@ def test_prompt_batches_partial_and_plan_mtimes(ctx: dict[str, object]) -> None:
         json={"names": ["x.png", "y.png"], "variant": "main", "mtimes": [200, 100]},
     ).json()
     assert [p["scene"] for p in plan["plan"]] == [1, 0] and plan["scene_count"] == 4
+
+
+def test_bulk_toggle_vertical(ctx: dict[str, object]) -> None:
+    _approve(ctx, ["A.", "B."])
+    c: TestClient = ctx["c"]  # type: ignore[assignment]
+    vid = ctx["vid"]
+    r = c.post(f"/videos/{vid}/scenes/vertical", data={"enabled": "1"}, follow_redirects=True)
+    assert r.status_code == 200 and "Desmarcar 9:16 em todas" in r.text
+    assert r.text.count('data-field="wants_vertical" checked') == 2
+    r = c.post(f"/videos/{vid}/scenes/vertical", data={"enabled": "0"}, follow_redirects=True)
+    assert 'data-field="wants_vertical" checked' not in r.text

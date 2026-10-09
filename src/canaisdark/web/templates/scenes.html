@@ -14,7 +14,9 @@
 <div class="card {{ 'accent' if open_task }}" style="margin-bottom:1rem">
   <div class="meta" style="margin:0 0 .75rem"><span class="badge {{ 'done' if have_prompts == total else 'info' }}">{{ have_prompts }}/{{ total }} prompts</span>
     <span class="badge {{ 'done' if have_files == needed_files else 'info' }}">{{ have_files }}/{{ needed_files }} imagens</span>
-    <a class="btn ghost sm" href="/videos/{{ video.id }}/scenes{{ '' if only == 'pending' else '?only=pending' }}">{{ "Mostrar todas" if only == "pending" else "Só pendentes" }}</a></div>
+    <a class="btn ghost sm" href="/videos/{{ video.id }}/scenes{{ '' if only == 'pending' else '?only=pending' }}">{{ "Mostrar todas" if only == "pending" else "Só pendentes" }}</a>
+    <form method="post" action="/videos/{{ video.id }}/scenes/vertical" style="display:inline"><input type="hidden" name="enabled" value="0"><button class="ghost sm" data-confirm="Desmarcar a versão 9:16 em todas as cenas? As imagens 9:16 já enviadas são mantidas.">Desmarcar 9:16 em todas</button></form>
+    <form method="post" action="/videos/{{ video.id }}/scenes/vertical" style="display:inline"><input type="hidden" name="enabled" value="1"><button class="ghost sm">Marcar 9:16 em todas</button></form></div>
   <div class="stack-inline">
     {% if not open_task %}
     <details class="menu"><summary class="btn sm">{{ ic("sparkles") }} Pedir prompts ao Claude ▾</summary>
