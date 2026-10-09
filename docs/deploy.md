@@ -4,6 +4,7 @@
 - Domínio: `https://canaisdark.russi.app` → Cloudflare Tunnel (container `cloudflare-cloudflare-tunnel-1`, pasta `~/Projetos/cloudflare`, rede `host`,
   token gerenciado no painel). A rota **canaisdark.russi.app → http://localhost:8123** está configurada no painel do Cloudflare Zero Trust.
 - Subir o sistema para o túnel: `make serve` (uvicorn em 127.0.0.1:8123, sem reload, `--proxy-headers`). Para desenvolver com reload: `make dev`.
+- Jobs (narração etc.): **`make worker`** em outro processo (hoje iniciado manualmente, como o `make serve`).
 - Ligar/desligar o túnel: `docker start|stop cloudflare-cloudflare-tunnel-1` (política `unless-stopped`).
 
 ## Variáveis (`.env`)

@@ -34,9 +34,16 @@ ferramenta de escrita → `complete_task` (ou `fail_task` / `release_task`). A a
 
 Prompt: `process_pending`.
 
+## Jobs (Fase 3)
+| Tool | Descrição |
+|---|---|
+| `get_job_status(job_id)` | status, progresso, erro, resultado e fim do log |
+| `list_jobs(video_id?, status?)` | jobs recentes |
+Narração/alinhamento só são disparados por pessoas no site (gastam créditos).
+
 ## Planejadas
 `save_scene_prompts`, `save_timeline`, `save_metadata`, `save_short_selections` (Fases 4–6);
-`get_job_status`, `start_render`, `start_shorts` (Fases 3, 5, 6). Regra: nenhuma tool bloqueia — operações longas criam Job e retornam `job_id`.
+`start_render`, `start_shorts` (Fases 5, 6). Regra: nenhuma tool bloqueia — operações longas criam Job e retornam `job_id`.
 
 ## Auth e extensão
 `mcp/auth.py:BearerAuthMiddleware` valida o token e expõe o usuário em `mcp/context.py:current_user`.

@@ -32,7 +32,7 @@
       </select>
       <div class="help">Desligado: o áudio é gerado normalmente, mas os tempos de cada cena e as legendas são <em>estimados</em> pela duração. {% if not n.alignment_global %}<strong>O interruptor global do servidor está desligado (FORCED_ALIGNMENT_ENABLED=false).</strong>{% endif %}</div>
     </div>
-    <div class="promptbox" id="narr-estimate" style="font-family:inherit">
+    <div class="callout" id="narr-estimate">
       Estimativa: <strong id="est-chars">{{ n.test.chars }}</strong> caracteres ≈ <strong id="est-credits">{{ n.test.credits_estimated }}</strong> créditos
       <span class="muted">(completa: {{ n.full.chars }} caracteres ≈ {{ n.full.credits_estimated }} créditos; limite por geração: {{ n.full.max_chars }})</span>
     </div>

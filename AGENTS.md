@@ -10,7 +10,7 @@ narração → imagens → render → Shorts → upload. O Claude atua via servi
 **a API do Claude nunca é usada**. Roda em servidor doméstico via Cloudflare Tunnel, 2 usuários.
 
 ## Status
-- Fases 0, 1 e 2 (incl. extensões 2.1–2.4: UI, editor, import/export, QoL): **concluídas**. Próxima: Fase 3 (Jobs + ElevenLabs) — exige chave da API do ElevenLabs e voice_id; avisar o usuário antes de planejar.
+- Fases 0–3 (incl. extensões 2.1–2.5) **concluídas**. Próxima: Fase 4 (Prompts e assets).
 
 ## Stack
 Python 3.12+, uv, FastAPI, SQLModel + SQLite (WAL) + Alembic, pydantic-settings, structlog,
@@ -44,7 +44,10 @@ Cuidado: chaves de contexto de template não podem colidir com parâmetros de `r
 Etapa 2.5 (polimento visual, concluída): sem overflow horizontal no celular (testado em 11 páginas com iframe de 390px), `select` com seta própria,
 favicon, barra de carregamento do htmx, proteção contra envio duplo, foco visível, barra de salvar fixa nos formulários de canal, menus que fecham ao clicar fora,
 `prefers-reduced-motion`. Dica de teste responsivo: `resize_window` do Chrome não muda o viewport; use iframes de 390px e compare `scrollWidth` x `clientWidth`.
-**Fase 2 e extensões 2.1–2.5 concluídas.** Próxima: Fase 3 (Jobs + ElevenLabs) — exige chave da API e `voice_id`; avisar o usuário antes de planejar.
+**Fase 3 (Jobs + ElevenLabs) concluída**: fila `Job` + worker (`make worker`), narração (TTS) com guardas de crédito, Forced Alignment OPCIONAL (global/canal/geração; sem ele tempos estimados),
+legendas `.srt/.ass`, invalidação automática, card de Narração com progresso, `/jobs`, REST e MCP `get_job_status/list_jobs`. Detalhes: `docs/jobs-and-narration.md`.
+Dois processos: `make serve` + `make worker`. `ELEVENLABS_FAKE=true` = demonstração sem créditos. Testes usam `FakeElevenLabs` (nunca rede). Segredo `ELEVENLABS_API_KEY` só no `.env`.
+**Próxima: Fase 4 (Prompts e assets)** — não exige chaves externas (uploads manuais); lembrar do limite de 100 MB do Cloudflare.
 
 ## Estrutura
 `src/canaisdark/`: `config.py`, `logging.py`, `db.py`, `models/`, `services/` (lógica),

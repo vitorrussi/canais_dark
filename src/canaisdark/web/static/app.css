@@ -177,3 +177,4 @@ img, svg { max-width: 100%; }
 @media (max-width: 600px) { .tip::after { left: auto; right: -2rem; transform: none; max-width: 230px; } }
 .badge.partial { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); background: color-mix(in srgb, var(--warn) 12%, transparent); }
 .pipeline .partial .dot { border-color: var(--warn); color: var(--warn); } .pipeline .skipped .label { color: var(--muted); text-decoration: line-through; opacity: .7; }
+.callout { background: var(--bg); border: 1px dashed var(--accent); border-radius: 8px; padding: .7rem .9rem; margin-bottom: .75rem; }
