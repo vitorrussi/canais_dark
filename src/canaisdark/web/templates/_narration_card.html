@@ -1,7 +1,7 @@
 {% from "_macros.html" import ic %}
 {% set job = n.ali_job if (n.ali_job and n.ali_job.status in ("queued", "running")) else n.tts_job %}
 <div class="card {{ 'accent' if n.active }}" id="narration-card" {% if n.active %}hx-get="/videos/{{ n.video.id }}/narration/card" hx-trigger="every {{ '1s' if n.countdown else '3s' }}" hx-swap="outerHTML"{% endif %}>
-  <header><h3>{{ ic("play") }} Narração</h3>
+  <header class="step-head"><span class="step-n">2</span><h3>Narração</h3>
     <div class="actions"><span class="muted" style="font-size:.82rem">{{ n.channel.tts_model }}{% if n.channel.elevenlabs_voice_id %} · voz {{ n.channel.elevenlabs_voice_id[:8] }}…{% endif %}</span></div></header>
 
   <div class="meta" style="margin:0 0 .75rem">

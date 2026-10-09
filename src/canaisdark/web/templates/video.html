@@ -15,13 +15,16 @@
 
 <div class="layout-2">
   <div class="stack">
-    <div class="card">
-      <header><h3>Tema</h3><div class="actions"><button type="button" class="ghost sm" data-copy="#video-topic">{{ ic("copy") }} Copiar</button></div></header>
+    <div class="card step">
+      <header class="step-head"><span class="step-n tema">{{ ic("file") }}</span><h3>Tema</h3><div class="actions"><button type="button" class="ghost sm" data-copy="#video-topic">{{ ic("copy") }} Copiar</button></div></header>
       <p id="video-topic" style="white-space:pre-wrap;margin:0">{{ video.topic }}</p>
     </div>
 
-    <div class="card {{ 'accent' if open_tasks }}">
-      <header><h3>{{ ic("sparkles") }} Claude</h3></header>
+    <div class="card step">
+      <header class="step-head"><span class="step-n">1</span><h3>Roteiro</h3></header>
+      {% set claude_open = open_tasks or failed_tasks or not selected %}
+      {% if not claude_open %}<details class="claude-fold"><summary class="btn secondary sm">{{ ic("sparkles") }} Gerar um roteiro novo com o Claude</summary>{% else %}<h4 class="subhead">{{ ic("sparkles") }} Pedir ao Claude</h4>{% endif %}
+    <div class="claude-box {{ 'accent' if open_tasks }}">
       {% for t in open_tasks %}
       <div class="list-row">
         <div class="grow">
@@ -45,17 +48,8 @@
       </form>
       {% endif %}
     </div>
+      {% if not claude_open %}</details>{% endif %}
 
-    {% set n = narr %}{% include "_narration_card.html" %}
-    <script src="/static/narration.js?v={{ static_v("narration.js") }}"></script>
-    {% if video.approved_script_version_id %}
-    <div class="card"><header><h3>{{ ic("film") }} Cenas, prompts e imagens</h3></header>
-      <p class="muted">{{ cov.prompts }}/{{ cov.total }} prompts · {{ cov.files }}/{{ cov.needed }} imagens</p>
-      <a class="btn secondary" href="/videos/{{ video.id }}/scenes">Abrir storyboard</a></div>
-    {% endif %}
-
-    <div class="card">
-      <header><h3>Roteiro</h3></header>
       {% if selected %}
       <div class="versions">
         {% for ver in versions %}<a href="/videos/{{ video.id }}?v={{ ver.number }}" class="{{ 'current' if ver.id == selected.id }}">v{{ ver.number }}{% if ver.approved %} ✓{% endif %}</a>{% endfor %}
@@ -91,6 +85,14 @@
         <a class="btn" href="/videos/{{ video.id }}/script/edit">{{ ic("edit") }} Escrever roteiro</a></div>
       {% endif %}
     </div>
+    {% set n = narr %}{% include "_narration_card.html" %}
+    <script src="/static/narration.js?v={{ static_v("narration.js") }}"></script>
+    {% if video.approved_script_version_id %}
+    <div class="card step"><header class="step-head"><span class="step-n">3</span><h3>Cenas, prompts e imagens</h3></header>
+      <p class="muted">{{ cov.prompts }}/{{ cov.total }} prompts · {{ cov.files }}/{{ cov.needed }} imagens</p>
+      <a class="btn secondary" href="/videos/{{ video.id }}/scenes">Abrir storyboard</a></div>
+    {% endif %}
+
   </div>
 
   <div class="stack">
