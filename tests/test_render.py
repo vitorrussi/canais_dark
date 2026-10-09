@@ -222,3 +222,59 @@ def test_render_start_validations(
         render.start(session, ids["video_id"], user_token[0], "preview")
     with pytest.raises(InvalidState, match="Qualidade inválida"):
         render.start(session, ids["video_id"], user_token[0], "8k")
+
+
+def _stage(session: Session, video_id: int, key: str) -> str:
+    from canaisdark.services import video_status
+
+    session.expire_all()
+    stages = video_status.get_stages(session, videos.get_video(session, video_id))
+    return next(s.state for s in stages if s.key == key)
+
+
+def test_stage_states_timeline_render_review(
+    session: Session, user_token: tuple[User, str], cfg: Path
+) -> None:
+    user = user_token[0]
+    ids = setup_video(session, user, [2.0, 2.0])
+    vid = ids["video_id"]
+    video = videos.get_video(session, vid)
+    assert [_stage(session, vid, k) for k in ("timeline", "render", "review")] == [
+        "not_started"
+    ] * 3
+    tl_asset = timeline.save(session, vid, timeline.build_default(session, video), "auto", "x")
+    assert _stage(session, vid, "timeline") == "done"
+    fake = get_settings().data_dir / "r.mp4"
+    fake.write_bytes(b"x")
+    res = render.RenderResult(fake, 4.0, 2, 0, 1)
+
+    def store(kind: str) -> Asset:
+        return render.store_result(
+            session,
+            video,
+            res,
+            kind,
+            {
+                "timeline_asset_id": tl_asset.id,
+                "inputs_hash": tl_asset.meta["inputs_hash"],
+                "partial": False,
+            },
+            None,
+        )
+
+    store("preview")
+    assert _stage(session, vid, "render") == "partial"  # só prévia
+    assert _stage(session, vid, "review") == "not_started"
+    store("final")
+    assert _stage(session, vid, "render") == "done" and _stage(session, vid, "review") == "pending"
+    render.approve(session, vid, user)
+    assert _stage(session, vid, "review") == "done"
+    # trocar uma imagem deixa timeline e render desatualizados
+    img = session.exec(__import__("sqlmodel").select(Asset).where(Asset.type == "image")).first()
+    assert img
+    img.meta = {**img.meta, "variant": "vertical"}
+    session.add(img)
+    session.commit()
+    assert _stage(session, vid, "timeline") == "stale" and _stage(session, vid, "render") == "stale"
+    with pytest.raises(InvalidState, match="render final"):
+        render.approve(session, 99999, user)

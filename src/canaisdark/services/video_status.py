@@ -192,7 +192,75 @@ def _assets_state(session: Session, video: Video) -> StageState:
     return StageState.DONE if have == needed else StageState.PARTIAL
 
 
+def _current_hash(session: Session, video: Video) -> str | None:
+    from canaisdark.services import timeline
+    from canaisdark.services.errors import InvalidState
+
+    try:
+        return timeline.inputs_hash(session, video)
+    except InvalidState:
+        return None
+
+
+def _timeline_state(session: Session, video: Video) -> StageState:
+    from canaisdark.services import timeline
+
+    assert video.id is not None
+    task_state = _task_state(_latest_task(session, video, TaskType.GENERATE_TIMELINE))
+    if task_state in (StageState.PENDING, StageState.IN_PROGRESS):
+        return task_state
+    found = timeline.list_versions(session, video.id)
+    if not found:
+        return task_state or StageState.NOT_STARTED
+    current = _current_hash(session, video)
+    if current is None or found[-1].meta.get("inputs_hash") != current:
+        return StageState.STALE
+    return StageState.DONE
+
+
+def _render_state(session: Session, video: Video) -> StageState:
+    from canaisdark.services import jobs, render, timeline
+
+    assert video.id is not None
+    job = jobs.latest_job(session, video.id, JobType.RENDER)
+    if (running := _job_state(job.status if job else None)) is not None:
+        return running
+    final = render.latest_render(session, video.id, "final")
+    preview = render.latest_render(session, video.id, "preview")
+    best = final or preview
+    if best is None:
+        return (
+            StageState.FAILED
+            if job and job.status == JobStatus.FAILED.value
+            else StageState.NOT_STARTED
+        )
+    versions = timeline.list_versions(session, video.id)
+    current = _current_hash(session, video)
+    if (
+        current is None
+        or best.meta.get("inputs_hash") != current
+        or (versions and best.meta.get("timeline_asset_id") != versions[-1].id)
+    ):
+        return StageState.STALE
+    if final is None or final.meta.get("partial"):
+        return StageState.PARTIAL  # só prévia (ou teste curto)
+    return StageState.DONE
+
+
+def _review_state(session: Session, video: Video) -> StageState:
+    from canaisdark.services import render
+
+    assert video.id is not None
+    final = render.latest_render(session, video.id, "final")
+    if final is None or _render_state(session, video) in (StageState.STALE, StageState.PARTIAL):
+        return StageState.NOT_STARTED
+    return StageState.DONE if final.meta.get("approved_by") else StageState.PENDING
+
+
 _STATE_CALCULATORS: dict[str, Callable[[Session, Video], StageState]] = {
+    "timeline": _timeline_state,
+    "render": _render_state,
+    "review": _review_state,
     "prompts": _prompts_state,
     "assets": _assets_state,
     "script": _script_state,

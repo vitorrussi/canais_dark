@@ -830,3 +830,19 @@ def run_job(session: Session, job: Job) -> None:
         f"Pronto em {elapsed:.0f}s: {result.size / 1e6:.1f} MB ({result.segments_cached} cenas reaproveitadas).",
     )
     jobs.complete(session, job.id, {"asset_id": out.id, "seconds": round(elapsed, 1)})
+
+
+def approve(session: Session, video_id: int, actor: User) -> Asset:
+    """Revisão humana: marca o render final mais recente como aprovado."""
+    asset = latest_render(session, video_id, "final")
+    if asset is None:
+        raise InvalidState("Não há render final para aprovar. Gere o render final primeiro.")
+    asset.meta = {
+        **asset.meta,
+        "approved_by": actor.id,
+        "approved_at": int(time.time()),
+    }
+    session.add(asset)
+    session.commit()
+    session.refresh(asset)
+    return asset
