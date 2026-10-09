@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     # Interruptor geral do Forced Alignment (false = nunca chama; tempos das cenas são estimados)
     forced_alignment_enabled: bool = True
     worker_poll_seconds: float = 2.0
+    # Upload de imagens/clipes por cena (o Cloudflare limita a 100 MB por requisição)
+    max_upload_mb: int = 100
 
     @property
     def elevenlabs_ready(self) -> bool:

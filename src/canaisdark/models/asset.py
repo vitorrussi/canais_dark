@@ -10,6 +10,8 @@ from canaisdark.models.channel import utcnow
 
 class AssetType(StrEnum):
     AUDIO = "audio"
+    IMAGE = "image"
+    VIDEO_CLIP = "video_clip"
     ALIGNMENT = "alignment"
     SUBTITLE = "subtitle"
 

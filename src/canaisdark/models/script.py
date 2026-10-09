@@ -27,5 +27,9 @@ class Scene(SQLModel, table=True):
     index: int
     text: str
     notes: str = ""
+    image_prompt: str = ""  # só a parte da cena; o prefixo de estilo do canal é composto na hora
+    video_prompt: str = ""  # cenas-chave (clipe de vídeo de IA)
+    wants_vertical: bool = False  # cena merece versão 9:16 (Shorts)
+    is_key_scene: bool = False
     start_s: float | None = None  # preenchido pelo alinhamento (Fase 3)
     end_s: float | None = None

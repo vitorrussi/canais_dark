@@ -105,6 +105,7 @@ def approve_script(session: Session, version_id: int, actor: User) -> ScriptVers
     version = get_version(session, version_id)
     video = session.get(Video, version.video_id)
     assert video is not None
+    previous_approved = video.approved_script_version_id
     if (
         video.approved_script_version_id is not None
         and video.approved_script_version_id != version_id
@@ -121,6 +122,12 @@ def approve_script(session: Session, version_id: int, actor: User) -> ScriptVers
     session.add(video)
     session.commit()
     session.refresh(version)
+    if previous_approved is not None and previous_approved != version_id:
+        from canaisdark.services import scene_prompts
+
+        scene_prompts.carry_over(
+            session, previous_approved, version_id
+        )  # reaproveita prompts/imagens de cenas iguais
     return version
 
 
