@@ -1,0 +1,110 @@
+{% from "_macros.html" import ic, field %}
+{% set v = y.video %}
+<div class="card step {{ 'accent' if y.active }}" id="youtube-card" {% if y.active %}hx-get="/videos/{{ v.id }}/youtube/card" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
+  <header class="step-head"><span class="step-n">6</span><h3>Metadados e YouTube</h3></header>
+
+  <h4 class="subhead">Título, descrição e tags</h4>
+  {% if y.open_task %}
+  <div class="claude-box accent"><h4 class="subhead">{{ ic("sparkles") }} Claude escrevendo os metadados</h4>
+    <p class="muted">{{ "Aguardando o Claude." if y.open_task.status == "pending" else "Em andamento." }} Copie e cole no Claude Code:</p>
+    <div id="meta-claude-prompt" class="promptbox">{{ y.claude_prompt }}</div>
+    <button type="button" data-copy="#meta-claude-prompt">{{ ic("copy") }} Copiar prompt</button>
+    <form method="post" action="/tasks/{{ y.open_task.id }}/cancel" style="display:inline"><button class="secondary sm" data-confirm="Cancelar esta tarefa?">Cancelar tarefa</button></form></div>
+  {% endif %}
+
+  {% if y.proposal and not y.proposal_asset.meta.applied %}
+  <div class="claude-box accent">
+    <h4 class="subhead">Proposta {{ "do Claude" if y.proposal_asset.meta.source == "claude" else "salva" }} (v{{ y.proposal_asset.meta.number }}) — ainda não aplicada</h4>
+    <p style="margin:.2rem 0"><b>{{ y.proposal.title }}</b></p>
+    <p class="muted" style="white-space:pre-wrap;margin:.2rem 0">{{ y.proposal.description }}</p>
+    {% if y.proposal.tags %}<p class="help">Tags: {{ y.proposal.tags|join(", ") }}</p>{% endif %}
+    {% if y.proposal.thumbnail_ideas %}<p class="help">Ideias de thumbnail: {{ y.proposal.thumbnail_ideas|join(" · ") }}</p>{% endif %}
+    <form method="post" action="/videos/{{ v.id }}/metadata/apply"><button class="sm">{{ ic("check") }} Aplicar ao vídeo</button></form>
+  </div>
+  {% endif %}
+
+  <form method="post" action="/videos/{{ v.id }}/metadata/save">
+    {{ field("title", "Título (até 100 caracteres)", v.title, "Aparece na busca e na miniatura. Sem < >.", "O desaparecimento de Flannan Isles: o que realmente aconteceu?", required=true, attrs='maxlength="100"') }}
+    {{ field("description", "Descrição", v.description, "Resumo sem entregar o final, capítulos e até 3 hashtags. Até 5000 bytes.", "Em 1900, três guardiões desapareceram…", kind="textarea", rows=5) }}
+    {{ field("tags", "Tags (separadas por vírgula)", (v.tags or [])|join(", "), "Sem #. No total até 500 caracteres.", "farol, mistério, história real") }}
+    <div class="form-actions"><button class="secondary">Salvar metadados</button></div>
+  </form>
+  {% if not y.open_task %}
+  <details class="claude-fold" style="margin-top:.6rem"><summary class="btn secondary sm">{{ ic("sparkles") }} Pedir ao Claude para propor os metadados</summary>
+    <form method="post" action="/videos/{{ v.id }}/metadata/request" style="margin-top:.6rem">
+      <div class="field"><label for="meta-instr">Instruções (opcional)</label>
+        <textarea id="meta-instr" name="instructions" rows="2" placeholder="Ex.: título mais curioso, sem citar datas"></textarea></div>
+      <button class="secondary sm">Enfileirar</button></form></details>
+  {% endif %}
+
+  <hr>
+  <h4 class="subhead">Thumbnail</h4>
+  {% if y.thumb %}
+  <img src="/assets/{{ y.thumb.id }}/file" alt="Thumbnail atual" style="max-width:20rem;width:100%;border-radius:.5rem">
+  <p class="help">{{ y.thumb.meta.width }}×{{ y.thumb.meta.height }} · {{ "%.0f"|format(y.thumb.meta.bytes / 1000) }} KB{% for w in y.thumb.meta.warnings %} · <span class="warn-text">{{ w }}</span>{% endfor %}</p>
+  {% else %}<p class="muted">Sem thumbnail. O YouTube usa um quadro do vídeo se você não enviar.</p>{% endif %}
+  {% if y.proposal and y.proposal.thumbnail_ideas %}<p class="help">Ideias: {{ y.proposal.thumbnail_ideas|join(" · ") }}</p>{% endif %}
+  <form method="post" action="/videos/{{ v.id }}/thumbnail" enctype="multipart/form-data" class="row compact">
+    <input type="file" name="file" accept="image/jpeg,image/png" required style="max-width:100%">
+    <button class="secondary sm">{{ ic("upload") }} Enviar thumbnail</button>
+    {% if y.thumb %}<button class="ghost sm" formaction="/videos/{{ v.id }}/thumbnail/remove" formnovalidate data-confirm="Remover a thumbnail?">Remover</button>{% endif %}
+  </form>
+  <p class="help">JPG ou PNG, 1280×720 (16:9), até 2 MB. Imagens maiores são recomprimidas.</p>
+
+  <hr>
+  <h4 class="subhead">Enviar ao YouTube <span class="badge">sempre privado</span></h4>
+  {% if y.setup.fake %}<div class="alert">Modo demonstração: nada é enviado de verdade.</div>{% endif %}
+  {% if not y.connected %}
+    <div class="alert">{% if y.account %}A autorização do YouTube deste canal expirou.{% else %}O canal “{{ y.channel.name }}” ainda não está conectado ao YouTube.{% endif %}
+      <a href="/channels/{{ y.channel.slug }}?tab=settings">Conectar na página do canal</a>.</div>
+  {% else %}
+    <p class="help">Conta: <b>{{ y.account.youtube_channel_title }}</b> · cota de hoje: {{ y.quota.used }}/{{ y.quota.limit }} unidades (≈ {{ y.quota.uploads_left }} envios restantes)</p>
+  {% endif %}
+
+  {% if y.long_upload %}
+  <div class="list-row" style="border:0;padding:0 0 .5rem">
+    <div class="grow"><span class="title">Vídeo enviado</span><small>privado · <a href="{{ y.long_upload.meta.url }}" target="_blank" rel="noopener">{{ y.long_upload.meta.url }}</a> · <a href="{{ y.long_upload.meta.studio_url }}" target="_blank" rel="noopener">abrir no Studio</a></small></div>
+    <span class="badge done">enviado</span>
+  </div>
+  {% if y.long_upload.meta.thumbnail_error %}<div class="alert">A thumbnail não foi enviada: {{ y.long_upload.meta.thumbnail_error }}</div>{% endif %}
+  {% endif %}
+
+  {% if y.problems or y.long_problem %}
+    {% if not y.long_upload %}<div class="alert">{{ y.long_problem or (y.problems|join(" ")) }}</div>{% endif %}
+  {% endif %}
+  <form method="post" action="/videos/{{ v.id }}/youtube/upload">
+    <input type="hidden" name="target" value="long">
+    {% if y.long_upload %}<label class="check"><input type="checkbox" name="force" value="1"> Enviar de novo (cria um vídeo duplicado no YouTube)</label>{% endif %}
+    <button {{ "disabled" if y.active or not y.connected or (y.long_problem and not y.long_upload) }}>{{ ic("upload") }} {{ "Enviar de novo" if y.long_upload else "Enviar vídeo (privado)" }}</button>
+  </form>
+
+  {% if y.shorts %}
+  <h4 class="subhead" style="margin-top:1rem">Shorts</h4>
+  {% for sh in y.shorts %}
+  <div class="list-row">
+    <div class="grow"><span class="title">{{ sh.index + 1 }}. {{ sh.title }}</span>
+      <small>{% if sh.upload %}enviado · <a href="{{ sh.upload.meta.url }}" target="_blank" rel="noopener">{{ sh.upload.meta.url }}</a>{% elif not sh.has_final %}precisa do render final (1080×1920) no cartão ⑤{% elif sh.problem %}{{ sh.problem }}{% else %}pronto para enviar{% endif %}</small></div>
+    <form method="post" action="/videos/{{ v.id }}/youtube/upload">
+      <input type="hidden" name="target" value="short"><input type="hidden" name="index" value="{{ sh.index }}">
+      {% if sh.upload %}<input type="hidden" name="force" value="1">{% endif %}
+      <button class="secondary sm" {{ "disabled" if y.active or not y.connected or not sh.has_final or sh.problem }} {% if sh.upload %}data-confirm="Este Short já foi enviado. Enviar de novo cria um duplicado. Continuar?"{% endif %}>{{ "Reenviar" if sh.upload else "Enviar" }}</button>
+    </form>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if y.job %}
+  <hr>
+  <div class="list-row" style="border:0;padding:0">
+    <div class="grow"><span class="title">Job #{{ y.job.id }} · envio ao YouTube</span></div>
+    <span class="badge {{ {'queued':'pending','running':'in_progress','done':'done','failed':'failed','cancelled':'stale'}[y.job.status] }}">{{ {"queued":"na fila","running":"enviando","done":"concluído","failed":"falhou","cancelled":"cancelado"}[y.job.status] }}</span>
+    {% if y.job.status in ("queued", "running") %}<form method="post" action="/jobs/{{ y.job.id }}/cancel"><button class="secondary sm" data-confirm="Cancelar o envio?">Cancelar</button></form>{% endif %}
+    {% if y.job.status in ("failed", "cancelled") %}<form method="post" action="/jobs/{{ y.job.id }}/retry"><button class="secondary sm">Tentar de novo</button></form>{% endif %}
+  </div>
+  {% if y.job.status in ("queued", "running") %}<div class="progress"><i style="width: {{ y.job.progress }}%"></i></div>{% endif %}
+  {% if y.job.error %}<div class="alert">{{ y.job.error }}</div>{% endif %}
+  {% if y.log %}<details {{ "open" if y.job.status in ("running", "queued", "failed") }}><summary class="muted" style="cursor:pointer">Ver log</summary><pre class="promptbox" style="font-size:.78rem;max-height:10rem;overflow:auto">{{ y.log }}</pre></details>{% endif %}
+  {% endif %}
+
+  <p class="help">Depois do envio, finalize no YouTube Studio (visibilidade, conteúdo alterado, vídeo relacionado dos Shorts, teste A/B). O sistema nunca publica por conta própria.</p>
+</div>

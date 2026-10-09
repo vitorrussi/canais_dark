@@ -35,6 +35,7 @@ from canaisdark.web.presets import CHANNEL_PRESETS
 from canaisdark.web.render import render_ctx
 from canaisdark.web.settings import PROCESS_ALL_PROMPT
 from canaisdark.web.shorts import shorts_ctx
+from canaisdark.web.youtube import youtube_ctx
 
 router = APIRouter(include_in_schema=False)
 
@@ -337,6 +338,7 @@ def video_page(
         narr=narration_ctx(session, video),
         rnd=render_ctx(session, video) if video.approved_script_version_id else None,
         shr=shorts_ctx(session, video) if video.approved_script_version_id else None,
+        yts=youtube_ctx(session, video) if video.approved_script_version_id else None,
         cov=_coverage(session, video),
         stages=video_status.get_stages(session, video),
         versions=versions,
