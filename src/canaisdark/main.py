@@ -26,6 +26,7 @@ from canaisdark.web.settings import router as web_settings_router
 from canaisdark.web.shorts import router as web_shorts_router
 from canaisdark.web.transfer import router as web_transfer_router
 from canaisdark.web.voices import router as web_voices_router
+from canaisdark.web.youtube import router as web_youtube_router
 
 _STATUS: dict[type[DomainError], int] = {
     NotFound: 404,
@@ -85,6 +86,7 @@ def create_app() -> FastAPI:
     app.include_router(web_scenes_router)
     app.include_router(web_render_router)
     app.include_router(web_shorts_router)
+    app.include_router(web_youtube_router)
     app.include_router(web_voices_router)
     app.include_router(web_admin_router)
     # Último: o app MCP atende apenas /mcp; demais caminhos caem em 404.

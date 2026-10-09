@@ -18,6 +18,7 @@ from canaisdark.services import (
     video_status,
     videos,
 )
+from canaisdark.services import youtube as youtube_service
 from canaisdark.services.errors import DomainError
 from canaisdark.services.ratelimit import login_limiter
 from canaisdark.web.common import (
@@ -230,6 +231,7 @@ def _channel_ctx(
         "tab": tab,
         "q": q,
         "status_filter": status,
+        "yt": youtube_service.status(session, channel) if tab == "settings" else None,
         "total_videos": len(videos.list_videos(session, channel.id)),
         "statuses": [s.value for s in VideoStatus],
         "crumbs": [("Canais", "/")],
