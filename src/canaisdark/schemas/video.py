@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 class VideoCreate(BaseModel):
     topic: str = Field(min_length=1)
+    title: str = ""
     language: str | None = None  # None → herda do canal
 
 

@@ -9,7 +9,13 @@ from canaisdark.services import channels, storage, tasks
 from canaisdark.services.errors import InvalidState, NotFound
 
 
-def create_video(session: Session, channel_id: int, data: VideoCreate, actor: User) -> Video:
+def create_video(
+    session: Session,
+    channel_id: int,
+    data: VideoCreate,
+    actor: User,
+    enqueue_script: bool = True,
+) -> Video:
     channel = channels.get_channel(session, channel_id)
     if channel.is_archived:
         raise InvalidState("Canal arquivado não aceita novos vídeos")
@@ -17,6 +23,7 @@ def create_video(session: Session, channel_id: int, data: VideoCreate, actor: Us
     video = Video(
         channel_id=channel_id,
         topic=data.topic,
+        title=data.title,
         language=data.language or channel.language,
         created_by=actor.id,
     )
@@ -25,7 +32,8 @@ def create_video(session: Session, channel_id: int, data: VideoCreate, actor: Us
     session.refresh(video)
     assert video.id is not None
     storage.video_dir(channel.slug, video.id, create=True)
-    tasks.create_task(session, video.id, TaskType.GENERATE_SCRIPT, actor=actor)
+    if enqueue_script:
+        tasks.create_task(session, video.id, TaskType.GENERATE_SCRIPT, actor=actor)
     return video
 
 
