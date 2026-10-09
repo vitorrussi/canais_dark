@@ -36,10 +36,10 @@
   {% endif %}
 </div>
 
-<div class="card" style="margin-bottom:1rem" id="prompt-batches-card">
-  <header><h3>{{ ic("sparkles") }} Pedir várias imagens numa só mensagem</h3></header>
+<details class="card" style="margin-bottom:1rem" id="prompt-batches-card">
+  <summary class="pipeline-summary"><strong>{{ ic("sparkles") }} Pedir várias imagens numa só mensagem</strong><span class="muted">prompts em lote para o Gemini/ChatGPT</span></summary>
   <p class="muted">Gera uma mensagem pronta para o Gemini/ChatGPT com várias cenas de uma vez (o estilo do canal entra uma vez só no cabeçalho). O chatbot pode gerar menos imagens por resposta do que o pedido: escolha quantas por resposta quer (ex.: 3 em 3) e, depois de cada resposta, escreva <strong>continue</strong>.</p>
-  <form class="row" id="batch-form" hx-get="/videos/{{ video.id }}/scenes/batches" hx-target="#batch-out" hx-trigger="change, load" hx-boost="false" hx-swap="innerHTML" style="align-items:end">
+  <form class="row compact" id="batch-form" hx-get="/videos/{{ video.id }}/scenes/batches" hx-target="#batch-out" hx-trigger="change, load" hx-boost="false" hx-swap="innerHTML" style="align-items:end">
     <div class="field" style="margin:0"><label for="bsize">Cenas por mensagem</label>
       <select id="bsize" name="size"><option value="5">5</option><option value="8">8</option><option value="10" selected>10</option><option value="12">12</option><option value="20">20</option><option value="0">Todas</option></select></div>
     <div class="field" style="margin:0"><label for="bper">Imagens por resposta do chatbot</label>
@@ -49,7 +49,7 @@
     <label class="check"><input type="checkbox" name="only_missing" value="1"> Só cenas sem imagem</label>
   </form>
   <div id="batch-out" style="margin-top:.75rem"><p class="muted">Carregando…</p></div>
-</div>
+</details>
 
 <div class="card" id="batch-drop" style="margin-bottom:1rem;border-style:dashed;text-align:center">
   <strong>Envio em lote</strong> — arraste várias imagens aqui ou <label style="display:inline;color:var(--accent);cursor:pointer">escolha arquivos<input type="file" id="batch-input" multiple accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime" hidden></label>
@@ -70,9 +70,9 @@
   <div class="layout-2" style="grid-template-columns:minmax(0,1fr) auto">
     <div>
       <label class="muted" style="font-size:.8rem">Prompt da cena (inglês; o estilo do canal entra sozinho)</label>
-      <textarea class="prompt-input" rows="3" data-field="image_prompt" placeholder="Ainda sem prompt — peça ao Claude ou escreva aqui…">{{ s.image_prompt }}</textarea>
-      <div class="stack-inline" style="margin-top:.35rem">
-        <button type="button" class="secondary sm" data-copy="{{ r.full }}" data-full {{ "disabled" if not r.full }}>{{ ic("copy") }} Copiar prompt completo</button>
+      <textarea class="prompt-input" rows="2" data-field="image_prompt" placeholder="Ainda sem prompt — peça ao Claude ou escreva aqui…">{{ s.image_prompt }}</textarea>
+      <div class="stack-inline prompt-actions" style="margin-top:.35rem">
+        <button type="button" class="secondary sm" data-copy="{{ r.full }}" data-full {{ "disabled" if not r.full }}>{{ ic("copy") }} Copiar prompt</button>
         <button type="button" class="secondary sm" data-copy="{{ r.full_vertical }}" data-full-vertical {{ "hidden" if not s.wants_vertical }} {{ "disabled" if not r.full }}>{{ ic("copy") }} Copiar 9:16</button>
       </div>
       <div class="video-prompt" {{ "hidden" if not s.is_key_scene }} style="margin-top:.5rem">
@@ -101,6 +101,6 @@
 <div class="card"><div class="empty">{{ ic("film") }}<h3>Nada pendente</h3><p>Todas as cenas têm prompt e imagem.</p></div></div>
 {% endfor %}
 </div>
-<script src="/static/scenes.js"></script>
+<script src="/static/scenes.js?v={{ static_v("scenes.js") }}"></script>
 {% endif %}
 {% endblock %}

@@ -71,6 +71,17 @@ def _author_label(author: str) -> str:
 templates.env.globals["author_label"] = _author_label
 
 
+def _static_version(name: str) -> str:
+    """Query de cache-busting: muda quando o arquivo estático muda (evita CSS/JS velhos no celular)."""
+    try:
+        return str(int((BASE / "static" / name).stat().st_mtime))
+    except OSError:
+        return "0"
+
+
+templates.env.globals["static_v"] = _static_version
+
+
 def render(
     request: Request, name: str, user: User | None, status: int = 200, **ctx: object
 ) -> HTMLResponse:

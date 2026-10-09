@@ -31,6 +31,13 @@
   // fecha menus <details class="menu"> ao clicar fora
   document.addEventListener("click", (e) => document.querySelectorAll("details.menu[open]").forEach((d) => { if (!d.contains(e.target)) d.removeAttribute("open"); }));
 
+  function collapseMobile() {
+    if (!window.matchMedia("(max-width: 900px)").matches) return;
+    document.querySelectorAll("details[data-collapse-mobile]").forEach((d) => { if (!d.dataset.touched) d.open = false; });
+  }
+  document.addEventListener("toggle", (e) => { if (e.target.matches && e.target.matches("details[data-collapse-mobile]")) e.target.dataset.touched = "1"; }, true);
+  document.addEventListener("DOMContentLoaded", collapseMobile);
+  document.addEventListener("htmx:afterSettle", collapseMobile);
   document.addEventListener("DOMContentLoaded", flushFlash);
   document.addEventListener("htmx:afterSettle", flushFlash);
   document.addEventListener("htmx:afterSwap", () => document.body.classList.remove("menu-open"));

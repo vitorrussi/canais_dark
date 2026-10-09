@@ -331,3 +331,13 @@ def test_channel_tts_settings_roundtrip(logged: TestClient) -> None:
         .text.split('name="forced_alignment"')[1]
         .split(">")[0]
     )
+
+
+def test_static_assets_are_cache_busted(logged: TestClient) -> None:
+    html = logged.get("/").text
+    import re
+
+    assert re.search(r"/static/app\.css\?v=\d+", html) and re.search(
+        r"/static/app\.js\?v=\d+", html
+    )
+    assert logged.get("/static/app.css?v=123").status_code == 200

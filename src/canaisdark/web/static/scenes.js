@@ -6,6 +6,10 @@
   const toast = (m, k) => window.studioToast(m, k);
   const $ = (el, sel) => el.querySelector(sel);
 
+  // ---------- campos de prompt crescem com o texto ----------
+  const grow = (ta) => { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + 2 + "px"; };
+  root.querySelectorAll(".prompt-input").forEach(grow);
+  root.addEventListener("input", (e) => { if (e.target.matches(".prompt-input")) grow(e.target); });
   // ---------- autosave ----------
   async function save(row, patch) {
     const r = await fetch(`/videos/${videoId}/scenes/${row.dataset.sceneId}/update`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });

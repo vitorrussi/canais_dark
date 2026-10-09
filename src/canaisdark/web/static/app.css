@@ -194,3 +194,26 @@ img, svg { max-width: 100%; }
 .batch-item { border: 1px solid var(--border); border-radius: 8px; padding: .4rem; display: flex; flex-direction: column; gap: .25rem; background: var(--bg); } .batch-item.conflict { border-color: var(--danger); }
 .batch-item img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; } .batch-vid { aspect-ratio: 16/9; display: grid; place-items: center; background: var(--surface-2); border-radius: 6px; }
 .batch-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .batch-item select { padding: .2rem 1.6rem .2rem .4rem; font-size: .85rem; }
+
+/* Mobile (2.6): páginas longas ficam compactas */
+.pipeline-summary { display: flex; align-items: center; gap: .6rem; cursor: pointer; list-style: none; flex-wrap: wrap; } .pipeline-summary::-webkit-details-marker { display: none; }
+.pipeline-summary strong { flex: none; } .pipeline-summary .muted { font-size: .85rem; }
+details.card > summary::after { content: "▾"; margin-left: auto; color: var(--muted); } details.card[open] > summary::after { content: "▴"; }
+details.pipeline-card > .progress { margin-top: .6rem; }
+.row.compact > * { flex: 1 1 130px; }
+.prompt-input { overflow: hidden; resize: none; line-height: 1.45; }
+@media (max-width: 900px) {
+  /* Página do vídeo no celular: Pipeline no topo; Detalhes/Importar/Zona de risco no fim */
+  .layout-2:has(.pipeline-card) { display: flex; flex-direction: column; gap: 1rem; align-items: stretch; }
+  .layout-2:has(.pipeline-card) > .stack { display: contents; }
+  .layout-2:has(.pipeline-card) .stack > * + * { margin-top: 0; }
+  .layout-2:has(.pipeline-card) .pipeline-card { order: -1; }
+  .layout-2:has(.pipeline-card) > .stack:last-child > :not(.pipeline-card) { order: 5; }
+  .scene-row .scene-head { gap: .4rem; } .scene-row .scene-tools { margin-left: 0; width: 100%; gap: .8rem; }
+  .scene-row .slots { display: grid; grid-template-columns: minmax(0, 1fr) 92px; gap: .6rem; align-items: start; margin-top: .6rem; }
+  .scene-row .slots:has(.slot[data-variant="vertical"][hidden]) { grid-template-columns: minmax(0, 1fr); }
+  .scene-row .slot { width: auto; max-width: none; } .scene-row .slot-body.v { width: 92px; }
+  .scene-row .slot .stack-inline { gap: .25rem; } .scene-row .slot .stack-inline button { padding: .25rem .5rem; font-size: .78rem; }
+  .scene-row .slot-info small { font-size: .7rem; }
+  .scene-row .stack-inline.prompt-actions { gap: .4rem; }
+}

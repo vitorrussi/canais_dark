@@ -59,7 +59,7 @@
   {% if job.status in ("queued", "running") %}<div class="progress"><i style="width: {{ job.progress }}%"></i></div>{% endif %}
   {% if job.status == "queued" %}<p class="help">Na fila. Se não andar, o worker não está rodando (<code>make worker</code>).</p>{% endif %}
   {% if job.error %}<div class="alert">{{ job.error }}</div>{% endif %}
-  {% if n.log %}<pre class="promptbox" style="font-size:.78rem;max-height:12rem;overflow:auto">{{ n.log }}</pre>{% endif %}
+  {% if n.log %}<details {{ "open" if (job.status in ("running", "queued", "failed")) }}><summary class="muted" style="cursor:pointer">Ver log do job</summary><pre class="promptbox" style="font-size:.78rem;max-height:12rem;overflow:auto">{{ n.log }}</pre></details>{% endif %}
   {% endif %}
 
   {% if n.audio %}
@@ -72,11 +72,12 @@
   <div class="stack-inline">{% for label, aid in n.downloads %}<a class="btn secondary sm" href="/assets/{{ aid }}/file?download=1" hx-boost="false">{{ ic("download") }} {{ label }}</a>{% endfor %}</div>
 
   {% if n.doc %}
-  <h4 style="margin:1rem 0 .4rem">Tempo por cena</h4>
+  <details data-collapse-mobile style="margin-top:.8rem"><summary class="muted" style="cursor:pointer">Tempo por cena ({{ n.doc.scenes|length }})</summary>
   {% for sc in n.doc.scenes %}
   <div class="scene" style="grid-template-columns:2.2rem 5.5rem 1fr;padding:.35rem 0"><span class="n">{{ sc.index + 1 }}</span>
     <span class="muted mono" style="font-size:.8rem">{{ "%.1f"|format(sc.start) }}–{{ "%.1f"|format(sc.end) }}s</span><span>{{ sc.text[:90] }}{{ "…" if sc.text|length > 90 }}</span></div>
   {% endfor %}
+  </details>
   {% if n.doc.low_confidence %}
   <h4 style="margin:1rem 0 .4rem">Palavras para revisar <span class="tip" tabindex="0" data-tip="O alinhamento teve dificuldade com estas palavras (loss alto): pode haver erro de pronúncia, número por extenso, sigla ou nome estrangeiro. Ouça o trecho.">?</span></h4>
   <div class="chips">{% for w in n.doc.low_confidence %}<span class="chip" title="loss {{ '%.2f'|format(w.loss) }} em {{ '%.1f'|format(w.start) }}s">{{ w.text }}</span>{% endfor %}</div>

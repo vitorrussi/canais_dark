@@ -47,7 +47,7 @@
     </div>
 
     {% set n = narr %}{% include "_narration_card.html" %}
-    <script src="/static/narration.js"></script>
+    <script src="/static/narration.js?v={{ static_v("narration.js") }}"></script>
     {% if video.approved_script_version_id %}
     <div class="card"><header><h3>{{ ic("film") }} Cenas, prompts e imagens</h3></header>
       <p class="muted">{{ cov.prompts }}/{{ cov.total }} prompts · {{ cov.files }}/{{ cov.needed }} imagens</p>
@@ -94,8 +94,8 @@
   </div>
 
   <div class="stack">
-    <div class="card">
-      <header><h3>Pipeline</h3><span class="muted" style="margin-left:auto">{{ done }}/{{ total }}</span></header>
+    <details class="card pipeline-card" open data-collapse-mobile>
+      <summary class="pipeline-summary"><strong>Pipeline</strong><span class="muted">{{ done }}/{{ total }}{% set nxt = stages|rejectattr("state", "equalto", "done")|list %}{% if nxt %} · próxima: {{ nxt[0].label }}{% endif %}</span></summary>
       <div class="progress"><i style="width: {{ (done * 100 / total)|round|int }}%"></i></div>
       <ul class="pipeline">
         {% for s in stages %}
@@ -103,7 +103,7 @@
           <span class="label">{{ s.label }}</span>{% if s.state != "not_started" %}{{ state_badge(s.state, state_labels) }}{% endif %}</li>
         {% endfor %}
       </ul>
-    </div>
+    </details>
     <div class="card">
       <header><h3>Detalhes</h3></header>
       <details {% if video.title or video.tags %}{% else %}open{% endif %}>
