@@ -91,3 +91,19 @@ def test_srt_and_ass() -> None:
 def test_short_cue_gets_min_duration() -> None:
     srt = subtitles.to_srt([W("Oi.", 0, 0.2)])
     assert "00:00:00,000 --> 00:00:01,000" in srt
+
+
+def test_clean_words_drops_whitespace_tokens_from_real_api_shape() -> None:
+    # formato real observado: espaços vêm como "palavras" com tempos próprios
+    real = [
+        W("Abril", 0.04, 0.36, 0.74),
+        W(" ", 0.36, 0.4, 0.61),
+        W("de", 0.4, 0.48, 0.76),
+        W(" ", 0.48, 0.52, 0.55),
+        W("1986.", 0.52, 2.08, 1.26),
+    ]
+    cleaned = alignment.clean_words(real)
+    assert [w["text"] for w in cleaned] == ["Abril", "de", "1986."]
+    assert alignment.map_words_to_scenes(cleaned, ["Abril de 1986."]) == [(0.04, 2.08)]
+    srt = subtitles.to_srt(cleaned)
+    assert "Abril de 1986." in srt and "  " not in srt

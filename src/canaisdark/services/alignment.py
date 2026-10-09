@@ -16,6 +16,11 @@ def _tokens(text: str) -> list[str]:
     return [t for t in (normalize_token(x) for x in text.split()) if t]
 
 
+def clean_words(words: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """A API devolve espaços como "palavras" (ex.: {"text": " "}); descartamos tokens em branco."""
+    return [w for w in words if str(w.get("text", "")).strip()]
+
+
 def map_words_to_scenes(
     words: list[dict[str, Any]], scene_texts: list[str]
 ) -> list[tuple[float, float] | None]:

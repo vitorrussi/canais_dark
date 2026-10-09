@@ -175,8 +175,14 @@ def run_tts(session: Session, job: Job, make_client: ClientFactory) -> None:
     session.refresh(asset)
     after = _credits(client)
     used = after - before if before is not None and after is not None else None
-    if used is not None:
+    if used:
         jobs.append_log(session, job.id, f"Créditos gastos neste TTS: {used}.")
+    else:
+        jobs.append_log(
+            session,
+            job.id,
+            f"Créditos estimados neste TTS: {p.get('credits_estimated')} (o contador do ElevenLabs atualiza com atraso; veja o saldo no card).",
+        )
     jobs.append_log(session, job.id, f"Áudio pronto: {duration:.1f}s.")
     result: dict[str, Any] = {
         "audio_asset_id": asset.id,
@@ -227,7 +233,7 @@ def run_alignment(session: Session, job: Job, make_client: ClientFactory) -> Non
     jobs.heartbeat(session, job.id, 20)
     data = client.forced_alignment(audio_bytes, full_text)
     _check_cancel(session, job)
-    words = data.get("words") or []
+    words = alignment.clean_words(data.get("words") or [])
     if not words:
         raise InvalidState("O ElevenLabs não devolveu palavras alinhadas.")
     spans = [s or (0.0, 0.0) for s in alignment.map_words_to_scenes(words, texts)]
@@ -237,8 +243,14 @@ def run_alignment(session: Session, job: Job, make_client: ClientFactory) -> Non
     )
     after = _credits(client)
     used = after - before if before is not None and after is not None else None
-    if used is not None:
+    if used:
         jobs.append_log(session, job.id, f"Créditos gastos no alinhamento: {used}.")
+    else:
+        jobs.append_log(
+            session,
+            job.id,
+            "Custo do alinhamento: o contador do ElevenLabs ainda não refletiu (compare o saldo do card antes/depois).",
+        )
     jobs.append_log(
         session,
         job.id,
