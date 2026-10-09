@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ic, field %}
+{% block title %}Usuários{% endblock %}
+{% block crumb %}Usuários{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Usuários</h1>
+  <p class="muted">Cada pessoa tem o seu token (para o login e para o Claude Code). Só administradores veem esta página.</p></div></div>
+
+{% if new_token %}
+<div class="card accent" style="margin-bottom:1rem">
+  <header><h3>Token de {{ new_token[0].name }}</h3></header>
+  <div class="alert" style="border-color:var(--warn);color:var(--warn);background:transparent">Copie e envie agora: este token <strong>não será mostrado de novo</strong>. Se já havia um token, ele deixou de valer.</div>
+  <div id="token-box" class="promptbox">{{ new_token[1] }}</div>
+  <button type="button" data-copy="#token-box">{{ ic("copy") }} Copiar token</button>
+</div>
+{% endif %}
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+<div class="layout-2">
+  <div class="card">
+    <header><h3>Pessoas</h3></header>
+    {% for u in users_list %}
+    <div class="list-row">
+      <div class="grow"><span class="title">{{ u.name }} {% if u.id == user.id %}<small class="muted">(você)</small>{% endif %}</span>
+        <small>{{ u.email }}</small></div>
+      {% if u.is_admin %}<span class="badge info">admin</span>{% endif %}
+      <span class="badge {{ 'done' if u.is_active else 'failed' }}">{{ "ativo" if u.is_active else "desativado" }}</span>
+      <div class="stack-inline">
+        {% if u.is_active %}
+        <form method="post" action="/admin/users/{{ u.id }}/token"><button class="secondary sm" data-confirm="Gerar novo token para {{ u.name }}? O token atual deixa de valer.">Novo token</button></form>
+        {% endif %}
+        <form method="post" action="/admin/users/{{ u.id }}/admin"><input type="hidden" name="make_admin" value="{{ 0 if u.is_admin else 1 }}"><button class="ghost sm">{{ "Remover admin" if u.is_admin else "Tornar admin" }}</button></form>
+        {% if u.id != user.id %}
+        <form method="post" action="/admin/users/{{ u.id }}/active"><input type="hidden" name="active" value="{{ 0 if u.is_active else 1 }}"><button class="{{ 'danger' if u.is_active else 'secondary' }} sm" {% if u.is_active %}data-confirm="Desativar {{ u.name }}? O acesso e o token deixam de valer."{% endif %}>{{ "Desativar" if u.is_active else "Reativar" }}</button></form>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <form class="card accent" method="post" action="/admin/users">
+    <header><h3>{{ ic("plus") }} Novo usuário</h3></header>
+    {{ field("name", "Nome", "", "Como aparece nas telas e na autoria dos roteiros.", "Maria Silva", required=true) }}
+    {{ field("email", "E-mail", "", "Único. Também será usado para o Cloudflare Access, se ativado.", "maria@exemplo.com", required=true) }}
+    <label class="check"><input type="checkbox" name="is_admin"> Administrador <span class="tip" tabindex="0" data-tip="Pode criar usuários, gerar tokens e desativar pessoas.">?</span></label>
+    <div class="form-actions"><button>Criar e gerar token</button></div>
+  </form>
+</div>
+{% endblock %}

@@ -12,3 +12,7 @@ class Conflict(DomainError):
 
 class InvalidState(DomainError):
     pass
+
+
+class Forbidden(DomainError):
+    pass

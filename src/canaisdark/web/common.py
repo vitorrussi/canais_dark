@@ -11,7 +11,8 @@ from sqlmodel import Session
 
 from canaisdark.db import get_engine, get_session
 from canaisdark.models import User
-from canaisdark.services import tasks
+from canaisdark.services import tasks, users
+from canaisdark.services.errors import Forbidden
 
 BASE = Path(__file__).parent
 templates = Jinja2Templates(directory=BASE / "templates")
@@ -49,6 +50,23 @@ def web_user(request: Request, session: SessionDep) -> User:
 
 
 WebUser = Annotated[User, Depends(web_user)]
+
+
+def admin_user(user: WebUser) -> User:
+    if not user.is_admin:
+        raise Forbidden("Esta área é só para administradores.")
+    return user
+
+
+AdminUser = Annotated[User, Depends(admin_user)]
+
+
+def _author_label(author: str) -> str:
+    with Session(get_engine()) as session:
+        return users.author_label(session, author)
+
+
+templates.env.globals["author_label"] = _author_label
 
 
 def render(

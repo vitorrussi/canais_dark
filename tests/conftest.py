@@ -11,6 +11,23 @@ from canaisdark.models import User
 from canaisdark.services import users
 
 
+@pytest.fixture(autouse=True)
+def hermetic_settings(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Testes não podem depender do .env do desenvolvedor (ex.: PUBLIC_URL deixa o cookie Secure)."""
+    from canaisdark.config import get_settings
+
+    for key, value in {
+        "ENV": "dev",
+        "PUBLIC_URL": "",
+        "MCP_ALLOWED_HOSTS": "",
+        "SECRET_KEY": "dev-insecure-change-me",
+    }.items():
+        monkeypatch.setenv(key, value)
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
 @pytest.fixture
 def session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Session]:
     engine = db.make_engine(f"sqlite:///{tmp_path / 'test.db'}")

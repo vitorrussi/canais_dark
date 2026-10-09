@@ -52,7 +52,7 @@
       <div class="versions">
         {% for ver in versions %}<a href="/videos/{{ video.id }}?v={{ ver.number }}" class="{{ 'current' if ver.id == selected.id }}">v{{ ver.number }}{% if ver.approved %} ✓{% endif %}</a>{% endfor %}
       </div>
-      <p class="muted">Versão {{ selected.number }} · {{ selected.author }} · {{ scenes|length }} cenas {% if selected.approved %}· <span class="badge done">aprovada</span>{% endif %}</p>
+      <p class="muted">Versão {{ selected.number }} · {{ author_label(selected.author) }} · {{ scenes|length }} cenas {% if selected.approved %}· <span class="badge done">aprovada</span>{% endif %}</p>
       {% for sc in scenes %}
       <div class="scene"><span class="n">{{ sc.index + 1 }}</span><div>{{ sc.text }}{% if sc.notes %}<div class="note">{{ sc.notes }}</div>{% endif %}</div></div>
       {% endfor %}

@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page-head">
   <div><h1>Comparar versões</h1>
-    <p class="muted">v{{ old.number }} <span class="muted">({{ old.author }})</span> → v{{ new.number }} <span class="muted">({{ new.author }})</span></p>
+    <p class="muted">v{{ old.number }} <span class="muted">({{ author_label(old.author) }})</span> → v{{ new.number }} <span class="muted">({{ author_label(new.author) }})</span></p>
     <div class="meta"><span class="badge done">{{ summary.added }} adicionada(s)</span><span class="badge stale">{{ summary.changed }} alterada(s)</span><span class="badge failed">{{ summary.removed }} removida(s)</span><span class="badge">{{ summary.same }} iguais</span></div></div>
   <div class="actions"><a class="btn secondary" href="/videos/{{ video.id }}?v={{ new.number }}">Voltar ao vídeo</a></div>
 </div>

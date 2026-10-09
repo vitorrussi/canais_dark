@@ -1,7 +1,7 @@
 import hashlib
 import secrets
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from canaisdark.models import User
 
@@ -16,10 +16,13 @@ def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def create_user(session: Session, name: str, email: str) -> User:
+def create_user(session: Session, name: str, email: str, is_admin: bool = False) -> User:
+    email = email.strip().lower()
     if session.exec(select(User).where(User.email == email)).first():
         raise UserError(f"Já existe usuário com o e-mail {email}")
-    user = User(name=name, email=email)
+    if not name.strip() or "@" not in email:
+        raise UserError("Informe um nome e um e-mail válido")
+    user = User(name=name.strip(), email=email.strip().lower(), is_admin=is_admin)
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -52,3 +55,56 @@ def deactivate_user(session: Session, user: User) -> None:
 
 def get_by_email(session: Session, email: str) -> User | None:
     return session.exec(select(User).where(User.email == email)).first()
+
+
+def list_users(session: Session) -> list[User]:
+    return list(session.exec(select(User).order_by(col(User.id))))
+
+
+def get_user(session: Session, user_id: int) -> User:
+    user = session.get(User, user_id)
+    if user is None:
+        raise UserError(f"Usuário {user_id} não encontrado")
+    return user
+
+
+def _active_admins(session: Session) -> int:
+    return len([u for u in list_users(session) if u.is_active and u.is_admin])
+
+
+def set_active(session: Session, user: User, active: bool, actor: User) -> None:
+    if not active:
+        if user.id == actor.id:
+            raise UserError("Você não pode desativar a si mesmo")
+        if user.is_admin and _active_admins(session) <= 1:
+            raise UserError("É preciso manter ao menos um administrador ativo")
+        user.token_hash = None  # desativar também revoga o token
+    user.is_active = active
+    session.add(user)
+    session.commit()
+
+
+def set_admin(session: Session, user: User, admin: bool, actor: User) -> None:
+    if not admin and user.is_admin and _active_admins(session) <= 1:
+        raise UserError("É preciso manter ao menos um administrador ativo")
+    user.is_admin = admin
+    session.add(user)
+    session.commit()
+
+
+AUTHOR_LABELS = {
+    "claude": "Claude (via {name})",
+    "user": "{name}",
+    "import": "Importado por {name}",
+    "copy": "Cópia feita por {name}",
+}
+
+
+def author_label(session: Session, author: str) -> str:
+    """Converte `claude:1` / `user:2` em texto legível com o nome da pessoa."""
+    kind, _, raw = author.partition(":")
+    template = AUTHOR_LABELS.get(kind)
+    if template is None or not raw.isdigit():
+        return author
+    user = session.get(User, int(raw))
+    return template.format(name=user.name if user else f"usuário {raw}")

@@ -9,4 +9,5 @@ class User(SQLModel, table=True):
     email: str = Field(unique=True, index=True)
     token_hash: str | None = Field(default=None, index=True)
     is_active: bool = True
+    is_admin: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
