@@ -2,6 +2,7 @@
 
 import json
 import mimetypes
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Form, Request
@@ -38,6 +39,12 @@ def narration_ctx(session: Session, video: Video) -> dict[str, Any]:
             total += len(s.text) + (1 if i else 0)
             cum.append(total)
     tts_job = jobs.latest_job(session, video.id, JobType.TTS)
+    countdown = 0
+    if tts_job and tts_job.status == "queued" and tts_job.run_after is not None:
+        run_after = (
+            tts_job.run_after if tts_job.run_after.tzinfo else tts_job.run_after.replace(tzinfo=UTC)
+        )
+        countdown = max(0, int((run_after - datetime.now(UTC)).total_seconds() + 0.99))
     ali_job = jobs.latest_job(session, video.id, JobType.ALIGNMENT)
     active = [j for j in (tts_job, ali_job) if j and j.status in ACTIVE]
     shown = active[0] if active else (tts_job or ali_job)
@@ -68,6 +75,8 @@ def narration_ctx(session: Session, video: Video) -> dict[str, Any]:
         "tts_job": tts_job,
         "ali_job": ali_job,
         "active": bool(active),
+        "countdown": countdown,
+        "undo_seconds": settings.narration_undo_seconds,
         "log": _tail(shown.log) if shown else "",
         "audio": audio_asset,
         "audio_url": f"/assets/{audio_asset.id}/file" if audio_asset else None,

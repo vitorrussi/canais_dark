@@ -6,7 +6,7 @@ from typing import Any
 
 from sqlmodel import Session
 
-from canaisdark.integrations.elevenlabs import ElevenLabsLike
+from canaisdark.integrations.elevenlabs import ElevenLabsLike, GenerationCancelled
 from canaisdark.models import Asset, AssetType, Job, JobType, Scene
 from canaisdark.models.channel import utcnow
 from canaisdark.services import alignment, audio, jobs, narration, scripts, subtitles, videos
@@ -99,6 +99,7 @@ def store_timing_outputs(
 
 def run_tts(session: Session, job: Job, make_client: ClientFactory) -> None:
     assert job.id is not None
+    job_id = job.id
     p = job.params
     video = videos.get_video(session, job.video_id)
     scenes = narration.scenes_for_version(session, p["script_version_id"], p["scene_count"])
@@ -130,16 +131,25 @@ def run_tts(session: Session, job: Job, make_client: ClientFactory) -> None:
                 f"Trecho {i + 1}/{len(chunks)}: reaproveitado (já gerado antes, sem custo).",
             )
         else:
-            data = client.text_to_speech(
-                p["voice_id"],
-                chunk.text,
-                model_id=p["model_id"],
-                stability=p["stability"],
-                similarity=p["similarity"],
-                speed=p["speed"],
-                previous_text=chunks[i - 1].text[-250:] if i > 0 else "",
-                next_text=chunks[i + 1].text[:250] if i + 1 < len(chunks) else "",
-            )
+            try:
+                data = client.text_to_speech(
+                    p["voice_id"],
+                    chunk.text,
+                    model_id=p["model_id"],
+                    stability=p["stability"],
+                    similarity=p["similarity"],
+                    speed=p["speed"],
+                    previous_text=chunks[i - 1].text[-250:] if i > 0 else "",
+                    next_text=chunks[i + 1].text[:250] if i + 1 < len(chunks) else "",
+                    should_cancel=lambda: jobs.is_cancelled(session, job_id),
+                )
+            except GenerationCancelled:
+                jobs.append_log(
+                    session,
+                    job_id,
+                    f"Cancelado durante o trecho {i + 1}: a espera foi interrompida (esse trecho pode já ter sido cobrado).",
+                )
+                raise JobCancelled from None
             part.write_bytes(data)
             jobs.append_log(
                 session,

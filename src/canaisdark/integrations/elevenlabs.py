@@ -11,6 +11,10 @@ BASE_URL = "https://api.elevenlabs.io"
 MP3_BITRATE = 128_000  # mp3_44100_128: CBR, usado para estimar duração sem ffmpeg
 
 
+class GenerationCancelled(Exception):
+    """Cancelamento pedido durante uma requisição de TTS (a espera é interrompida)."""
+
+
 class ElevenLabsError(Exception):
     """Erro com mensagem já em português para exibir no site."""
 
@@ -42,6 +46,7 @@ class ElevenLabsLike(Protocol):
         speed: float,
         previous_text: str = "",
         next_text: str = "",
+        should_cancel: Callable[[], bool] | None = None,
     ) -> bytes: ...
 
     def forced_alignment(self, audio: bytes, text: str) -> dict[str, Any]: ...
@@ -151,7 +156,12 @@ class ElevenLabsClient:
         speed: float,
         previous_text: str = "",
         next_text: str = "",
+        should_cancel: Callable[[], bool] | None = None,
     ) -> bytes:
+        """Usa o endpoint de streaming para poder interromper a espera se o job for cancelado.
+
+        O ElevenLabs não tem API de cancelamento: fechar a conexão para de ESPERAR, mas o trecho
+        em andamento pode já ter sido cobrado."""
         body: dict[str, Any] = {
             "text": text,
             "model_id": model_id,
@@ -165,13 +175,45 @@ class ElevenLabsClient:
             body["previous_text"] = previous_text
         if next_text:
             body["next_text"] = next_text
-        resp = self._request(
+        last: ElevenLabsError | None = None
+        for attempt in range(3):
+            if should_cancel and should_cancel():
+                raise GenerationCancelled
+            try:
+                return self._stream_once(voice_id, body, should_cancel)
+            except ElevenLabsError as e:
+                if not e.retryable:
+                    raise
+                last = e
+            except httpx.TimeoutException:
+                last = ElevenLabsError("Tempo esgotado ao falar com o ElevenLabs.", retryable=True)
+            except httpx.HTTPError:
+                last = ElevenLabsError("Falha de rede ao falar com o ElevenLabs.", retryable=True)
+            self._sleep(2.0 * (attempt + 1))
+        assert last is not None
+        raise last
+
+    def _stream_once(
+        self, voice_id: str, body: dict[str, Any], should_cancel: Callable[[], bool] | None
+    ) -> bytes:
+        buf = bytearray()
+        last_check = time.monotonic()
+        with self._http.stream(
             "POST",
-            f"/v1/text-to-speech/{voice_id}",
+            f"/v1/text-to-speech/{voice_id}/stream",
             params={"output_format": "mp3_44100_128"},
             json=body,
-        )
-        return resp.content
+        ) as resp:
+            if resp.status_code >= 400:
+                resp.read()
+                raise map_error(resp)
+            for chunk in resp.iter_bytes(8192):
+                buf.extend(chunk)
+                if should_cancel and time.monotonic() - last_check >= 0.3:
+                    last_check = time.monotonic()
+                    if should_cancel():
+                        raise GenerationCancelled  # sai do `with`: fecha a conexão
+        return bytes(buf)
 
     def forced_alignment(self, audio: bytes, text: str) -> dict[str, Any]:
         resp = self._request(
@@ -208,7 +250,10 @@ class FakeElevenLabs:
         self.alignment_error: ElevenLabsError | None = None
 
     def text_to_speech(self, voice_id: str, text: str, **kw: Any) -> bytes:
+        should_cancel = kw.pop("should_cancel", None)
         self.tts_calls.append({"voice_id": voice_id, "text": text, **kw})
+        if should_cancel and should_cancel():
+            raise GenerationCancelled
         if self.fail_on_call == len(self.tts_calls):
             raise ElevenLabsError("falha simulada", status=500)
         self.used += int(len(text) * credit_multiplier(kw.get("model_id", "")))

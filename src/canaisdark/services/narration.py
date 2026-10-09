@@ -182,7 +182,14 @@ def start(
         "chars": p.chars,
         "credits_estimated": p.credits_estimated,
     }
-    return jobs.create_job(session, video_id, JobType.TTS, params, actor)
+    return jobs.create_job(
+        session,
+        video_id,
+        JobType.TTS,
+        params,
+        actor,
+        delay_seconds=get_settings().narration_undo_seconds,
+    )
 
 
 # ----- Arquivos / ativos -----

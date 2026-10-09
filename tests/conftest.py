@@ -26,6 +26,7 @@ def hermetic_settings(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         "FORCED_ALIGNMENT_ENABLED": "true",
         "ELEVENLABS_MAX_CHARS_PER_JOB": "2500",
         "TTS_CHUNK_CHARS": "2500",
+        "NARRATION_UNDO_SECONDS": "0",
     }.items():
         monkeypatch.setenv(key, value)
     get_settings.cache_clear()

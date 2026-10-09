@@ -21,6 +21,7 @@ def create_job(
     params: dict[str, Any] | None = None,
     actor: User | None = None,
     parent_job_id: int | None = None,
+    delay_seconds: int = 0,
 ) -> Job:
     if session.get(Video, video_id) is None:
         raise NotFound(f"Vídeo {video_id} não encontrado")
@@ -39,6 +40,7 @@ def create_job(
         params=params or {},
         created_by=actor.id if actor else None,
         parent_job_id=parent_job_id,
+        run_after=utcnow() + timedelta(seconds=delay_seconds) if delay_seconds > 0 else None,
     )
     session.add(job)
     session.commit()
@@ -76,15 +78,18 @@ def latest_job(session: Session, video_id: int, job_type: JobType) -> Job | None
 def claim_next(session: Session, worker_id: str) -> Job | None:
     """Reserva atomicamente o job `queued` mais antigo (UPDATE condicional é o lock)."""
     for _ in range(5):
+        now = utcnow()
         job_id = session.exec(
             select(Job.id)
-            .where(Job.status == JobStatus.QUEUED.value)
+            .where(
+                Job.status == JobStatus.QUEUED.value,
+                or_(col(Job.run_after).is_(None), col(Job.run_after) <= now),
+            )
             .order_by(col(Job.id))
             .limit(1)
         ).first()
         if job_id is None:
             return None
-        now = utcnow()
         result = session.execute(
             update(Job)
             .where(col(Job.id) == job_id, col(Job.status) == JobStatus.QUEUED.value)

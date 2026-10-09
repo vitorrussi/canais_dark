@@ -24,7 +24,9 @@ class Settings(BaseSettings):
     elevenlabs_fake: bool = False
     elevenlabs_max_chars_per_job: int = 2500
     # Tamanho máximo de cada requisição de TTS (trechos cortados em fronteiras de cena)
-    tts_chunk_chars: int = 2500
+    tts_chunk_chars: int = 1500
+    # Segundos entre clicar em "Gerar narração" e o job poder começar (dá tempo de desfazer sem gastar nada)
+    narration_undo_seconds: int = 10
     # Interruptor geral do Forced Alignment (false = nunca chama; tempos das cenas são estimados)
     forced_alignment_enabled: bool = True
     worker_poll_seconds: float = 2.0

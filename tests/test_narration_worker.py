@@ -321,3 +321,60 @@ def test_stage_failed(session: Session, env: dict[str, object]) -> None:
     drain(worker(env))
     assert _states(session, env)["narration"] == "failed"
     _ = ElevenLabsError
+
+
+def test_undo_window_blocks_worker_until_elapsed(
+    session: Session, env: dict[str, object], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from datetime import timedelta
+
+    from canaisdark.models.channel import utcnow
+
+    monkeypatch.setattr(get_settings(), "narration_undo_seconds", 30)
+    job = narration.start(session, env["video_id"], env["user"], test_scenes=1, align=False)  # type: ignore[arg-type]
+    assert job.run_after is not None and job.status == "queued"
+    assert drain(worker(env)) == 0 and env["fake"].tts_calls == []  # type: ignore[attr-defined]
+    job.run_after = utcnow() - timedelta(seconds=1)  # a janela passou
+    session.add(job)
+    session.commit()
+    assert drain(worker(env)) == 1 and len(env["fake"].tts_calls) == 1  # type: ignore[attr-defined]
+
+
+def test_undo_during_window_costs_nothing(
+    session: Session, env: dict[str, object], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(get_settings(), "narration_undo_seconds", 30)
+    job = narration.start(session, env["video_id"], env["user"], test_scenes=1)  # type: ignore[arg-type]
+    jobs.cancel(session, job.id or 0)
+    monkeypatch.setattr(get_settings(), "narration_undo_seconds", 0)
+    assert drain(worker(env)) == 0 and env["fake"].tts_calls == []  # type: ignore[attr-defined]
+    assert narration.latest_asset(session, env["video_id"], AssetType.AUDIO) is None  # type: ignore[arg-type]
+
+
+def test_cancel_while_generating_stops_before_next_chunk(
+    session: Session, env: dict[str, object], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(get_settings(), "tts_chunk_chars", 40)
+    monkeypatch.setattr(
+        audio,
+        "concat_mp3",
+        lambda parts, out: out.write_bytes(b"".join(p.read_bytes() for p in parts)),
+    )
+    fake: FakeElevenLabs = env["fake"]  # type: ignore[assignment]
+    job = narration.start(session, env["video_id"], env["user"], align=False)  # type: ignore[arg-type]
+    original = fake.text_to_speech
+
+    def cancel_after_first(voice_id: str, text: str, **kw: object) -> bytes:
+        data = original(voice_id, text, **kw)
+        jobs.cancel(
+            session, job.id or 0
+        )  # o usuário clica em Cancelar enquanto o 1º trecho termina
+        return data
+
+    fake.text_to_speech = cancel_after_first  # type: ignore[method-assign]
+    drain(worker(env))
+    session.expire_all()
+    done = jobs.get_job(session, job.id or 0)
+    assert done.status == "cancelled" and len(fake.tts_calls) == 1
+    assert "reaproveitados" in done.log
+    assert narration.latest_asset(session, env["video_id"], AssetType.AUDIO) is None  # type: ignore[arg-type]

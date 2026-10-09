@@ -42,9 +42,9 @@ def test_tts_request_shape_and_header() -> None:
         previous_text="antes",
     )
     assert audio == b"MP3DATA" and seen["key"] == "KEY"
-    assert "/v1/text-to-speech/v1" in str(seen["url"]) and "output_format=mp3_44100_128" in str(
+    assert "/v1/text-to-speech/v1/stream" in str(
         seen["url"]
-    )
+    ) and "output_format=mp3_44100_128" in str(seen["url"])
     body = seen["body"]
     assert (
         isinstance(body, dict)
@@ -160,3 +160,38 @@ def test_fake_and_helpers() -> None:
     assert data["words"][1]["loss"] == 0.9 and data["words"][-1]["end"] == pytest.approx(
         mp3_duration_seconds(audio), abs=0.01
     )
+
+
+def test_streaming_tts_collects_and_cancels() -> None:
+    from canaisdark.integrations.elevenlabs import GenerationCancelled
+
+    seen = {"url": ""}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        seen["url"] = str(req.url)
+        return httpx.Response(200, content=b"A" * 50_000)
+
+    c, _ = client(httpx.MockTransport(handler))
+    assert (
+        c.text_to_speech(
+            "v",
+            "t",
+            model_id="m",
+            stability=0.5,
+            similarity=0.5,
+            speed=1,
+            should_cancel=lambda: False,
+        )
+        == b"A" * 50_000
+    )
+    assert "/v1/text-to-speech/v/stream" in seen["url"]
+    with pytest.raises(GenerationCancelled):
+        c.text_to_speech(
+            "v",
+            "t",
+            model_id="m",
+            stability=0.5,
+            similarity=0.5,
+            speed=1,
+            should_cancel=lambda: True,
+        )  # cancela antes de enviar

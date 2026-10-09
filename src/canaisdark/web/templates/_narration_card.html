@@ -1,6 +1,6 @@
 {% from "_macros.html" import ic %}
 {% set job = n.ali_job if (n.ali_job and n.ali_job.status in ("queued", "running")) else n.tts_job %}
-<div class="card {{ 'accent' if n.active }}" id="narration-card" {% if n.active %}hx-get="/videos/{{ n.video.id }}/narration/card" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
+<div class="card {{ 'accent' if n.active }}" id="narration-card" {% if n.active %}hx-get="/videos/{{ n.video.id }}/narration/card" hx-trigger="every {{ '1s' if n.countdown else '3s' }}" hx-swap="outerHTML"{% endif %}>
   <header><h3>{{ ic("play") }} Narração</h3>
     <div class="actions"><span class="muted" style="font-size:.82rem">{{ n.channel.tts_model }}{% if n.channel.elevenlabs_voice_id %} · voz {{ n.channel.elevenlabs_voice_id[:8] }}…{% endif %}</span></div></header>
 
@@ -49,9 +49,13 @@
     <div class="grow"><span class="title">Job #{{ job.id }} · {{ "narração" if job.type == "tts" else "alinhamento" }}</span>
       <small>{{ n.users.get(job.created_by, "") }}{% if job.parent_job_id %} · continuação do #{{ job.parent_job_id }}{% endif %}</small></div>
     <span class="badge {{ {'queued':'pending','running':'in_progress','done':'done','failed':'failed','cancelled':'stale'}[job.status] }}">{{ {"queued":"na fila","running":"rodando","done":"concluído","failed":"falhou","cancelled":"cancelado"}[job.status] }}</span>
-    {% if job.status in ("queued", "running") %}<form method="post" action="/jobs/{{ job.id }}/cancel"><button class="secondary sm" data-confirm="Cancelar este job?">Cancelar</button></form>{% endif %}
+    {% if job.status in ("queued", "running") %}<form method="post" action="/jobs/{{ job.id }}/cancel"><button class="secondary sm" title="Para o quanto antes. O trecho em andamento pode já ter sido cobrado; trechos prontos ficam salvos." data-confirm="Cancelar este job? O trecho em andamento pode já ter sido cobrado pelo ElevenLabs.">Cancelar</button></form>{% endif %}
     {% if job.status in ("failed", "cancelled") %}<form method="post" action="/jobs/{{ job.id }}/retry"><button class="secondary sm">Tentar de novo</button></form>{% endif %}
   </div>
+  {% if job.type == "tts" and job.status == "queued" and n.countdown %}
+  <div class="callout" style="border-color:var(--warn)"><strong>Começa em {{ n.countdown }}s.</strong> Ainda não gastou nada: clique em <em>Desfazer</em> se foi sem querer.
+    <form method="post" action="/jobs/{{ job.id }}/cancel" style="display:inline"><button class="secondary sm">Desfazer</button></form></div>
+  {% endif %}
   {% if job.status in ("queued", "running") %}<div class="progress"><i style="width: {{ job.progress }}%"></i></div>{% endif %}
   {% if job.status == "queued" %}<p class="help">Na fila. Se não andar, o worker não está rodando (<code>make worker</code>).</p>{% endif %}
   {% if job.error %}<div class="alert">{{ job.error }}</div>{% endif %}

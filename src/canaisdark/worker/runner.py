@@ -43,7 +43,11 @@ class Worker:
                     raise DomainError(f"Tipo de job desconhecido: {job.type}")
                 handler(session, job, self.make_client)
             except JobCancelled:
-                jobs.append_log(session, job_id, "Cancelado pelo usuário.")
+                jobs.append_log(
+                    session,
+                    job_id,
+                    "Cancelado. Trechos já gerados ficam salvos e são reaproveitados numa nova tentativa.",
+                )
             except (ElevenLabsError, DomainError) as e:
                 jobs.append_log(session, job_id, f"ERRO: {e}")
                 jobs.fail(session, job_id, str(e))

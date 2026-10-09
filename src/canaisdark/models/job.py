@@ -37,5 +37,6 @@ class Job(SQLModel, table=True):
     parent_job_id: int | None = Field(default=None, foreign_key="job.id")
     created_by: int | None = Field(default=None, foreign_key="user.id")
     created_at: datetime = Field(default_factory=utcnow)
+    run_after: datetime | None = None  # janela de "desfazer": o worker só pega o job depois disso
     started_at: datetime | None = None
     finished_at: datetime | None = None
