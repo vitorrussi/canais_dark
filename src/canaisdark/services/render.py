@@ -477,6 +477,15 @@ def _source_for(asset: Asset, scene_index: int) -> dict[str, Any]:
     return {"kind": kind, "path": str(path), "stamp": _stamp(path), "scene_index": scene_index}
 
 
+def music_file(session: Session, timeline: Timeline) -> Path | None:
+    if timeline.music.asset_id is None:
+        return None
+    music_asset = session.get(Asset, timeline.music.asset_id)
+    if music_asset is None or not (get_settings().data_dir / music_asset.path).is_file():
+        raise InvalidState("O arquivo da trilha sonora não está mais no disco.")
+    return get_settings().data_dir / music_asset.path
+
+
 def plan(
     session: Session,
     video: Video,
@@ -541,12 +550,7 @@ def plan(
     subs_asset = narration.latest_subtitle(session, video.id, "ass") if use_subs else None
     if use_subs and subs_asset is None:
         raise InvalidState("As legendas pedidas ainda não existem (gere a narração/alinhamento).")
-    music_path: Path | None = None
-    if timeline.music.asset_id is not None:
-        music_asset = session.get(Asset, timeline.music.asset_id)
-        if music_asset is None or not (get_settings().data_dir / music_asset.path).is_file():
-            raise InvalidState("O arquivo da trilha sonora não está mais no disco.")
-        music_path = get_settings().data_dir / music_asset.path
+    music_path = music_file(session, timeline)
     texts: list[tuple[float, float, str, str]] = []
     for sp in spans:
         edit = timeline.for_scene(sp.scene.index)

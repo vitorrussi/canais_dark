@@ -44,7 +44,7 @@ STAGES: list[tuple[str, str]] = [
     ("render", "Render"),
     ("review", "Revisão humana"),
     ("metadata", "Metadados"),
-    ("shorts", "Shorts"),
+    ("shorts", "Shorts (opcional)"),
     ("youtube", "Upload YouTube"),
     ("drive", "Google Drive"),
 ]
@@ -257,10 +257,39 @@ def _review_state(session: Session, video: Video) -> StageState:
     return StageState.DONE if final.meta.get("approved_by") else StageState.PENDING
 
 
+def _shorts_state(session: Session, video: Video) -> StageState:
+    """Etapa OPCIONAL: nada depende dela; SKIPPED = dispensada de propósito."""
+    from canaisdark.services import jobs, shorts, shorts_render
+
+    assert video.id is not None
+    job = jobs.latest_job(session, video.id, JobType.SHORTS)
+    if (running := _job_state(job.status if job else None)) is not None:
+        return running
+    found = shorts.latest_plan(session, video.id)
+    if found is None:
+        return (
+            _task_state(_latest_task(session, video, TaskType.SELECT_SHORTS))
+            or StageState.NOT_STARTED
+        )
+    asset, plan = found
+    if plan.skipped:
+        return StageState.SKIPPED
+    if not plan.shorts:
+        return StageState.NOT_STARTED
+    if asset.based_on_script_version_id != video.approved_script_version_id:
+        return StageState.STALE
+    rendered = shorts_render.best_for(session, video.id)
+    done = sum(1 for i in range(len(plan.shorts)) if rendered.get(i) is not None)
+    if done == len(plan.shorts):
+        return StageState.DONE
+    return StageState.PARTIAL if done else StageState.PENDING
+
+
 _STATE_CALCULATORS: dict[str, Callable[[Session, Video], StageState]] = {
     "timeline": _timeline_state,
     "render": _render_state,
     "review": _review_state,
+    "shorts": _shorts_state,
     "prompts": _prompts_state,
     "assets": _assets_state,
     "script": _script_state,

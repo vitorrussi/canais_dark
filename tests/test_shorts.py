@@ -2,14 +2,14 @@ from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from canaisdark.config import get_settings
-from canaisdark.models import User
+from canaisdark.models import Asset, AssetType, JobStatus, User
 from canaisdark.schemas.shorts import ShortIn, ShortsPlan
-from canaisdark.services import shorts, videos
+from canaisdark.services import jobs, render, shorts, shorts_render, video_status, videos
 from canaisdark.services.errors import InvalidState
-from tests.media import setup_video
+from tests.media import have_ffmpeg, setup_video
 
 TEXT = (
     "o farol ficava no alto da colina e ninguém sabia quem o acendia todas as noites "
@@ -94,3 +94,93 @@ def test_versions_and_skip(session: Session, ids: dict[str, int]) -> None:
     asset, loaded = shorts.latest_plan(session, vid)  # type: ignore[misc]
     assert asset.meta["number"] == 2 and loaded.skipped
     assert shorts.set_skipped(session, vid, False, "user:1").skipped is False
+
+
+# ----- render -----
+
+needs_ffmpeg = pytest.mark.skipif(not have_ffmpeg(), reason="ffmpeg não instalado")
+VTINY = render.Quality("preview", 180, 320, 12, "ultrafast", 32)
+
+
+@pytest.fixture
+def tiny(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(render.SHORT_QUALITIES, "preview", VTINY)
+
+
+def _stage(session: Session, video_id: int) -> str:
+    video = videos.get_video(session, video_id)
+    return next(s.state for s in video_status.get_stages(session, video) if s.key == "shorts")
+
+
+def test_plan_short_uses_blur_then_fill_for_vertical_variant(
+    session: Session, ids: dict[str, int], tmp_path: Path, tiny: None
+) -> None:
+    vid = ids["video_id"]
+    shorts.save_selections(
+        session,
+        vid,
+        [ShortIn(exact_text="Cena número 2. Cena número 3.", title="Meio")],
+        "user",
+        "u",
+    )
+    video = videos.get_video(session, vid)
+    _, plan = shorts.latest_plan(session, vid)  # type: ignore[misc]
+    sel = plan.shorts[0]
+    rp = shorts_render.plan_short(session, video, sel, 0, VTINY, tmp_path / "o")
+    assert rp.audio_start == pytest.approx(sel.start_s) and rp.audio_fade
+    assert rp.duration == pytest.approx(sel.end_s - sel.start_s)
+    assert {s.source["layout"] for s in rp.segments} == {"blur"}
+    assert rp.subtitles_ass and rp.subtitles_ass.read_text().count("Dialogue") >= 6
+    # imagem vertical da primeira cena passa a ser usada em `fill`
+    img = next(a for a in session.exec(select(Asset)) if a.path.endswith("s001_main.jpg"))
+    img.meta = {**img.meta, "variant": "vertical", "width": 180, "height": 320}
+    session.add(img)
+    session.commit()
+    rp2 = shorts_render.plan_short(session, video, sel, 0, VTINY, tmp_path / "o")
+    assert rp2.segments[0].source["layout"] == "fill"
+
+
+@needs_ffmpeg
+def test_shorts_job_renders_and_replaces(
+    session: Session,
+    user_token: tuple[User, str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tiny: None,
+) -> None:
+    from canaisdark.worker.runner import Worker
+
+    monkeypatch.setattr(get_settings(), "data_dir", tmp_path / "files")
+    ids = setup_video(session, user_token[0], [10.0, 10.0, 10.0, 10.0], real_audio=True)
+    vid = ids["video_id"]
+    assert _stage(session, vid) == "not_started"
+    with pytest.raises(InvalidState, match="Ainda não há Shorts"):
+        shorts_render.start(session, vid, user_token[0])
+    item = ShortIn(
+        exact_text="Cena número 1. Cena número 2.", title="Abertura", hook_override="O FAROL"
+    )
+    shorts.save_selections(session, vid, [item], "claude", "claude")
+    assert _stage(session, vid) == "pending"
+    job = shorts_render.start(session, vid, user_token[0], "preview")
+    assert job.type == "shorts"
+    Worker(poll_seconds=0).run_once()
+    session.expire_all()
+    done = jobs.get_job(session, job.id)  # type: ignore[arg-type]
+    assert done.status == JobStatus.DONE.value, done.error + done.log
+    out = shorts_render.best_for(session, vid)[0]
+    path = get_settings().data_dir / out.path
+    assert path.is_file() and out.meta["width"] == 180 and out.type == AssetType.SHORT.value
+    assert _stage(session, vid) == "done"
+    j2 = shorts_render.start(session, vid, user_token[0], "preview", index=0)
+    Worker(poll_seconds=0).run_once()
+    session.expire_all()
+    assert jobs.get_job(session, j2.id).status == JobStatus.DONE.value  # type: ignore[arg-type]
+    assert not path.exists() and len(shorts_render.list_shorts(session, vid)) == 1
+
+
+def test_stage_is_optional_and_skippable(session: Session, ids: dict[str, int]) -> None:
+    vid = ids["video_id"]
+    shorts.set_skipped(session, vid, True, "u")
+    assert _stage(session, vid) == "skipped"
+    shorts.set_skipped(session, vid, False, "u")
+    assert _stage(session, vid) == "not_started"

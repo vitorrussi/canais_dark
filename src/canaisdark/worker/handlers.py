@@ -16,6 +16,7 @@ from canaisdark.services import (
     narration,
     render,
     scripts,
+    shorts_render,
     subtitles,
     videos,
 )
@@ -295,8 +296,16 @@ def run_render(session: Session, job: Job, make_client: ClientFactory) -> None:
         raise JobCancelled from e
 
 
+def run_shorts(session: Session, job: Job, make_client: ClientFactory) -> None:
+    try:
+        shorts_render.run_job(session, job)
+    except render.RenderCancelled as e:
+        raise JobCancelled from e
+
+
 HANDLERS: dict[str, Callable[[Session, Job, ClientFactory], None]] = {
     JobType.TTS.value: run_tts,
     JobType.ALIGNMENT.value: run_alignment,
     JobType.RENDER.value: run_render,
+    JobType.SHORTS.value: run_shorts,
 }
