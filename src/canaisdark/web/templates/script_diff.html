@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ic %}
+{% block title %}Comparar versões — vídeo #{{ video.id }}{% endblock %}
+{% block crumb %}Comparar versões{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Comparar versões</h1>
+    <p class="muted">v{{ old.number }} <span class="muted">({{ old.author }})</span> → v{{ new.number }} <span class="muted">({{ new.author }})</span></p>
+    <div class="meta"><span class="badge done">{{ summary.added }} adicionada(s)</span><span class="badge stale">{{ summary.changed }} alterada(s)</span><span class="badge failed">{{ summary.removed }} removida(s)</span><span class="badge">{{ summary.same }} iguais</span></div></div>
+  <div class="actions"><a class="btn secondary" href="/videos/{{ video.id }}?v={{ new.number }}">Voltar ao vídeo</a></div>
+</div>
+<div class="card" style="margin-bottom:1rem">
+  <form method="get" class="row" style="align-items:end">
+    <div class="field" style="margin:0"><label for="a">Versão base</label><select id="a" name="a">{% for v in versions %}<option value="{{ v.number }}" {{ "selected" if v.number == old.number }}>v{{ v.number }}</option>{% endfor %}</select></div>
+    <div class="field" style="margin:0"><label for="b">Comparar com</label><select id="b" name="b">{% for v in versions %}<option value="{{ v.number }}" {{ "selected" if v.number == new.number }}>v{{ v.number }}</option>{% endfor %}</select></div>
+    <div><button>Comparar</button></div>
+  </form>
+</div>
+<div class="card">
+  {% for r in rows %}
+  <div class="diff-row {{ r.kind }}">
+    <div class="muted">{% if r.kind == "added" %}+ nova{% elif r.kind == "removed" %}− removida{% elif r.kind == "changed" %}~ alterada{% else %}= igual{% endif %}
+      <br><small>{% if r.old_index is not none %}v{{ old.number }}·{{ r.old_index + 1 }}{% endif %}{% if r.new_index is not none %} → v{{ new.number }}·{{ r.new_index + 1 }}{% endif %}</small></div>
+    <div>
+      {% if r.kind == "changed" %}{% for op, text in r.segments %}{% if op == "ins" %}<ins>{{ text }}</ins>{% elif op == "del" %}<del>{{ text }}</del>{% else %}{{ text }}{% endif %}{% endfor %}
+      {% elif r.kind == "removed" %}<del>{{ r.old_text }}</del>
+      {% elif r.kind == "added" %}<ins>{{ r.new_text }}</ins>
+      {% else %}{{ r.new_text }}{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

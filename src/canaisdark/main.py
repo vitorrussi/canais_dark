@@ -17,6 +17,7 @@ from canaisdark.services.errors import Conflict, DomainError, InvalidState, NotF
 from canaisdark.web.common import BASE as WEB_BASE
 from canaisdark.web.common import NotLoggedIn, templates
 from canaisdark.web.routes import router as web_router
+from canaisdark.web.scripts import router as web_scripts_router
 
 _STATUS: dict[type[DomainError], int] = {NotFound: 404, Conflict: 409, InvalidState: 422}
 
@@ -65,6 +66,7 @@ def create_app() -> FastAPI:
 
     app.include_router(router)
     app.include_router(web_router)
+    app.include_router(web_scripts_router)
     # Último: o app MCP atende apenas /mcp; demais caminhos caem em 404.
     app.mount("/", build_mcp_app())
     return app

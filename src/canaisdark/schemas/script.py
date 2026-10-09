@@ -31,3 +31,10 @@ class ScriptVersionRead(BaseModel):
 
 class RevisionRequest(BaseModel):
     notes: str = Field(min_length=1)
+
+
+class SaveScriptRequest(BaseModel):
+    """Salvar roteiro editado por uma pessoa: sempre cria uma nova versão."""
+
+    scenes: list[SceneIn]
+    approve: bool = False

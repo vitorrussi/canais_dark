@@ -136,3 +136,14 @@ def request_script(session: Session, video_id: int, instructions: str, actor: Us
         return tasks.create_task(session, video_id, TaskType.GENERATE_SCRIPT, instructions, actor)
     except Conflict as e:
         raise Conflict("Já há uma tarefa de roteiro aguardando/em andamento para este vídeo") from e
+
+
+def save_user_script(
+    session: Session, video_id: int, scenes: list[SceneIn], actor: User, approve: bool = False
+) -> ScriptVersion:
+    """Roteiro escrito/editado à mão: nova versão (autor `user:<id>`), opcionalmente já aprovada."""
+    version = save_script(session, video_id, scenes, actor, author_kind="user")
+    if approve:
+        assert version.id is not None
+        version = approve_script(session, version.id, actor)
+    return version

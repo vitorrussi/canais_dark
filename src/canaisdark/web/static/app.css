@@ -125,3 +125,32 @@ table { width: 100%; border-collapse: collapse; } th, td { text-align: left; pad
   .sidebar { position: fixed; z-index: 30; left: 0; top: 0; bottom: 0; width: 250px; transform: translateX(-100%); transition: transform .2s; } body.menu-open .sidebar { transform: none; }
   .menu-btn { display: inline-flex; } .content { padding: 1rem; } .topbar { padding: .7rem 1rem; }
 }
+
+/* Editor de roteiro */
+.editor-toolbar { display: flex; flex-wrap: wrap; gap: .6rem .9rem; align-items: center; position: sticky; top: 57px; z-index: 4; background: var(--bg); padding: .6rem 0; border-bottom: 1px solid var(--border); }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg-btn { border: 0; border-radius: 0; background: var(--surface); color: var(--muted); font-weight: 600; padding: .4rem .8rem; } .seg-btn.active { background: var(--accent); color: var(--accent-fg); }
+.tool-group { display: flex; gap: .35rem; align-items: center; } .tool-hint { font-size: .8rem; margin-left: auto; }
+.menu { position: relative; } .menu > summary { list-style: none; cursor: pointer; } .menu > summary::-webkit-details-marker { display: none; }
+.menu-body { position: absolute; top: 110%; left: 0; z-index: 10; min-width: 270px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); padding: .35rem; display: flex; flex-direction: column; }
+.menu-body button { justify-content: flex-start; width: 100%; } .menu-body hr { margin: .3rem 0; }
+.check { display: inline-flex; align-items: center; gap: .4rem; font-weight: 500; font-size: .9rem; cursor: pointer; } .check input { width: auto; }
+.scene-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .7rem .8rem; } .scene-card.over { border-color: var(--danger); } .scene-card.empty { border-style: dashed; }
+.scene-card:focus-within { border-color: var(--accent); }
+.scene-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .45rem; }
+.scene-head .n { width: 1.9rem; height: 1.9rem; border-radius: 8px; background: var(--surface-2); color: var(--muted); display: grid; place-items: center; font-weight: 700; font-size: .8rem; }
+.scene-head .metrics { color: var(--muted); font-size: .82rem; } .scene-head .metrics.warn { color: var(--danger); }
+.scene-tools { margin-left: auto; display: flex; gap: .15rem; flex-wrap: wrap; } .scene-tools button { padding: .2rem .5rem; font-size: .8rem; }
+.scene-text { min-height: 3.2rem; line-height: 1.55; overflow: hidden; resize: none; }
+.scene-note { margin-top: .4rem; font-size: .85rem; padding: .35rem .6rem; color: var(--muted); }
+.full-text { min-height: 60vh; line-height: 1.7; font-size: 1rem; }
+.sticky-foot { position: sticky; bottom: 0; z-index: 4; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; padding: .7rem 1rem; margin-top: 1rem; box-shadow: 0 -8px 24px rgba(0,0,0,.2); }
+.sticky-foot .stats { display: flex; gap: .5rem 1rem; flex-wrap: wrap; font-size: .9rem; } .stats .ok { color: var(--success); } .stats .warn { color: var(--warn); } .stats .bad { color: var(--danger); }
+.foot-actions { margin-left: auto; display: flex; align-items: center; gap: 1rem; }
+mark.hit { background: var(--warn); color: #000; }
+
+/* Diff */
+.diff-row { display: grid; grid-template-columns: 6rem 1fr; gap: .8rem; padding: .7rem 0; border-top: 1px solid var(--border); } .diff-row:first-child { border-top: 0; }
+.diff-row ins { background: color-mix(in srgb, var(--success) 25%, transparent); text-decoration: none; border-radius: 3px; } .diff-row del { background: color-mix(in srgb, var(--danger) 25%, transparent); border-radius: 3px; }
+.diff-row.added { border-left: 3px solid var(--success); padding-left: .5rem; } .diff-row.removed { border-left: 3px solid var(--danger); padding-left: .5rem; opacity: .85; } .diff-row.changed { border-left: 3px solid var(--warn); padding-left: .5rem; } .diff-row.same { opacity: .55; }
+@media (max-width: 900px) { .tool-hint { display: none; } .editor-toolbar { top: 52px; } }

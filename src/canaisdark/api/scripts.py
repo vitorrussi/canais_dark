@@ -6,7 +6,12 @@ from sqlmodel import Session
 from canaisdark.api.deps import CurrentUser
 from canaisdark.db import get_session
 from canaisdark.models import ScriptVersion
-from canaisdark.schemas.script import RevisionRequest, SceneRead, ScriptVersionRead
+from canaisdark.schemas.script import (
+    RevisionRequest,
+    SaveScriptRequest,
+    SceneRead,
+    ScriptVersionRead,
+)
 from canaisdark.schemas.task import TaskRead
 from canaisdark.services import scripts, videos
 
@@ -54,3 +59,12 @@ def request_revision(
 ) -> TaskRead:
     task = scripts.request_revision(session, video_id, data.notes, user)
     return TaskRead.model_validate(task, from_attributes=True)
+
+
+@router.post("/videos/{video_id}/scripts", status_code=201)
+def save_script(
+    user: CurrentUser, session: SessionDep, video_id: int, data: SaveScriptRequest
+) -> ScriptVersionRead:
+    """Salva um roteiro escrito à mão como nova versão (autor `user`)."""
+    version = scripts.save_user_script(session, video_id, data.scenes, user, data.approve)
+    return _read(session, version, True)

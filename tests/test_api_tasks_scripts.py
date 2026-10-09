@@ -65,3 +65,24 @@ def test_task_and_script_flow(
 def test_requires_auth(client: TestClient) -> None:
     assert client.get("/api/tasks").status_code == 401
     assert client.post("/api/scripts/1/approve").status_code == 401
+
+
+def test_rest_save_user_script(client: TestClient, auth: dict[str, str]) -> None:
+    cid = client.post("/api/channels", json={"name": "C"}, headers=auth).json()["id"]
+    vid = client.post(f"/api/channels/{cid}/videos", json={"topic": "t"}, headers=auth).json()["id"]
+    r = client.post(
+        f"/api/videos/{vid}/scripts",
+        json={"scenes": [{"text": "a"}, {"text": "b", "notes": "n"}], "approve": True},
+        headers=auth,
+    )
+    assert r.status_code == 201
+    body = r.json()
+    assert (
+        body["author"].startswith("user:")
+        and body["approved"]
+        and [s["text"] for s in body["scenes"]] == ["a", "b"]
+    )
+    assert (
+        client.post(f"/api/videos/{vid}/scripts", json={"scenes": []}, headers=auth).status_code
+        == 422
+    )

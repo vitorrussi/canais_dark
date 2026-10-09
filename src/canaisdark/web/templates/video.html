@@ -57,6 +57,8 @@
       <div class="scene"><span class="n">{{ sc.index + 1 }}</span><div>{{ sc.text }}{% if sc.notes %}<div class="note">{{ sc.notes }}</div>{% endif %}</div></div>
       {% endfor %}
       <div class="form-actions">
+        <a class="btn secondary" href="/videos/{{ video.id }}/script/edit?v={{ selected.number }}">{{ ic("edit") }} Editar roteiro</a>
+        {% if selected.number > 1 %}<a class="btn ghost" href="/videos/{{ video.id }}/diff?a={{ selected.number - 1 }}&b={{ selected.number }}">Comparar com v{{ selected.number - 1 }}</a>{% endif %}
         {% if not selected.approved %}
         <form method="post" action="/scripts/{{ selected.id }}/approve"><button>{{ ic("check") }} Aprovar roteiro (v{{ selected.number }})</button></form>
         {% endif %}
@@ -71,7 +73,8 @@
       </form>
       {% endif %}
       {% else %}
-      <div class="empty">{{ ic("file") }}<h3>Nenhum roteiro ainda</h3><p>Peça ao Claude no cartão acima.</p></div>
+      <div class="empty">{{ ic("file") }}<h3>Nenhum roteiro ainda</h3><p>Peça ao Claude no cartão acima ou escreva você mesmo.</p>
+        <a class="btn" href="/videos/{{ video.id }}/script/edit">{{ ic("edit") }} Escrever roteiro</a></div>
       {% endif %}
     </div>
   </div>

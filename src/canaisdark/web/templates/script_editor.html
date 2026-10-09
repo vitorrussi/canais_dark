@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ic %}
+{% block title %}Editar roteiro — vídeo #{{ video.id }}{% endblock %}
+{% block crumb %}Editar roteiro{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Editar roteiro</h1>
+    <p class="muted">{% if base %}Partindo da v{{ base.number }}{% if base.approved %} (aprovada){% endif %}. {% else %}Roteiro novo, em branco. {% endif %}
+      Ao salvar, é criada uma <strong>nova versão</strong>; as anteriores continuam guardadas.</p>
+  </div>
+  <div class="actions"><a class="btn secondary" href="/videos/{{ video.id }}{% if base %}?v={{ base.number }}{% endif %}">Voltar ao vídeo</a></div>
+</div>
+
+<div id="draft-banner" class="card accent" hidden style="margin-bottom:1rem">
+  <strong>Rascunho local encontrado</strong> <span class="muted" id="draft-when"></span>
+  <div class="form-actions" style="margin-top:.5rem"><button type="button" class="sm" id="draft-restore">Restaurar rascunho</button><button type="button" class="secondary sm" id="draft-discard">Descartar</button></div>
+</div>
+
+<div class="editor" id="editor">
+  <div class="editor-toolbar">
+    <div class="seg" role="tablist" aria-label="Modo de edição">
+      <button type="button" class="seg-btn active" data-mode="scenes" title="Uma caixa por cena">Cenas</button>
+      <button type="button" class="seg-btn" data-mode="text" title="Texto corrido: linha em branco separa as cenas">Texto corrido</button>
+    </div>
+    <div class="tool-group">
+      <button type="button" class="secondary sm" id="btn-undo" title="Desfazer (Ctrl+Z)">↶ Desfazer</button>
+      <button type="button" class="secondary sm" id="btn-redo" title="Refazer (Ctrl+Y)">↷ Refazer</button>
+    </div>
+    <div class="tool-group">
+      <button type="button" class="secondary sm" id="btn-find" title="Localizar e substituir (Ctrl+H)">Localizar / substituir</button>
+      <details class="menu">
+        <summary class="btn secondary sm">Limpar ▾</summary>
+        <div class="menu-body">
+          <button type="button" class="ghost sm" data-tool="tidy" title="Remove espaços duplos, espaços invisíveis e linhas em branco demais">Arrumar espaços e quebras</button>
+          <button type="button" class="ghost sm" data-tool="punct" title="Aspas curvas → retas, … → ... (melhor para narração por IA)">Normalizar aspas e reticências</button>
+          <button type="button" class="ghost sm" data-tool="marks" title="Remove [música], (pausa) e similares">Remover [marcações] e (rubricas)</button>
+          <button type="button" class="ghost sm" data-tool="emoji">Remover emojis</button>
+          <button type="button" class="ghost sm" data-tool="markdown" title="Remove **, #, __ e crases">Remover markdown</button>
+          <hr>
+          <button type="button" class="ghost sm" data-tool="upper">MAIÚSCULAS</button>
+          <button type="button" class="ghost sm" data-tool="lower">minúsculas</button>
+          <button type="button" class="ghost sm" data-tool="sentence">Primeira letra de cada frase</button>
+        </div>
+      </details>
+    </div>
+    <span class="muted tool-hint">Atalhos: Ctrl+S salvar · Ctrl+Enter dividir · Alt+↑/↓ mover</span>
+  </div>
+
+  <div id="find-panel" class="card" hidden style="margin:.75rem 0">
+    <div class="row">
+      <div class="field"><label for="find-input">Localizar</label><input id="find-input" autocomplete="off"></div>
+      <div class="field"><label for="replace-input">Substituir por</label><input id="replace-input" autocomplete="off"></div>
+    </div>
+    <div class="form-actions" style="margin-top:0">
+      <label class="check"><input type="checkbox" id="find-regex"> Expressão regular</label>
+      <label class="check"><input type="checkbox" id="find-case"> Diferenciar maiúsculas</label>
+      <span class="muted" id="find-count"></span>
+      <span style="margin-left:auto" class="row" style="flex:none">
+        <button type="button" class="secondary sm" id="find-next">Próximo</button>
+        <button type="button" class="sm" id="replace-all">Substituir tudo</button>
+      </span>
+    </div>
+    <div class="help" id="find-error" style="color:var(--danger)" hidden></div>
+  </div>
+
+  <div id="scenes-view" class="stack" style="margin-top:.75rem"></div>
+  <div id="text-view" hidden style="margin-top:.75rem">
+    <textarea id="full-text" class="full-text" spellcheck="true" aria-label="Roteiro em texto corrido"></textarea>
+    <div class="help">Separe as cenas com uma <strong>linha em branco</strong>. Linhas seguidas sem espaço entre elas ficam na mesma cena.</div>
+  </div>
+  <div style="margin-top:.75rem"><button type="button" class="secondary" id="add-scene-end">+ Adicionar cena no fim</button></div>
+
+  <div class="sticky-foot">
+    <div class="stats" id="stats"></div>
+    <div class="foot-actions">
+      <label class="check"><input type="checkbox" id="approve-on-save"> Aprovar ao salvar</label>
+      <button type="button" id="btn-save">{{ ic("check") }} Salvar como nova versão</button>
+    </div>
+  </div>
+</div>
+<script type="application/json" id="editor-data">{{ editor_data|tojson }}</script>
+<script src="/static/script_editor.js"></script>
+{% endblock %}

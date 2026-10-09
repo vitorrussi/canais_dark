@@ -115,3 +115,59 @@ def test_channel_cards_show_stats(logged: TestClient) -> None:
 def test_friendly_error_page(logged: TestClient) -> None:
     r = logged.get("/channels/inexistente")
     assert r.status_code == 404 and "não encontrado" in r.text
+
+
+def _video_with_script(logged: TestClient, session: Session, user_token: tuple[User, str]) -> int:
+    from canaisdark.schemas.script import SceneIn
+    from canaisdark.services import scripts
+
+    logged.post("/channels", data={"name": "Canal Teste"})
+    r = logged.post("/channels/canal-teste/videos", data={"topic": "Tema"})
+    vid = int(str(r.url).rsplit("/", 1)[1])
+    scripts.save_script(
+        session, vid, [SceneIn(text="Um velho texto"), SceneIn(text="Dois")], user_token[0]
+    )
+    return vid
+
+
+def test_editor_page_embeds_data(
+    logged: TestClient, session: Session, user_token: tuple[User, str]
+) -> None:
+    vid = _video_with_script(logged, session, user_token)
+    html = logged.get(f"/videos/{vid}/script/edit").text
+    assert 'id="editor-data"' in html and "Um velho texto" in html and "script_editor.js" in html
+    empty = logged.get(f"/videos/{vid + 1}/script/edit")
+    assert empty.status_code == 404
+
+
+def test_editor_save_creates_user_version(
+    logged: TestClient, session: Session, user_token: tuple[User, str]
+) -> None:
+    from canaisdark.services import scripts
+
+    vid = _video_with_script(logged, session, user_token)
+    r = logged.post(
+        f"/videos/{vid}/script/save",
+        json={
+            "scenes": [{"text": "Um novo texto"}, {"text": "Dois"}, {"text": "Três"}],
+            "approve": True,
+        },
+    )
+    assert r.status_code == 200 and r.json()["version"] == 2 and r.json()["url"].endswith("?v=2")
+    version, scenes_ = scripts.get_script(session, vid)
+    assert version.author.startswith("user:") and version.approved and len(scenes_) == 3
+    assert (
+        "Roteiro salvo como v2 e aprovado" in logged.get(f"/videos/{vid}").text
+    )  # toast via flash
+    assert logged.post(f"/videos/{vid}/script/save", json={"scenes": []}).status_code == 422
+
+
+def test_diff_page(logged: TestClient, session: Session, user_token: tuple[User, str]) -> None:
+    vid = _video_with_script(logged, session, user_token)
+    logged.post(
+        f"/videos/{vid}/script/save",
+        json={"scenes": [{"text": "Um novo texto"}, {"text": "Dois"}, {"text": "Extra"}]},
+    )
+    html = logged.get(f"/videos/{vid}/diff?a=1&b=2").text
+    assert "<del>velho</del>" in html and "<ins>novo</ins>" in html and "Extra" in html
+    assert logged.get(f"/videos/{vid}/diff?a=1&b=9").status_code == 404
