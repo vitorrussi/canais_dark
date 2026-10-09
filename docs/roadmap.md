@@ -7,6 +7,6 @@
 - [x] Fase 4 — Prompts e assets
 - [x] Fase 5 — Render (timeline automática + ffmpeg por segmentos com cache, trilha com ducking, legendas, player)
 - [x] Fase 6 — Shorts (opcional: seleção por Claude/manual, localização no alinhamento, 9:16 fill/blur, legendas palavra a palavra)
-- [ ] Fase 7 — YouTube
+- [x] Fase 7 — YouTube (OAuth por canal, metadados com proposta do Claude, thumbnail, upload privado com cota; testado com cliente falso)
 - [ ] Fase 8 — Google Drive
 - [ ] Fase 9 — Deploy

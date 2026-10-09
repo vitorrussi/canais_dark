@@ -10,7 +10,7 @@ narração → imagens → render → Shorts → upload. O Claude atua via servi
 **a API do Claude nunca é usada**. Roda em servidor doméstico via Cloudflare Tunnel, 2 usuários.
 
 ## Status
-- Fases 0–6 (incl. extensões 2.1–2.5) **concluídas**. Próxima: Fase 7 (YouTube).
+- Fases 0–7 (incl. extensões 2.1–2.5) **concluídas**. Próxima: Fase 8 (Google Drive).
 
 ## Stack
 Python 3.12+, uv, FastAPI, SQLModel + SQLite (WAL) + Alembic, pydantic-settings, structlog,
@@ -51,7 +51,8 @@ Cancelamento/desfazer: `Job.run_after` (janela `NARRATION_UNDO_SECONDS`), TTS po
 **Fase 4 (Prompts e assets) concluída**: `Scene.image_prompt/video_prompt/wants_vertical/is_key_scene`, `services/scene_prompts.py` (compose, save, carry-over ao aprovar, pacote), `services/scene_assets.py` (upload validado por conteúdo, miniaturas Pillow, substituir/remover, lote por nome), storyboard `/videos/<id>/scenes` (`web/scenes.py`, `static/scenes.js`), MCP `save_scene_prompts`. Detalhes: `docs/prompts-and-assets.md`. Upload = 1 arquivo/requisição (Cloudflare 100 MB).
 **Fase 5 (Timeline e render) concluída**: `schemas/timeline.py` (JSON versionado), `services/timeline.py` (padrão automática, validação, versões como ativo `timeline`), `services/render.py` (segmentos por cena com crossfade embutido e cache por hash, execução paralela, passo final com trilha/ducking/legendas/textos), `services/music.py`, job `render` (`worker/handlers.py:run_render`), etapas `timeline`/`render`/`review`, cartão **④** em `/videos/{id}` + `/videos/{id}/timeline` (`web/render.py`), REST `api/render.py`, MCP `get_timeline/save_timeline/start_render` e tarefa `generate_timeline`. Detalhes: `docs/render.md`. Precisa de **ffmpeg** (instalado). Testes de render reais usam ffmpeg (skip se ausente); `tests/media.py` cria vídeos de teste. Mudou a montagem dos segmentos → incremente `ALGO_VERSION`.
 **Fase 6 (Shorts 9:16, etapa OPCIONAL) concluída**: seleção versionada `shorts_plan` (`services/shorts.py`: localiza `exact_text` no alinhamento, valida 15–59 s), render `services/shorts_render.py` (job `shorts`, layout `fill` com imagem vertical ou `blur` com 16:9, legendas palavra a palavra `subtitles.to_ass_shorts`, fatia da narração + trilha), ativos `short`, estágio `shorts` (`skipped` = dispensada; nada depende dele), cartão **⑤** recolhido em `/videos/{id}` (`web/shorts.py`), REST `api/shorts.py`, MCP `get_shorts/save_short_selections/start_shorts` e tarefa `select_shorts` (só quando a pessoa pede). Detalhes: `docs/shorts.md`. `ALGO_VERSION`=2.
-**Próxima: Fase 7 (YouTube)** — OAuth por canal, upload privado com metadados/thumbnail, respeitando cotas (precisará de credenciais Google: avisar antes).
+**Fase 7 (YouTube) concluída**: OAuth por canal (`services/youtube.py`, tabela `youtube_account`, refresh token Fernet com `FERNET_KEY`, `state` assinado), cliente `integrations/youtube.py` (upload resumable; `FakeYouTube`, `YOUTUBE_FAKE=true`), metadados como proposta versionada (`services/metadata.py`, MCP `get_metadata/save_metadata`; a pessoa aplica), thumbnail (`services/thumbnail.py`), job `youtube_upload` **sempre privado** com guarda de cota/duplicata (só site/REST: **nenhuma tool MCP envia ao YouTube**), cartão **⑥** em `/videos/{id}` e bloco YouTube no canal. Testado só com cliente falso/MockTransport: o teste real exige `GOOGLE_CLIENT_ID/SECRET` + `FERNET_KEY` (passo a passo em `docs/youtube.md`). Detalhes: `docs/youtube.md`.
+**Próxima: Fase 8 (Google Drive)** — sincronização por job, pastas por canal/vídeo, links no site (precisará de credenciais Google/Drive: avisar antes).
 
 ## Estrutura
 `src/canaisdark/`: `config.py`, `logging.py`, `db.py`, `models/`, `services/` (lógica),

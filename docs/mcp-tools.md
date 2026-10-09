@@ -42,6 +42,8 @@ Prompt: `process_pending`.
 |---|---|
 | `get_job_status(job_id)` | status, progresso, erro, resultado e fim do log |
 | `list_jobs(video_id?, status?)` | jobs recentes |
+| `get_metadata(video_id)` | título/descrição/tags atuais, problemas e última proposta (ver `docs/youtube.md`) |
+| `save_metadata(video_id, title, description?, tags?, thumbnail_ideas?, task_id?)` | NOVA proposta de metadados do YouTube (a pessoa aplica no site; nada vai ao YouTube) |
 | `get_shorts(video_id)` | seleção de Shorts, se foi dispensada e renders (etapa opcional; ver `docs/shorts.md`) |
 | `save_short_selections(video_id, shorts, task_id?)` | NOVA seleção: `shorts=[{exact_text, title, hook_override?}]`; o servidor localiza o texto na narração e valida 15–59 s |
 | `start_shorts(video_id, quality?, index?, allow_missing?)` | enfileira o render 9:16 (`preview` 720×1280 / `final` 1080×1920) e devolve `job_id` |
@@ -50,7 +52,7 @@ Prompt: `process_pending`.
 Narração/alinhamento só são disparados por pessoas no site (gastam créditos).
 
 ## Planejadas
-`save_metadata` (Fase 7). Regra: nenhuma tool bloqueia — operações longas criam Job e retornam `job_id`.
+Upload ao YouTube **não** é tool MCP (só site/REST). Regra: nenhuma tool bloqueia — operações longas criam Job e retornam `job_id`.
 
 ## Auth e extensão
 `mcp/auth.py:BearerAuthMiddleware` valida o token e expõe o usuário em `mcp/context.py:current_user`.
