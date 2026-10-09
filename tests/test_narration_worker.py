@@ -274,3 +274,50 @@ def test_start_refused_when_plan_has_problems(
     monkeypatch.setattr(get_settings(), "elevenlabs_max_chars_per_job", 10)
     with pytest.raises(InvalidState, match="limite por geração"):
         narration.start(session, env["video_id"], env["user"])  # type: ignore[arg-type]
+
+
+def _states(session: Session, env: dict[str, object]) -> dict[str, str]:
+    from canaisdark.services import video_status
+
+    video = videos.get_video(session, env["video_id"])  # type: ignore[arg-type]
+    return {s.key: s.state for s in video_status.get_stages(session, video)}
+
+
+def test_stage_states_through_the_flow(
+    session: Session, env: dict[str, object], user_token: tuple[User, str]
+) -> None:
+    assert _states(session, env)["narration"] == "not_started"
+    narration.start(session, env["video_id"], env["user"])  # type: ignore[arg-type]
+    assert _states(session, env)["narration"] == "pending"
+    w = worker(env)
+    w.run_once()
+    st = _states(session, env)
+    assert st["narration"] == "done" and st["alignment"] == "pending"
+    w.run_once()
+    st = _states(session, env)
+    assert st["narration"] == "done" and st["alignment"] == "done"
+    # novo roteiro aprovado → narração/alinhamento ficam desatualizados
+    newer = scripts.save_user_script(
+        session, env["video_id"], [SceneIn(text="Novo texto.")], user_token[0], approve=True
+    )  # type: ignore[arg-type]
+    assert newer.number == 2
+    st = _states(session, env)
+    assert st["narration"] == "stale" and st["alignment"] == "stale"
+
+
+def test_stage_partial_skipped_failed(session: Session, env: dict[str, object]) -> None:
+    narration.start(session, env["video_id"], env["user"], test_scenes=1, align=False)  # type: ignore[arg-type]
+    drain(worker(env))
+    st = _states(session, env)
+    assert st["narration"] == "partial" and st["alignment"] == "skipped"
+
+
+def test_stage_failed(session: Session, env: dict[str, object]) -> None:
+    from canaisdark.integrations.elevenlabs import ElevenLabsError
+
+    fake: FakeElevenLabs = env["fake"]  # type: ignore[assignment]
+    fake.fail_on_call = 1
+    narration.start(session, env["video_id"], env["user"], test_scenes=1)  # type: ignore[arg-type]
+    drain(worker(env))
+    assert _states(session, env)["narration"] == "failed"
+    _ = ElevenLabsError

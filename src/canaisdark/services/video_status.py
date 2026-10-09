@@ -9,7 +9,16 @@ from enum import StrEnum
 
 from sqlmodel import Session, col, select
 
-from canaisdark.models import ClaudeTask, ScriptVersion, TaskStatus, TaskType, Video
+from canaisdark.models import (
+    AssetType,
+    ClaudeTask,
+    JobStatus,
+    JobType,
+    ScriptVersion,
+    TaskStatus,
+    TaskType,
+    Video,
+)
 from canaisdark.schemas.video import StageRead
 
 
@@ -20,6 +29,8 @@ class StageState(StrEnum):
     DONE = "done"
     STALE = "stale"
     FAILED = "failed"
+    PARTIAL = "partial"  # só teste curto
+    SKIPPED = "skipped"  # etapa desligada de propósito (ex.: sem Forced Alignment)
 
 
 STAGES: list[tuple[str, str]] = [
@@ -79,9 +90,68 @@ def _script_approval_state(session: Session, video: Video) -> StageState:
     return StageState.PENDING if has_version else StageState.NOT_STARTED
 
 
+def _job_state(job_status: str | None) -> StageState | None:
+    return {
+        JobStatus.QUEUED.value: StageState.PENDING,
+        JobStatus.RUNNING.value: StageState.IN_PROGRESS,
+    }.get(job_status or "")
+
+
+def _narration_state(session: Session, video: Video) -> StageState:
+    from canaisdark.services import jobs, narration
+
+    assert video.id is not None
+    job = jobs.latest_job(session, video.id, JobType.TTS)
+    if (running := _job_state(job.status if job else None)) is not None:
+        return running
+    audio = narration.latest_asset(session, video.id, AssetType.AUDIO, "narration")
+    if audio is not None:
+        if audio.meta.get("partial"):
+            return StageState.PARTIAL
+        if audio.based_on_script_version_id != video.approved_script_version_id:
+            return StageState.STALE
+        return StageState.DONE
+    if job and job.status == JobStatus.FAILED.value:
+        return StageState.FAILED
+    return StageState.NOT_STARTED
+
+
+def _alignment_state(session: Session, video: Video) -> StageState:
+    from canaisdark.services import jobs, narration
+
+    assert video.id is not None
+    job = jobs.latest_job(session, video.id, JobType.ALIGNMENT)
+    if (running := _job_state(job.status if job else None)) is not None:
+        return running
+    audio = narration.latest_asset(session, video.id, AssetType.AUDIO, "narration")
+    if audio is None:
+        return StageState.NOT_STARTED
+    timing = narration.latest_asset(session, video.id, AssetType.ALIGNMENT)
+    has_forced = (
+        timing is not None
+        and timing.meta.get("timing") == "forced"
+        and timing.meta.get("audio_asset_id") == audio.id
+    )
+    if not has_forced:
+        if audio.meta.get("align") is False:
+            return StageState.SKIPPED
+        return (
+            StageState.FAILED
+            if job and job.status == JobStatus.FAILED.value
+            else StageState.NOT_STARTED
+        )
+    if audio.meta.get("partial"):
+        return StageState.PARTIAL
+    if audio.based_on_script_version_id != video.approved_script_version_id:
+        return StageState.STALE
+    return StageState.DONE
+
+
 _STATE_CALCULATORS: dict[str, Callable[[Session, Video], StageState]] = {
     "script": _script_state,
     "script_approval": _script_approval_state,
+    "narration": _narration_state,
+    "alignment": _alignment_state,
 }
 
 

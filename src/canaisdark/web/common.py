@@ -33,6 +33,8 @@ STATE_LABELS = {
     "done": "Concluída",
     "stale": "Desatualizada",
     "failed": "Falhou",
+    "partial": "Só teste",
+    "skipped": "Pulada",
 }
 
 

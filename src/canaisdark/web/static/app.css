@@ -175,3 +175,5 @@ img, svg { max-width: 100%; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
 @media (max-width: 600px) { .tip::after { left: auto; right: -2rem; transform: none; max-width: 230px; } }
+.badge.partial { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.pipeline .partial .dot { border-color: var(--warn); color: var(--warn); } .pipeline .skipped .label { color: var(--muted); text-decoration: line-through; opacity: .7; }
