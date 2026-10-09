@@ -15,15 +15,20 @@ from canaisdark.mcp.context import current_user
 from canaisdark.models import TaskType, User, VideoStatus
 from canaisdark.schemas.scene import PromptIn
 from canaisdark.schemas.script import SceneIn
+from canaisdark.schemas.timeline import Timeline
 from canaisdark.services import (
     channels,
     jobs,
+    render,
     scene_prompts,
     scripts,
     task_context,
     tasks,
     video_status,
     videos,
+)
+from canaisdark.services import (
+    timeline as tl_service,
 )
 from canaisdark.services.errors import DomainError
 
@@ -299,6 +304,60 @@ def save_scene_prompts(
             "missing_scene_indexes": result.missing,
             "task_id": task_id,
         }
+
+
+@mcp.tool()
+@safe
+def get_timeline(video_id: int) -> dict[str, Any]:
+    """Timeline de edição atual do vídeo (a última versão salva ou, se não houver, a padrão automática) + tempos das cenas.
+
+    Exige roteiro aprovado e narração com tempos."""
+    with _db() as (s, _):
+        video = videos.get_video(s, video_id)
+        found = tl_service.latest(s, video_id)
+        tl = found[1] if found else tl_service.build_default(s, video)
+        timing = tl_service.collect_timing(s, video)
+        return {
+            "saved_version": found[0].meta.get("number") if found else None,
+            "timeline": tl.model_dump(mode="json"),
+            "scenes": [
+                {"index": sp.scene.index, "start_s": round(sp.start, 2), "end_s": round(sp.end, 2)}
+                for sp in timing.spans
+            ],
+        }
+
+
+@mcp.tool()
+@safe
+def save_timeline(video_id: int, timeline: Timeline, task_id: int | None = None) -> dict[str, Any]:
+    """Salva uma NOVA versão da timeline de edição (nunca sobrescreve; o servidor valida tudo).
+
+    `timeline`: {"scenes": [{"scene_index": 0, "motion": {"kind": "zoom_in", "intensity": 0.1},
+    "transition_in": {"kind": "crossfade", "duration": 0.6}, "texts": [{"text": "1900", "position": "top"}]}, ...],
+    "fade_in_s": 0.6, "fade_out_s": 0.8, "effects": {"vignette": true, "grain": false}}.
+    Movimentos: zoom_in, zoom_out, pan_left, pan_right, pan_up, pan_down, static. Transições: cut, crossfade.
+    Parta de get_timeline e envie o JSON completo."""
+    with _db() as (s, user):
+        asset = tl_service.save(s, video_id, timeline, "claude", f"claude:{user.id}")
+        return {"version": asset.meta["number"], "timeline_asset_id": asset.id, "task_id": task_id}
+
+
+@mcp.tool()
+@safe
+def start_render(
+    video_id: int,
+    quality: str = "preview",
+    subtitles: bool | None = None,
+    allow_missing: bool = False,
+) -> dict[str, Any]:
+    """Enfileira o render (ffmpeg) e retorna `job_id` na hora; acompanhe com get_job_status.
+
+    quality: "preview" (720p, rápido) ou "final" (1080p). Não gasta créditos; usa só a CPU do servidor.
+    Exige roteiro aprovado, narração com tempos e imagens em todas as cenas (ou allow_missing=true para
+    preencher cenas sem imagem com fundo escuro, só para testes)."""
+    with _db() as (s, user):
+        job = render.start(s, video_id, user, quality, subtitles, allow_missing)
+        return {"job_id": job.id, "status": job.status, "quality": quality}
 
 
 # ----- Prompt (vira slash command no Claude Code) -----

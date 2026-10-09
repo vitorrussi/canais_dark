@@ -29,6 +29,17 @@ HOW_TO: dict[str, str] = {
         "Salve com save_scene_prompts(video_id, prompts, task_id) — pode salvar em lotes — e depois chame complete_task(task_id, resumo). "
         "Confira o campo `missing_scene_indexes` da resposta até ficar vazio."
     ),
+    TaskType.GENERATE_TIMELINE.value: (
+        "Refine a timeline de edição do vídeo. O sistema já gera uma timeline padrão (`default_timeline`); "
+        "parta dela e ajuste só o que melhora o vídeo, devolvendo o JSON COMPLETO. Por cena escolha `motion` "
+        "(kind: zoom_in, zoom_out, pan_left, pan_right, pan_up, pan_down, static; intensity 0 a 0,3, sugestão 0,06 a 0,12) "
+        "combinando com o conteúdo (revelação = zoom_in; ambiente/panorama = pan; tensão crescente = zoom_in lento; "
+        "nunca o mesmo movimento em cenas vizinhas) e `transition_in` (crossfade 0,3 a 0,8 s; cut em cenas muito curtas "
+        "ou em quebras de assunto). Use `texts` (até 4 por cena, curtos; start_s/end_s relativos à cena) só para dados "
+        "que merecem destaque (datas, nomes de lugares). Cenas com clipe (`asset.kind = clip`) devem ficar `static`. "
+        "NÃO mude `music` nem `subtitles` (são escolhas das pessoas). Salve com save_timeline(video_id, timeline, task_id) "
+        "(o servidor valida e explica erros) e depois complete_task(task_id, resumo). Não inicie o render: isso é feito no site."
+    ),
 }
 
 
@@ -60,7 +71,36 @@ def build_task_context(session: Session, task: ClaudeTask) -> dict[str, Any]:
                 session, scripts.get_version(session, video.approved_script_version_id)
             )
         ]
+    default_timeline: dict[str, Any] | None = None
+    if task.type == TaskType.GENERATE_TIMELINE.value and video.approved_script_version_id:
+        from canaisdark.services import timeline as tl_service
+
+        timing = tl_service.collect_timing(session, video)
+        assets = tl_service.main_assets(session, [sp.scene for sp in timing.spans])
+        scenes_ctx = [
+            {
+                "index": sp.scene.index,
+                "text": sp.scene.text,
+                "start_s": round(sp.start, 2),
+                "end_s": round(sp.end, 2),
+                "length_s": round(sp.length, 2),
+                "asset": {
+                    "id": a.id,
+                    "kind": "clip" if a.type == "video_clip" else "image",
+                    "width": a.meta.get("width"),
+                    "height": a.meta.get("height"),
+                }
+                if (a := assets.get(sp.scene.id or 0))
+                else None,
+            }
+            for sp in timing.spans
+        ]
+        found = tl_service.latest(session, video.id or 0)
+        default_timeline = (
+            found[1] if found else tl_service.build_default(session, video)
+        ).model_dump(mode="json")
     return {
+        "default_timeline": default_timeline,
         "scenes": scenes_ctx,
         "task": {
             "id": task.id,

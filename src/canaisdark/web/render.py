@@ -7,9 +7,9 @@ from typing import Annotated, Any
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, Response
 from pydantic import ValidationError
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
-from canaisdark.models import Asset, JobType, User, Video
+from canaisdark.models import Asset, ClaudeTask, JobType, TaskType, User, Video
 from canaisdark.schemas.timeline import (
     Motion,
     MotionKind,
@@ -18,7 +18,7 @@ from canaisdark.schemas.timeline import (
     Transition,
     TransitionKind,
 )
-from canaisdark.services import jobs, music, render, timeline, videos
+from canaisdark.services import channels, jobs, music, render, task_context, tasks, timeline, videos
 from canaisdark.services.errors import DomainError
 from canaisdark.web.common import SessionDep, WebUser, back, templates
 from canaisdark.web.common import render as render_page
@@ -75,7 +75,26 @@ def render_ctx(session: Session, video: Video) -> dict[str, Any]:
         and tl_asset.meta.get("inputs_hash") != _safe_hash(session, video)
     )
     users = {u.id: u.name for u in session.exec(select(User))}
+    open_task = session.exec(
+        select(ClaudeTask).where(
+            ClaudeTask.video_id == video.id,
+            ClaudeTask.type == TaskType.GENERATE_TIMELINE.value,
+            col(ClaudeTask.status).in_(["pending", "in_progress"]),
+        )
+    ).first()
+    claude_prompt = (
+        task_context.build_user_prompt(
+            video.id,
+            video.topic,
+            channels.get_channel(session, video.channel_id).name,
+            TaskType.GENERATE_TIMELINE.value,
+        )
+        if open_task
+        else None
+    )
     return {
+        "open_task": open_task,
+        "claude_prompt": claude_prompt,
         "video": video,
         "ffmpeg": _ffmpeg(),
         "job": job,
@@ -180,6 +199,23 @@ def _update(
     tl = tl.model_copy(deep=True)
     change(tl)
     return _save_user_timeline(session, video_id, user, Timeline.model_validate(tl.model_dump()))
+
+
+@router.post("/videos/{video_id}/timeline/request")
+def timeline_request(
+    request: Request,
+    user: WebUser,
+    session: SessionDep,
+    video_id: int,
+    instructions: Annotated[str, Form()] = "",
+) -> Response:
+    """Pede ao Claude (via MCP) para refinar a timeline; a automática continua valendo sem isso."""
+    try:
+        timeline.collect_timing(session, videos.get_video(session, video_id))
+        tasks.create_task(session, video_id, TaskType.GENERATE_TIMELINE, instructions.strip(), user)
+    except DomainError as e:
+        return back(request, f"/videos/{video_id}", error=e)
+    return back(request, f"/videos/{video_id}", ok="Tarefa de timeline enfileirada para o Claude.")
 
 
 @router.post("/videos/{video_id}/timeline/auto")

@@ -141,3 +141,17 @@ def test_requires_login(client: TestClient) -> None:
 
 def test_unused(session: Session) -> None:  # garante imports estáveis
     assert render.QUALITIES and videos
+
+
+def test_ask_claude_for_timeline(ctx: dict[str, object]) -> None:
+    c: TestClient = ctx["c"]  # type: ignore[assignment]
+    vid = ctx["video_id"]
+    r = c.post(
+        f"/videos/{vid}/timeline/request",
+        data={"instructions": "mais lento"},
+        follow_redirects=True,
+    )
+    assert "Tarefa de timeline enfileirada" in r.text and "Claude ajustando a timeline" in r.text
+    assert "generate_timeline" in r.text and "claim_next_task" in r.text
+    again = c.post(f"/videos/{vid}/timeline/request", follow_redirects=True)
+    assert "aberta" in again.text

@@ -42,6 +42,21 @@
   </details>
   {% endif %}
 
+  {% if r.open_task %}
+  <div class="claude-box accent"><h4 class="subhead">{{ ic("sparkles") }} Claude ajustando a timeline</h4>
+    <p class="muted">{{ "Aguardando o Claude." if r.open_task.status == "pending" else "Em andamento." }} Copie e cole no Claude Code:</p>
+    <div id="timeline-claude-prompt" class="promptbox">{{ r.claude_prompt }}</div>
+    <button type="button" data-copy="#timeline-claude-prompt">{{ ic("copy") }} Copiar prompt</button>
+    <form method="post" action="/tasks/{{ r.open_task.id }}/cancel" style="display:inline"><button class="secondary sm" data-confirm="Cancelar esta tarefa?">Cancelar tarefa</button></form></div>
+  {% elif r.tl %}
+  <details class="claude-fold" style="margin-bottom:.8rem"><summary class="btn secondary sm">{{ ic("sparkles") }} Pedir ao Claude para ajustar a timeline (opcional)</summary>
+    <form method="post" action="/videos/{{ v.id }}/timeline/request" style="margin-top:.6rem">
+      <div class="field"><label for="tl-instr">Instruções (opcional)</label>
+        <textarea id="tl-instr" name="instructions" rows="2" placeholder="Ex.: ritmo mais lento, destaque as datas com texto na tela"></textarea>
+        <div class="help">A timeline automática já funciona. O Claude só refina movimento, transições e textos.</div></div>
+      <button class="secondary sm">Enfileirar</button></form></details>
+  {% endif %}
+
   <form method="post" action="/videos/{{ v.id }}/render/start">
     <div class="field"><label for="rnd-subs">Legendas</label>
       <select id="rnd-subs" name="subtitles"><option value="default">Como na timeline ({{ "ligadas" if r.tl and r.tl.subtitles.enabled else "desligadas" }})</option><option value="on">Ligar neste render</option><option value="off">Desligar neste render</option></select></div>
