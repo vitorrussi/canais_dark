@@ -1,7 +1,11 @@
-.PHONY: dev test lint fmt migrate worker
+.PHONY: dev serve test lint fmt migrate worker
 
 dev:
-	uv run uvicorn canaisdark.main:create_app --reload --factory --port 8123
+	uv run uvicorn canaisdark.main:create_app --reload --factory --port 8123 --proxy-headers --forwarded-allow-ips=127.0.0.1
+
+# Sem reload, atrás do Cloudflare Tunnel (confia nos cabeçalhos X-Forwarded-* só de 127.0.0.1)
+serve:
+	uv run uvicorn canaisdark.main:create_app --factory --host 127.0.0.1 --port 8123 --proxy-headers --forwarded-allow-ips=127.0.0.1
 
 test:
 	uv run pytest

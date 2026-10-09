@@ -9,7 +9,7 @@ from sqlmodel import Session, text
 from starlette.middleware.sessions import SessionMiddleware
 
 from canaisdark.api.routes import router
-from canaisdark.config import get_settings
+from canaisdark.config import check_production_settings, get_settings
 from canaisdark.db import get_session
 from canaisdark.logging import configure_logging
 from canaisdark.mcp.server import build_mcp_app, mcp
@@ -27,8 +27,7 @@ _STATUS: dict[type[DomainError], int] = {NotFound: 404, Conflict: 409, InvalidSt
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_level, json_logs=settings.env != "dev")
-    if settings.env != "dev" and settings.secret_key == "dev-insecure-change-me":
-        raise RuntimeError("Defina SECRET_KEY fora do ambiente dev")
+    check_production_settings(settings)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -40,7 +39,7 @@ def create_app() -> FastAPI:
         SessionMiddleware,
         secret_key=settings.secret_key,
         same_site="lax",
-        https_only=settings.env != "dev",
+        https_only=settings.env != "dev" or settings.public_url.startswith("https://"),
         max_age=60 * 60 * 24 * 30,
     )
     app.mount("/static", StaticFiles(directory=WEB_BASE / "static"), name="static")

@@ -280,3 +280,30 @@ def test_dashboard_attention_and_recent(
 def test_tasks_page_has_process_all_prompt(logged: TestClient) -> None:
     html = logged.get("/tasks").text
     assert "Processar tudo de uma vez" in html and "claim_next_task" in html
+
+
+def test_login_throttle(client: TestClient, user_token: tuple[User, str]) -> None:
+    from canaisdark.services.ratelimit import login_limiter
+
+    login_limiter.reset("testclient")
+    for _ in range(10):
+        assert client.post("/login", data={"token": "cd_errado"}).status_code == 401
+    blocked = client.post("/login", data={"token": user_token[1]})
+    assert blocked.status_code == 429 and "Muitas tentativas" in blocked.text
+    login_limiter.reset("testclient")
+    assert (
+        client.post("/login", data={"token": user_token[1]}, follow_redirects=False).status_code
+        == 303
+    )
+
+
+def test_public_url_requires_real_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    from canaisdark.config import Settings, check_production_settings, public_host
+
+    s = Settings(public_url="https://canaisdark.russi.app", secret_key="dev-insecure-change-me")
+    with pytest.raises(RuntimeError):
+        check_production_settings(s)
+    ok = Settings(public_url="https://canaisdark.russi.app", secret_key="x" * 40)
+    check_production_settings(ok)
+    assert public_host(ok) == "canaisdark.russi.app"
+    check_production_settings(Settings())  # dev local sem URL pública continua livre

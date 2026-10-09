@@ -19,6 +19,7 @@ from canaisdark.services import (
     videos,
 )
 from canaisdark.services.errors import DomainError
+from canaisdark.services.ratelimit import login_limiter
 from canaisdark.web.common import (
     BASE,  # noqa: F401  (reexport)
     SessionDep,
@@ -91,11 +92,29 @@ def login_page(request: Request) -> Response:
     return render(request, "login.html", None)
 
 
+def client_ip(request: Request) -> str:
+    """IP real do cliente (Cloudflare envia CF-Connecting-IP; fallback para o socket)."""
+    return request.headers.get("cf-connecting-ip") or (
+        request.client.host if request.client else "?"
+    )
+
+
 @router.post("/login")
 def login(request: Request, session: SessionDep, token: Annotated[str, Form()]) -> Response:
+    ip = client_ip(request)
+    if login_limiter.blocked(ip):
+        return render(
+            request,
+            "login.html",
+            None,
+            status=429,
+            error="Muitas tentativas. Aguarde alguns minutos e tente de novo.",
+        )
     user = users.authenticate_token(session, token.strip())
     if user is None:
+        login_limiter.record_failure(ip)
         return render(request, "login.html", None, status=401, error="Token inválido")
+    login_limiter.reset(ip)
     request.session.clear()
     request.session["user_id"] = user.id
     return redirect("/")

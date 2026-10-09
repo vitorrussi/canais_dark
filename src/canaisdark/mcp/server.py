@@ -8,7 +8,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.server.transport_security import TransportSecuritySettings
 from sqlmodel import Session
 
-from canaisdark.config import get_settings
+from canaisdark.config import get_settings, public_host
 from canaisdark.db import get_engine
 from canaisdark.mcp.auth import BearerAuthMiddleware
 from canaisdark.mcp.context import current_user
@@ -242,7 +242,10 @@ def process_pending() -> str:
 
 
 def build_mcp_app() -> BearerAuthMiddleware:
-    extra = [h.strip() for h in get_settings().mcp_allowed_hosts.split(",") if h.strip()]
+    settings = get_settings()
+    extra = [h.strip() for h in settings.mcp_allowed_hosts.split(",") if h.strip()]
+    if public_host(settings) and public_host(settings) not in extra:
+        extra.append(public_host(settings))
     security = TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
         allowed_hosts=["127.0.0.1:*", "localhost:*", "[::1]:*", *extra],
