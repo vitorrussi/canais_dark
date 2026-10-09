@@ -14,6 +14,7 @@ class JobType(StrEnum):
     RENDER = "render"
     SHORTS = "shorts"
     YOUTUBE_UPLOAD = "youtube_upload"
+    DRIVE_SYNC = "drive_sync"
 
 
 class JobStatus(StrEnum):

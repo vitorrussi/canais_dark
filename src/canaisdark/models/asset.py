@@ -22,6 +22,7 @@ class AssetType(StrEnum):
     METADATA = "metadata"
     THUMBNAIL = "thumbnail"
     UPLOAD = "upload"
+    DRIVE_FILE = "drive_file"
 
 
 class Asset(SQLModel, table=True):

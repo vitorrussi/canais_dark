@@ -1,6 +1,7 @@
 from canaisdark.models.asset import Asset, AssetType
 from canaisdark.models.channel import Channel
 from canaisdark.models.claude_task import ClaudeTask, TaskStatus, TaskType
+from canaisdark.models.drive import DriveAccount
 from canaisdark.models.job import Job, JobStatus, JobType
 from canaisdark.models.script import Scene, ScriptVersion
 from canaisdark.models.user import User
@@ -11,6 +12,7 @@ __all__ = [
     "Asset",
     "AssetType",
     "Channel",
+    "DriveAccount",
     "ClaudeTask",
     "Job",
     "JobStatus",

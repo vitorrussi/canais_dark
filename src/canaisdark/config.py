@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     # Cota diária da YouTube Data API (padrão do Google: 10.000 unidades; cada upload custa ~1.650)
     youtube_daily_quota: int = 10_000
 
+    # Demonstração: Google Drive FALSO (sem rede); a "sincronização" só grava os registros no banco
+    drive_fake: bool = False
+
+    @property
+    def drive_ready(self) -> bool:
+        return self.drive_fake or bool(self.google_client_id and self.google_client_secret)
+
     @property
     def youtube_ready(self) -> bool:
         return self.youtube_fake or bool(self.google_client_id and self.google_client_secret)

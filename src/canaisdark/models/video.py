@@ -24,6 +24,7 @@ class Video(SQLModel, table=True):
     language: str = "pt-BR"
     approved_script_version_id: int | None = Field(default=None, index=True)
     drive_url: str = ""
+    drive_folder_id: str = ""  # pasta do vídeo criada pelo app (Fase 8)
     youtube_url: str = ""
     created_by: int = Field(foreign_key="user.id")
     created_at: datetime = Field(default_factory=utcnow)
