@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ic %}
+{% block title %}Conectar o Claude{% endblock %}
+{% block crumb %}Conectar o Claude{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Conectar o Claude</h1>
+  <p class="muted">O Claude Code acessa este estúdio pelo servidor MCP e executa as tarefas que o site cria. Cada pessoa usa o seu próprio token.</p></div></div>
+
+<div class="layout-2">
+<div class="stack">
+  <div class="card {{ 'accent' if token }}">
+    <header><h3>1. Seu token de API</h3></header>
+    {% if token %}
+    <div class="alert" style="border-color:var(--warn);color:var(--warn);background:transparent">Copie agora: este token <strong>não será mostrado de novo</strong>. O token anterior parou de funcionar.</div>
+    <div id="token-box" class="promptbox">{{ token }}</div>
+    <button type="button" data-copy="#token-box">{{ ic("copy") }} Copiar token</button>
+    {% else %}
+    <p class="muted">Por segurança, o servidor guarda só um hash do token e não consegue mostrá-lo de novo. Se perdeu o seu, gere outro — <strong>o anterior deixa de valer</strong> (inclusive no Claude Code já configurado).</p>
+    <form method="post" action="/connect/token"><button class="secondary" data-confirm="Gerar um novo token? O token atual deixará de funcionar.">{{ ic("plug") }} Gerar novo token</button></form>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <header><h3>2. Registrar o MCP no Claude Code</h3></header>
+    <p class="muted">Rode uma vez no terminal. Use <code>--scope user</code> para valer em qualquer pasta.</p>
+    <div id="mcp-cmd" class="promptbox">{{ command }}</div>
+    <button type="button" data-copy="#mcp-cmd">{{ ic("copy") }} Copiar comando</button>
+    {% if not token %}<p class="help">Troque <code>&lt;SEU_TOKEN&gt;</code> pelo seu token (ou gere um novo acima: o comando já virá preenchido).</p>{% endif %}
+    <p class="help">Endereço do MCP: <code>{{ mcp_url }}</code>. Em produção, o acesso externo exige também o Service Token do Cloudflare Access (ver <code>docs/mcp-tools.md</code>).</p>
+  </div>
+
+  <div class="card">
+    <header><h3>3. Usar</h3></header>
+    <ol>
+      <li>Abra o Claude Code (<code>claude</code>) e digite <code>/mcp</code>: o servidor <strong>canais</strong> deve aparecer como conectado.</li>
+      <li>Na página de um vídeo, copie o <strong>prompt para o Claude</strong> e cole no Claude Code. Ou processe tudo de uma vez:</li>
+    </ol>
+    <div id="process-all" class="promptbox">{{ process_all_prompt }}</div>
+    <button type="button" data-copy="#process-all">{{ ic("copy") }} Copiar “processar pendências”</button>
+    <p class="help">Atalho no Claude Code: <code>/mcp__canais__process_pending</code>.</p>
+  </div>
+</div>
+<div class="card">
+  <header><h3>Problemas comuns</h3></header>
+  <ul>
+    <li><strong>Falhou ao conectar:</strong> o servidor (<code>make dev</code>) está rodando? A porta é 8123?</li>
+    <li><strong>401 / token inválido:</strong> gere um novo token e refaça o comando (<code>claude mcp remove canais</code> antes).</li>
+    <li><strong>Host não permitido (421):</strong> acesse por <code>localhost</code> ou adicione o domínio em <code>MCP_ALLOWED_HOSTS</code>.</li>
+    <li><strong>Tarefa “em andamento” travada:</strong> a reserva expira em 30 min, ou cancele pela página do vídeo.</li>
+  </ul>
+</div>
+</div>
+{% endblock %}
