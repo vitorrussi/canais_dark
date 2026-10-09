@@ -14,8 +14,8 @@ from canaisdark.db import get_session
 from canaisdark.logging import configure_logging
 from canaisdark.mcp.server import build_mcp_app, mcp
 from canaisdark.services.errors import Conflict, DomainError, InvalidState, NotFound
-from canaisdark.web.routes import BASE as WEB_BASE
-from canaisdark.web.routes import NotLoggedIn, templates
+from canaisdark.web.common import BASE as WEB_BASE
+from canaisdark.web.common import NotLoggedIn, templates
 from canaisdark.web.routes import router as web_router
 
 _STATUS: dict[type[DomainError], int] = {NotFound: 404, Conflict: 409, InvalidState: 422}

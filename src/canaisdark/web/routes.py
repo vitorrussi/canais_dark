@@ -1,13 +1,10 @@
-from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
-from fastapi.templating import Jinja2Templates
+from fastapi import APIRouter, Form, Request
+from fastapi.responses import HTMLResponse, Response
 from pydantic import ValidationError
 from sqlmodel import Session, select
 
-from canaisdark.db import get_engine, get_session
 from canaisdark.models import Channel, User
 from canaisdark.schemas.channel import ChannelCreate, ChannelUpdate
 from canaisdark.schemas.video import VideoCreate
@@ -21,80 +18,18 @@ from canaisdark.services import (
     videos,
 )
 from canaisdark.services.errors import DomainError
+from canaisdark.web.common import (
+    BASE,  # noqa: F401  (reexport)
+    SessionDep,
+    WebUser,
+    back,
+    error_text,
+    redirect,
+    render,
+)
 from canaisdark.web.presets import CHANNEL_PRESETS
 
-BASE = Path(__file__).parent
-templates = Jinja2Templates(directory=BASE / "templates")
-
-
-def _open_task_count() -> int:
-    with Session(get_engine()) as session:
-        return len(tasks.list_tasks(session, open_only=True))
-
-
-templates.env.globals["open_task_count"] = _open_task_count
 router = APIRouter(include_in_schema=False)
-SessionDep = Annotated[Session, Depends(get_session)]
-
-STATE_LABELS = {
-    "not_started": "Não iniciada",
-    "pending": "Pendente",
-    "in_progress": "Em andamento",
-    "done": "Concluída",
-    "stale": "Desatualizada",
-    "failed": "Falhou",
-}
-
-
-class NotLoggedIn(Exception):
-    pass
-
-
-def web_user(request: Request, session: SessionDep) -> User:
-    user_id = request.session.get("user_id")
-    user = session.get(User, user_id) if user_id else None
-    if user is None or not user.is_active:
-        request.session.clear()
-        raise NotLoggedIn
-    return user
-
-
-WebUser = Annotated[User, Depends(web_user)]
-
-
-def _render(
-    request: Request, name: str, user: User | None, status: int = 200, **ctx: object
-) -> HTMLResponse:
-    flash = request.session.pop("flash", None) if "session" in request.scope else None
-    if ctx.get("error") and not flash:
-        flash = {"kind": "error", "msg": str(ctx["error"])}
-    return templates.TemplateResponse(
-        request,
-        name,
-        {"user": user, "state_labels": STATE_LABELS, "flash": flash, "nav": "channels", **ctx},
-        status_code=status,
-    )
-
-
-def _back(
-    request: Request, url: str, error: Exception | None = None, ok: str | None = None
-) -> RedirectResponse:
-    """Redireciona (PRG) deixando uma mensagem para o próximo render (toast)."""
-    if error is not None:
-        request.session["flash"] = {"kind": "error", "msg": str(error)}
-    elif ok:
-        request.session["flash"] = {"kind": "success", "msg": ok}
-    return _redirect(url)
-
-
-def _redirect(url: str) -> RedirectResponse:
-    return RedirectResponse(url, status_code=303)
-
-
-def _error_text(exc: Exception) -> str:
-    if isinstance(exc, ValidationError):
-        return "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors())
-    return str(exc)
 
 
 def _channel_form(
@@ -142,28 +77,28 @@ async def _form_data(request: Request) -> dict[str, object]:
 
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request) -> Response:
-    return _render(request, "login.html", None)
+    return render(request, "login.html", None)
 
 
 @router.post("/login")
 def login(request: Request, session: SessionDep, token: Annotated[str, Form()]) -> Response:
     user = users.authenticate_token(session, token.strip())
     if user is None:
-        return _render(request, "login.html", None, status=401, error="Token inválido")
+        return render(request, "login.html", None, status=401, error="Token inválido")
     request.session.clear()
     request.session["user_id"] = user.id
-    return _redirect("/")
+    return redirect("/")
 
 
 @router.post("/logout")
 def logout(request: Request) -> Response:
     request.session.clear()
-    return _redirect("/login")
+    return redirect("/login")
 
 
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request, user: WebUser, session: SessionDep) -> Response:
-    return _render(
+    return render(
         request,
         "channels.html",
         user,
@@ -174,7 +109,7 @@ def home(request: Request, user: WebUser, session: SessionDep) -> Response:
 
 @router.get("/channels/new", response_class=HTMLResponse)
 def new_channel_page(request: Request, user: WebUser) -> Response:
-    return _render(
+    return render(
         request, "channel_new.html", user, presets=CHANNEL_PRESETS, crumbs=[("Canais", "/")]
     )
 
@@ -185,17 +120,17 @@ async def create_channel(request: Request, user: WebUser, session: SessionDep) -
     try:
         channel = channels.create_channel(session, ChannelCreate(**data))
     except (DomainError, ValidationError) as e:
-        return _render(
+        return render(
             request,
             "channel_new.html",
             user,
             status=422,
             presets=CHANNEL_PRESETS,
             channel=data,
-            error=_error_text(e),
+            error=error_text(e),
             crumbs=[("Canais", "/")],
         )
-    return _back(request, f"/channels/{channel.slug}", ok=f"Canal “{channel.name}” criado")
+    return back(request, f"/channels/{channel.slug}", ok=f"Canal “{channel.name}” criado")
 
 
 def _channel_ctx(
@@ -227,7 +162,7 @@ def channel_page(
     request: Request, user: WebUser, session: SessionDep, slug: str, tab: str = "videos"
 ) -> Response:
     channel = channels.get_channel_by_slug(session, slug)
-    return _render(request, "channel.html", user, **_channel_ctx(session, channel, tab))
+    return render(request, "channel.html", user, **_channel_ctx(session, channel, tab))
 
 
 @router.post("/channels/{slug}")
@@ -241,14 +176,14 @@ async def update_channel(
         channels.update_channel(session, channel.id, ChannelUpdate(**data))
     except (DomainError, ValidationError) as e:
         session.rollback()
-        return _render(
+        return render(
             request,
             "channel.html",
             user,
             status=422,
-            **_channel_ctx(session, channel, "settings", error=_error_text(e)),
+            **_channel_ctx(session, channel, "settings", error=error_text(e)),
         )
-    return _back(request, f"/channels/{slug}?tab=settings", ok="Configurações salvas")
+    return back(request, f"/channels/{slug}?tab=settings", ok="Configurações salvas")
 
 
 @router.post("/channels/{slug}/archive")
@@ -256,7 +191,7 @@ def archive_channel(request: Request, user: WebUser, session: SessionDep, slug: 
     channel = channels.get_channel_by_slug(session, slug)
     assert channel.id is not None
     channels.archive_channel(session, channel.id)
-    return _back(request, "/", ok=f"Canal “{channel.name}” arquivado")
+    return back(request, "/", ok=f"Canal “{channel.name}” arquivado")
 
 
 @router.post("/channels/{slug}/videos")
@@ -268,14 +203,14 @@ def create_video(
     try:
         video = videos.create_video(session, channel.id, VideoCreate(topic=topic.strip()), user)
     except (DomainError, ValidationError) as e:
-        return _render(
+        return render(
             request,
             "channel.html",
             user,
             status=422,
-            **_channel_ctx(session, channel, error=_error_text(e)),
+            **_channel_ctx(session, channel, error=error_text(e)),
         )
-    return _back(request, f"/videos/{video.id}", ok="Vídeo criado — tarefa de roteiro enfileirada")
+    return back(request, f"/videos/{video.id}", ok="Vídeo criado — tarefa de roteiro enfileirada")
 
 
 @router.get("/videos/{video_id}", response_class=HTMLResponse)
@@ -296,7 +231,7 @@ def video_page(
         if open_tasks
         else None
     )
-    return _render(
+    return render(
         request,
         "video.html",
         user,
@@ -325,8 +260,8 @@ def generate_script(
     try:
         scripts.request_script(session, video_id, instructions.strip(), user)
     except DomainError as e:
-        return _back(request, f"/videos/{video_id}", e)
-    return _back(request, f"/videos/{video_id}", ok="Tarefa enfileirada para o Claude")
+        return back(request, f"/videos/{video_id}", e)
+    return back(request, f"/videos/{video_id}", ok="Tarefa enfileirada para o Claude")
 
 
 @router.post("/videos/{video_id}/script/revision")
@@ -340,8 +275,8 @@ def request_revision(
     try:
         scripts.request_revision(session, video_id, notes, user)
     except DomainError as e:
-        return _back(request, f"/videos/{video_id}", e)
-    return _back(request, f"/videos/{video_id}", ok="Revisão enviada ao Claude")
+        return back(request, f"/videos/{video_id}", e)
+    return back(request, f"/videos/{video_id}", ok="Revisão enviada ao Claude")
 
 
 @router.post("/scripts/{version_id}/approve")
@@ -349,13 +284,13 @@ def approve_script(
     request: Request, user: WebUser, session: SessionDep, version_id: int
 ) -> Response:
     version = scripts.approve_script(session, version_id, user)
-    return _back(request, f"/videos/{version.video_id}", ok=f"Roteiro v{version.number} aprovado")
+    return back(request, f"/videos/{version.video_id}", ok=f"Roteiro v{version.number} aprovado")
 
 
 @router.get("/tasks", response_class=HTMLResponse)
 def tasks_page(request: Request, user: WebUser, session: SessionDep) -> Response:
     claimers = {u.id: u.name for u in session.exec(select(User))}
-    return _render(
+    return render(
         request,
         "tasks.html",
         user,
@@ -372,8 +307,8 @@ def cancel_task(request: Request, user: WebUser, session: SessionDep, task_id: i
     try:
         tasks.cancel_task(session, task_id)
     except DomainError as e:
-        return _back(request, f"/videos/{task.video_id}", e)
-    return _back(request, request.headers.get("referer", f"/videos/{task.video_id}"))
+        return back(request, f"/videos/{task.video_id}", e)
+    return back(request, request.headers.get("referer", f"/videos/{task.video_id}"))
 
 
 @router.post("/videos/{video_id}/delete")
@@ -381,4 +316,4 @@ def delete_video(user: WebUser, session: SessionDep, video_id: int) -> Response:
     video = videos.get_video(session, video_id)
     channel = channels.get_channel(session, video.channel_id)
     videos.delete_video(session, video_id)
-    return _redirect(f"/channels/{channel.slug}")
+    return redirect(f"/channels/{channel.slug}")
