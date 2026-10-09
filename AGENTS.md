@@ -30,7 +30,13 @@ Etapa 2.2 (concluída): editor de roteiro em `/videos/{id}/script/edit` (`web/sc
 limpeza, desfazer/refazer, rascunho local (localStorage), salvar = NOVA versão (`user:<id>`, opção aprovar). Comparação de versões em
 `/videos/{id}/diff?a=&b=` (`services/script_diff.py`). Texto: `services/script_text.py`. REST: `POST /api/videos/{id}/scripts`.
 Fonte da verdade no JS é o array `scenes`; `window.__editor` expõe a API para depuração/testes manuais no navegador.
-Próximas: 2.3 baixar/exportar/importar, 2.4 configuração/QoL (ver plano).
+Etapa 2.3 (concluída): baixar roteiro (`/scripts/{id}/download?format=txt|md|json`), importar texto/arquivo com regras de divisão +
+prévia (`/videos/{id}/script/import`), criar vídeo com roteiro pronto sem acionar o Claude (`/channels/{slug}/videos/manual`),
+exportar/importar vídeo e canal (`/videos/{id}/export`, `/channels/{slug}/export`, `/import`). Formato JSON versionado
+(`canaisdark.video|channel|script`, v1) em `schemas/transfer.py`; lógica em `services/transfer.py` e `services/script_formats.py`;
+rotas em `web/transfer.py` e `api/transfer.py`. Importar SEMPRE cria algo novo (autor `import:<id>`), nunca sobrescreve; canal importado
+sem nome explícito ganha sufixo " (2)". `htmx-config` em `base.html` faz o htmx trocar respostas 404/422 (senão erros de formulário somem).
+Próxima: 2.4 configuração/QoL (ver plano).
 
 ## Estrutura
 `src/canaisdark/`: `config.py`, `logging.py`, `db.py`, `models/`, `services/` (lógica),
