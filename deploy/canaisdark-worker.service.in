@@ -1,0 +1,20 @@
+[Unit]
+Description=Estúdio de Canais Dark — worker (narração, render, uploads)
+After=network-online.target canaisdark-web.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@APP_DIR@
+Environment=PATH=@PATH@
+ExecStart=@UV@ run --no-sync canaisdark worker
+Restart=always
+RestartSec=5
+# dá tempo de terminar o job atual antes de reiniciar
+TimeoutStopSec=60
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

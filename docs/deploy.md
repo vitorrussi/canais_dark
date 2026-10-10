@@ -27,5 +27,13 @@ claude mcp add --transport http canais https://canaisdark.russi.app/mcp --header
 ```
 (`/connect` no site já mostra esse comando com a URL certa.) Se ativar Cloudflare Access no `/mcp`, acrescente os headers `CF-Access-Client-Id` e `CF-Access-Client-Secret`.
 
+## Mover para o servidor (scripts em `deploy/`)
+1. **Origem:** `deploy/pack.sh` gera `canaisdark-bundle-*.tar.gz` (`.env` + cópia consistente do banco + `data/files`; contém segredos).
+2. Envie por `scp` e, no servidor: `git clone ... && cd canais_dark && deploy/install.sh --bundle ~/canaisdark-bundle-*.tar.gz`.
+3. `install.sh` (idempotente; reexecute após `git pull`): confere git/uv/ffmpeg/systemd, `uv sync --frozen`, restaura o pacote
+   (nunca sobrescreve sem `--force`; o antigo vira `.bak-<data>`), faz cópia do banco em `data/backups/`, roda migrações, instala e
+   inicia `canaisdark-web` e `canaisdark-worker` (systemd, `Restart=always`) e testa `127.0.0.1:8123`. `--dry-run` só mostra o que faria.
+4. Manual: subir o túnel do Cloudflare no servidor com o MESMO token e desligar o do PC antigo. Manter a mesma `FERNET_KEY`.
+
 ## Pendente (Fase 9)
-Serviço persistente (systemd/Docker Compose) para o app, backup automático do banco e dos arquivos, regras do Access, limite de upload (Cloudflare: 100 MB/requisição).
+Backup automático do banco e dos arquivos, regras do Access, limite de upload (Cloudflare: 100 MB/requisição).

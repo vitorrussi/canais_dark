@@ -1,0 +1,18 @@
+[Unit]
+Description=Estúdio de Canais Dark — site/API/MCP
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@APP_DIR@
+Environment=PATH=@PATH@
+ExecStart=@UV@ run --no-sync uvicorn canaisdark.main:create_app --factory --host 127.0.0.1 --port 8123 --proxy-headers --forwarded-allow-ips=127.0.0.1
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
