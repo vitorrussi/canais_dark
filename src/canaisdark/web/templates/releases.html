@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ic %}
+{% block title %}Novidades{% endblock %}
+{% block crumb %}Novidades{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Novidades</h1>
+  <div class="meta"><span class="badge">{{ current.label }}</span></div></div></div>
+
+{% if not latest %}
+<div class="empty">{{ ic("sparkles") }}<h3>Ainda não há notas de versão</h3><p>Quando uma nova versão for lançada, o que mudou aparece aqui.</p></div>
+{% else %}
+<div class="card">
+  <header><h3>{{ latest.title }}</h3><span class="badge done">v{{ latest.version }} · {{ latest.date }}</span></header>
+  {% for name, items in latest.sections %}
+  <h4 class="subhead">{{ ic(icons.get(name, "file")) }} {{ name }}</h4>
+  <ul class="release-list">{% for it in items %}<li>{{ it }}</li>{% endfor %}</ul>
+  {% endfor %}
+</div>
+
+{% if previous %}
+<h2 style="margin-top:1.5rem">Versões anteriores</h2>
+{% for r in previous %}
+<details class="card" style="margin-bottom:.6rem">
+  <summary style="cursor:pointer"><strong>v{{ r.version }}</strong> · {{ r.title }} <span class="muted">· {{ r.date }}</span></summary>
+  {% for name, items in r.sections %}
+  <h4 class="subhead">{{ ic(icons.get(name, "file")) }} {{ name }}</h4>
+  <ul class="release-list">{% for it in items %}<li>{{ it }}</li>{% endfor %}</ul>
+  {% endfor %}
+</details>
+{% endfor %}
+{% endif %}
+{% endif %}
+{% endblock %}
