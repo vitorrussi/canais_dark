@@ -19,7 +19,7 @@
 - Login só com token de API; limite de **10 falhas por IP em 10 min** (usa `CF-Connecting-IP`), depois 429.
 - `/api` e `/mcp` exigem `Authorization: Bearer`; sessão do site em cookie assinado, HttpOnly, SameSite=Lax, Secure.
 - Proteção DNS-rebinding do SDK MCP ativa (só `localhost` e o host público).
-- `/mcp` aceita o token `cd_...` e OAuth de conector (Claude Desktop/claude.ai). `/register`, `/authorize`, `/token`, `/revoke` e `/.well-known/*` ficam públicos (padrão OAuth); se ativar Cloudflare Access, **não** proteja esses caminhos nem `/mcp` com login por e-mail (use bypass/Service Token), senão o conector não consegue autenticar.
+- `/mcp` aceita o token `cd_...` e OAuth de conector (Claude Desktop/claude.ai). `/register`, `/authorize`, `/token`, `/revoke` e `/.well-known/*` ficam públicos (padrão OAuth); `/x/*` (links assinados da edição livre, `docs/external-edit.md`) também precisa passar pelo WAF e pelo Access; se ativar Cloudflare Access, **não** proteja esses caminhos nem `/mcp` com login por e-mail (use bypass/Service Token), senão o conector não consegue autenticar.
 - **Recomendado (Fase 9):** Cloudflare Access na frente do site (login por e-mail) e Service Token no `/mcp`. Hoje o hostname está aberto: quem souber o endereço vê a tela de login.
 
 ## Claude Code pelo domínio

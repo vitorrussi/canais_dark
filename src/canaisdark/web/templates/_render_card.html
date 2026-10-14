@@ -81,7 +81,7 @@ Pedido: {{ r.edit_task.instructions }}{% endif %}</div>
       <div class="stack-inline">
         <a class="btn secondary sm" href="/videos/{{ v.id }}/edit-package.zip" hx-boost="false">{{ ic("download") }} Baixar pacote (.zip)</a>
       </div>
-      <form id="external-render-form" data-video="{{ v.id }}" class="row compact" style="margin-top:.6rem">
+      <form id="external-render-form" data-video="{{ v.id }}" hx-boost="false" onsubmit="return false" class="row compact" style="margin-top:.6rem">
         <input type="file" name="file" accept="video/mp4,.mp4" required style="max-width:100%">
         <button class="secondary sm">{{ ic("upload") }} Usar vídeo editado externamente</button>
         <span class="muted" id="external-render-status"></span>
@@ -118,7 +118,7 @@ Pedido: {{ r.edit_task.instructions }}{% endif %}</div>
   {% for kind, asset, label in (("final", r.final, "Render final 1080p"), ("preview", r.preview, "Prévia 720p")) %}
   {% if asset %}
   <hr>
-  <h4 class="subhead">{{ label }}
+  <h4 class="subhead">{{ "Vídeo editado pelo Claude (edição livre)" if asset.meta.external else label }}
     {% if asset.meta.partial %}<span class="badge partial">só teste</span>{% endif %}
     {% if not r.fresh[kind] %}<span class="badge stale" title="Áudio, imagens ou timeline mudaram depois deste render">desatualizado</span>{% endif %}
     {% if kind == "final" and asset.meta.approved_by %}<span class="badge done">aprovado por {{ r.users.get(asset.meta.approved_by, "?") }}</span>{% endif %}</h4>
