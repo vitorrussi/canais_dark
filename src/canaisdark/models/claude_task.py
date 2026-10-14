@@ -13,6 +13,7 @@ class TaskType(StrEnum):
     GENERATE_METADATA = "generate_metadata"
     SELECT_SHORTS = "select_shorts"
     EDIT_VIDEO = "edit_video"
+    MAKE_THUMBNAIL = "make_thumbnail"
 
 
 class TaskStatus(StrEnum):

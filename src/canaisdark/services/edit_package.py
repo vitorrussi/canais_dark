@@ -24,7 +24,17 @@ from sqlmodel import Session
 
 from canaisdark.config import get_settings, oauth_issuer
 from canaisdark.models import AssetType, User, Video
-from canaisdark.services import channels, narration, render, scene_assets, shorts, videos
+from canaisdark.services import (
+    channels,
+    metadata,
+    narration,
+    render,
+    scene_assets,
+    scene_prompts,
+    shorts,
+    thumbnail,
+    videos,
+)
 from canaisdark.services import timeline as tl_service
 from canaisdark.services.errors import Forbidden, InvalidState, NotFound
 
@@ -486,4 +496,138 @@ def register(session: Session, video: Video, assembled: Path, actor: User) -> di
         "duration_s": round(info["duration"], 1),
         "bytes": result.size,
         "message": "Render final registrado. A pessoa revisa e aprova no site.",
+    }
+
+
+# ----- Thumbnail pelo Claude -----
+
+THUMB_MAX_BYTES = 10 * 1024 * 1024  # entrada; o serviço recompõe para ≤ 2 MB (limite do YouTube)
+
+THUMB_HOW_TO = (
+    "Crie a thumbnail no seu sandbox (Python + Pillow) e envie. Passos: (1) baixe 2 a 4 imagens de `scenes` "
+    "pelos links (`curl -L -o`); escolha a cena visualmente mais forte (use `title` e `thumbnail_ideas` como "
+    "guia); (2) componha uma imagem de `spec.width`x`spec.height` (16:9): recorte/zoom no ponto de interesse, "
+    "aumente contraste e saturação, escureça um lado se for pôr texto; (3) texto curto (até 4 palavras, "
+    "fonte grossa tipo DejaVu Sans Bold/Liberation Sans Bold, contorno ou sombra, legível em tamanho "
+    "pequeno), no idioma do vídeo; sem rostos de pessoas reais e sem promessas enganosas; (4) salve JPG "
+    "(qualidade 90) ou PNG com até `spec.max_bytes`; (5) envie com `curl -s -X POST --data-binary @thumb.jpg "
+    "-H 'Content-Type: application/octet-stream' '<upload.url>'`; a resposta confirma (`status: ok`) ou "
+    "explica o problema. Cada envio substitui o anterior (a última vale); (6) chame complete_task (se "
+    "houver task_id) com um resumo. Não envie nada ao YouTube: a pessoa revisa no site."
+)
+
+
+def _scene_files(session: Session, video: Video) -> list[PackageFile]:
+    scenes = scene_prompts.approved_scenes(session, video.id or 0)
+    amap = scene_assets.scene_assets(session, [sc.id for sc in scenes if sc.id])
+    out: list[PackageFile] = []
+    for sc in scenes:
+        for variant, asset in sorted(amap.get(sc.id or 0, {}).items()):
+            path = narration.asset_path(asset)
+            if not path.is_file():
+                continue
+            role = (
+                "clip"
+                if asset.type == AssetType.VIDEO_CLIP.value
+                else ("vertical" if variant == "vertical" else "image")
+            )
+            out.append(
+                PackageFile(
+                    f"scenes/{sc.index + 1:03d}_{variant}{path.suffix or '.jpg'}",
+                    path,
+                    role,
+                    sc.index,
+                )
+            )
+    return out
+
+
+def find_thumb_file(session: Session, video: Video, name: str) -> PackageFile:
+    for f in _scene_files(session, video):
+        if f.name == name:
+            return f
+    raise NotFound("Arquivo não encontrado (as imagens podem ter mudado; peça um pacote novo).")
+
+
+def build_thumbnail_manifest(
+    session: Session, video_id: int, user: User, base_url: str | None = None
+) -> dict[str, Any]:
+    video = videos.get_video(session, video_id)
+    if not video.approved_script_version_id:
+        raise InvalidState("Aprove o roteiro e envie as imagens das cenas antes da thumbnail.")
+    base = (base_url or oauth_issuer(get_settings())).rstrip("/")
+    channel = channels.get_channel(session, video.channel_id)
+    files = [f for f in _scene_files(session, video) if f.role in ("image", "vertical")]
+    if not files:
+        raise InvalidState(
+            "Ainda não há imagens nas cenas. Envie as imagens no storyboard primeiro."
+        )
+    scenes = scene_prompts.approved_scenes(session, video_id)
+    names: dict[int, dict[str, str]] = {}
+    for f in files:
+        if f.scene_index is not None:
+            names.setdefault(f.scene_index, {})[f.role] = f.name
+    found = metadata.latest(session, video_id)
+    current = metadata.current(video)
+    title = (found[1].title if found else "") or str(current.get("title") or video.title or "")
+    ideas = list(found[1].thumbnail_ideas) if found else []
+    current_thumb = thumbnail.latest(session, video_id)
+    return {
+        "video": {"id": video.id, "topic": video.topic, "language": video.language},
+        "title": title or video.topic,
+        "thumbnail_ideas": ideas,
+        "channel": {
+            "name": channel.name,
+            "language": channel.language,
+            "visual_style_prompt": channel.visual_style_prompt,
+        },
+        "scenes": [
+            {
+                "index": sc.index,
+                "text": sc.text,
+                "image": names.get(sc.index, {}).get("image"),
+                "vertical_image": names.get(sc.index, {}).get("vertical"),
+            }
+            for sc in scenes
+        ],
+        "files": [
+            {
+                "name": f.name,
+                "role": f.role,
+                "scene_index": f.scene_index,
+                "bytes": f.path.stat().st_size,
+                "url": _url(base, sign(video, user, f"t:{f.name}")),
+            }
+            for f in files
+        ],
+        "spec": {
+            "width": 1280,
+            "height": 720,
+            "formats": ["jpg", "png"],
+            "max_bytes": thumbnail.MAX_BYTES,
+        },
+        "has_current_thumbnail": current_thumb is not None,
+        "upload": {
+            "url": _url(base, sign(video, user, "thumb"), "/thumbnail"),
+            "method": "POST (corpo bruto, Content-Type: application/octet-stream)",
+            "max_bytes": THUMB_MAX_BYTES,
+        },
+        "expires_in_s": LINK_TTL_SECONDS,
+        "how_to": THUMB_HOW_TO,
+    }
+
+
+def register_thumbnail(session: Session, video: Video, data: bytes, actor: User) -> dict[str, Any]:
+    """Valida pelo conteúdo (Pillow) e grava como a thumbnail do vídeo (a última vale)."""
+    assert video.id is not None
+    asset = thumbnail.save_upload(session, video.id, data)
+    log.info("edit_package.thumbnail", video_id=video.id, asset_id=asset.id, by=actor.id)
+    return {
+        "status": "ok",
+        "asset_id": asset.id,
+        "width": asset.meta.get("width"),
+        "height": asset.meta.get("height"),
+        "bytes": asset.meta.get("bytes"),
+        "warnings": asset.meta.get("warnings", []),
+        "message": "Thumbnail registrada. A pessoa revisa no site.",
     }

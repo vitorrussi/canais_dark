@@ -49,6 +49,7 @@ Prompt: `process_pending`.
 | `start_shorts(video_id, quality?, index?, allow_missing?)` | enfileira o render 9:16 (`preview` 720×1280 / `final` 1080×1920) e devolve `job_id` |
 | `start_render(video_id, quality?, subtitles?, allow_missing?)` | enfileira o render (`preview` 720p / `final` 1080p) e devolve `job_id`; sem créditos, só CPU |
 | `get_edit_package(video_id, quality?)` | manifesto da **edição livre** (cenas, tempos por palavra, links assinados de 3 h, `upload.url`); o Claude edita no sandbox e envia o MP4 em partes. Ver `docs/external-edit.md`; tipo de tarefa `edit_video` |
+| `get_thumbnail_package(video_id)` | pacote para **criar a thumbnail** no sandbox: título/ideias, imagens das cenas (links assinados), spec 1280×720 e `upload.url`; tarefa `make_thumbnail`. Ver `docs/external-edit.md` |
 
 Narração/alinhamento só são disparados por pessoas no site (gastam créditos).
 

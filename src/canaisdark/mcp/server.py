@@ -383,6 +383,18 @@ def get_edit_package(video_id: int, quality: str = "720p") -> dict[str, Any]:
         return edit_package.build_manifest(s, video_id, user, quality)
 
 
+@mcp.tool()
+@safe
+def get_thumbnail_package(video_id: int) -> dict[str, Any]:
+    """Pacote para criar a THUMBNAIL no seu sandbox (execução de código com rede liberada para o servidor).
+
+    Devolve título e ideias de thumbnail (da proposta de metadados), as imagens das cenas (links assinados de 3 h),
+    a especificação (1280x720, JPG/PNG, até 2 MB), o estilo do canal e `upload.url` para enviar a imagem pronta
+    (POST do corpo bruto). Siga o `how_to`. A pessoa revisa e envia ao YouTube pelo site."""
+    with _db() as (s, user):
+        return edit_package.build_thumbnail_manifest(s, video_id, user)
+
+
 # ----- Shorts (etapa OPCIONAL) -----
 
 

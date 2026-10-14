@@ -11,6 +11,7 @@ from canaisdark.models import ClaudeTask, JobType, TaskType, Video
 from canaisdark.schemas.metadata import MetadataIn
 from canaisdark.services import (
     channels,
+    edit_package,
     jobs,
     metadata,
     shorts,
@@ -149,6 +150,13 @@ def youtube_ctx(session: Session, video: Video) -> dict[str, Any]:
             col(ClaudeTask.status).in_(["pending", "in_progress"]),
         )
     ).first()
+    thumb_tasks = [
+        t
+        for t in tasks.list_tasks(session, video_id=video.id)
+        if t.type == TaskType.MAKE_THUMBNAIL.value
+    ]
+    thumb_task = next((t for t in reversed(thumb_tasks) if t.status in tasks.OPEN_STATUSES), None)
+    thumb_failed = thumb_tasks[-1] if thumb_tasks and thumb_tasks[-1].status == "failed" else None
     return {
         "video": video,
         "channel": channel,
@@ -163,6 +171,8 @@ def youtube_ctx(session: Session, video: Video) -> dict[str, Any]:
         "proposal_asset": proposal[0] if proposal else None,
         "problems": metadata.problems(video),
         "thumb": thumbnail.latest(session, video.id),
+        "thumb_task": thumb_task,
+        "thumb_failed": thumb_failed,
         "long_problem": _problem(session, video.id, "long"),
         "long_upload": long_upload,
         "shorts": short_rows,
@@ -253,6 +263,23 @@ async def upload_thumbnail(
         return back(request, _home(video_id), error=e)
     warn = " Atenção: " + " ".join(asset.meta["warnings"]) if asset.meta.get("warnings") else ""
     return back(request, _home(video_id), ok="Thumbnail salva." + warn)
+
+
+@router.post("/videos/{video_id}/thumbnail/request")
+def request_thumbnail(
+    request: Request,
+    user: WebUser,
+    session: SessionDep,
+    video_id: int,
+    instructions: Annotated[str, Form()] = "",
+) -> Response:
+    """Pede ao Claude (claude.ai com conector) para criar a thumbnail no sandbox dele."""
+    try:
+        edit_package.build_thumbnail_manifest(session, video_id, user)  # só valida pré-requisitos
+        tasks.create_task(session, video_id, TaskType.MAKE_THUMBNAIL, instructions.strip(), user)
+    except DomainError as e:
+        return back(request, _home(video_id), error=e)
+    return back(request, _home(video_id), ok="Pedido de thumbnail enfileirado para o Claude.")
 
 
 @router.post("/videos/{video_id}/thumbnail/remove")

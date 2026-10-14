@@ -38,6 +38,10 @@ def download(signed: str, session: SessionDep) -> Response:
             f = edit_package.find_file(session, grant.video, grant.key[2:])
             mime = mimetypes.guess_type(f.path.name)[0] or "application/octet-stream"
             return FileResponse(f.path, media_type=mime, filename=f.path.name)
+        if grant.key.startswith("t:"):
+            tf = edit_package.find_thumb_file(session, grant.video, grant.key[2:])
+            tmime = mimetypes.guess_type(tf.path.name)[0] or "application/octet-stream"
+            return FileResponse(tf.path, media_type=tmime, filename=tf.path.name)
         raise Forbidden("Este link não serve para download.")
     except DomainError as e:
         return _error(e)
@@ -86,6 +90,28 @@ async def upload(
                 }
             )
         result = await run_in_threadpool(edit_package.register, session, video, assembled, user)
+        return JSONResponse(result)
+    except DomainError as e:
+        return _error(e)
+
+
+@router.post("/x/{signed}/thumbnail")
+async def upload_thumbnail(request: Request, signed: str, session: SessionDep) -> Response:
+    """Recebe a imagem da thumbnail (corpo bruto, até 10 MB); valida e grava (a última vale)."""
+    try:
+        grant = edit_package.verify(session, signed)
+        if grant.key != "thumb":
+            raise Forbidden("Este link não serve para enviar a thumbnail.")
+        body = bytearray()
+        async for chunk in request.stream():
+            body.extend(chunk)
+            if len(body) > edit_package.THUMB_MAX_BYTES:
+                return JSONResponse(
+                    {"status": "error", "detail": "Imagem maior que 10 MB."}, status_code=413
+                )
+        result = await run_in_threadpool(
+            edit_package.register_thumbnail, session, grant.video, bytes(body), grant.user
+        )
         return JSONResponse(result)
     except DomainError as e:
         return _error(e)

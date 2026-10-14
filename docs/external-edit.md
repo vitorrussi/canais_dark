@@ -39,3 +39,14 @@ No mesmo cartão: **Baixar pacote (.zip)** → anexar no chat do claude.ai → b
 
 Código: `services/edit_package.py`, `web/edit_package.py`, `static/external_render.js`, tool `get_edit_package`,
 tarefa `edit_video`. Testes: `tests/test_edit_package.py`.
+
+## Thumbnail pelo Claude
+Mesmo mecanismo (links assinados, sandbox do claude.ai), sem narração e sem MP4:
+1. Cartão do YouTube → **Criar a thumbnail com o Claude** (instruções opcionais) → copie o prompt para o chat.
+2. O Claude chama `get_thumbnail_package(video_id)`: título e `thumbnail_ideas` dos metadados, imagens das cenas
+   (links de 3 h), especificação (1280×720, JPG/PNG, ≤ 2 MB), estilo do canal e `upload.url`.
+3. No sandbox ele compõe a imagem com Pillow e envia: `POST /x/<assinado>/thumbnail` (corpo bruto, ≤ 10 MB).
+   O servidor valida pelo conteúdo e recomprime para ≤ 2 MB (`services/thumbnail.save_upload`); a última vale.
+4. A pessoa revisa no cartão e envia ao YouTube como hoje (junto do vídeo). Nada vai ao YouTube pelo MCP.
+Tarefa `make_thumbnail` (não existe no modo copiar/colar). Sem rede no sandbox: peça a imagem ao Claude no chat e
+use "Enviar thumbnail" normalmente.

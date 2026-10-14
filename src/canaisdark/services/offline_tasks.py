@@ -23,8 +23,9 @@ from canaisdark.services import shorts as shorts_service
 from canaisdark.services import timeline as timeline_service
 from canaisdark.services.errors import DomainError, InvalidState
 
-# edit_video exige o sandbox do claude.ai (baixa/envia arquivos): não existe no modo copiar/colar
-SUPPORTED = tuple(t.value for t in TaskType if t is not TaskType.EDIT_VIDEO)
+# edit_video/make_thumbnail exigem o sandbox do claude.ai (baixa/envia arquivos): não existem no modo copiar/colar
+_SANDBOX_ONLY = (TaskType.EDIT_VIDEO, TaskType.MAKE_THUMBNAIL)
+SUPPORTED = tuple(t.value for t in TaskType if t not in _SANDBOX_ONLY)
 
 _TOOL_WORDS = ("save_", "complete_task", "fail_task", "claim_next", "Salve com", "chame ", "Chame ")
 

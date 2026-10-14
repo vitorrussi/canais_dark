@@ -218,6 +218,9 @@ async def test_mcp_get_edit_package_and_task_type(
     res: Any = await server.mcp.call_tool("get_edit_package", {"video_id": ids["video_id"]})
     data = res.structured_content if hasattr(res, "structured_content") else res
     assert data["target"]["quality"] == "720p" and data["files"] and data["upload"]["url"]
+    th: Any = await server.mcp.call_tool("get_thumbnail_package", {"video_id": ids["video_id"]})
+    tdata = th.structured_content if hasattr(th, "structured_content") else th
+    assert tdata["spec"]["width"] == 1280 and tdata["files"] and tdata["upload"]["url"]
     assert "edit_video" in {t.value for t in TaskType}
 
 
@@ -256,3 +259,89 @@ def test_failed_task_of_other_type_does_not_leak_into_script_card(
     assert "select_shorts" not in script_card.split("Narração")[0]
     assert "A última tentativa de edição livre falhou" in page
     assert page.count("NO-VAZAMENTO") == 1
+
+
+# ----- Thumbnail pelo Claude -----
+
+
+def _jpeg(size: tuple[int, int] = (1280, 720)) -> bytes:
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", size, (200, 30, 30)).save(buf, "JPEG", quality=90)
+    return buf.getvalue()
+
+
+def test_thumbnail_manifest_files_and_upload(
+    client: TestClient, session: Session, user_token: tuple[User, str], ids: dict[str, int]
+) -> None:
+    from canaisdark.services import thumbnail
+
+    m = edit_package.build_thumbnail_manifest(
+        session, ids["video_id"], user_token[0], "http://127.0.0.1"
+    )
+    assert m["spec"]["width"] == 1280 and m["upload"]["url"].endswith("/thumbnail")
+    assert len(m["scenes"]) == 2 and m["files"][0]["url"].startswith("http://127.0.0.1/x/")
+    path = "/x/" + m["files"][0]["url"].split("/x/")[1]
+    assert client.get(path).status_code == 200  # imagem da cena, sem sessão
+    up = "/x/" + m["upload"]["url"].split("/x/")[1]
+    ok = client.post(up, content=_jpeg())
+    assert ok.status_code == 200 and ok.json()["status"] == "ok"
+    session.expire_all()
+    thumb = thumbnail.latest(session, ids["video_id"])
+    assert thumb is not None and thumb.meta["width"] == 1280
+    # a última vale; arquivo inválido é recusado sem trocar a atual
+    bad = client.post(up, content=b"nao e imagem")
+    assert bad.status_code == 422 and "imagem" in bad.json()["detail"]
+    session.expire_all()
+    assert thumbnail.latest(session, ids["video_id"]).id == thumb.id  # type: ignore[union-attr]
+    # link de download/vídeo não serve para enviar thumbnail
+    zip_url = (
+        "/x/"
+        + edit_package.build_manifest(session, ids["video_id"], user_token[0], base_url="")[
+            "zip_url"
+        ].split("/x/")[1]
+    )
+    assert client.post(f"{zip_url.removesuffix('/')}/thumbnail", content=_jpeg()).status_code == 403
+
+
+def test_thumbnail_requires_images_and_task_flow(
+    client: TestClient,
+    session: Session,
+    user_token: tuple[User, str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(get_settings(), "data_dir", tmp_path / "files")
+    no_images = setup_video(session, user_token[0], [2.0], images=False)["video_id"]
+    with pytest.raises(InvalidState, match="imagens"):
+        edit_package.build_thumbnail_manifest(session, no_images, user_token[0])
+    from canaisdark.services import offline_tasks, task_context
+
+    assert "make_thumbnail" not in offline_tasks.SUPPORTED
+    text = task_context.build_user_prompt(5, "t", "C", "make_thumbnail")
+    assert "get_thumbnail_package(5)" in text
+
+
+def test_thumbnail_card_request_and_failure_shown_in_its_card(
+    client: TestClient, session: Session, user_token: tuple[User, str], ids: dict[str, int]
+) -> None:
+    from canaisdark.models import TaskType
+    from canaisdark.services import tasks
+
+    vid, user = ids["video_id"], user_token[0]
+    client.post("/login", data={"token": user_token[1]})
+    r = client.post(f"/videos/{vid}/thumbnail/request", data={"instructions": "texto amarelo"})
+    assert r.status_code in (200, 303)
+    page = client.get(f"/videos/{vid}").text
+    assert 'claim_next_task(type="make_thumbnail"' in page or "make_thumbnail" in page
+    assert "texto amarelo" in page
+    task = next(t for t in tasks.list_tasks(session, video_id=vid) if t.type == "make_thumbnail")
+    claimed = tasks.claim_next(session, user, TaskType.MAKE_THUMBNAIL.value, vid)
+    assert claimed and task.id
+    tasks.fail_task(session, task.id, user, "sem rede THUMB-ERRO")
+    page = client.get(f"/videos/{vid}").text
+    assert page.count("THUMB-ERRO") == 1
+    assert "THUMB-ERRO" not in page.split("Cenas, prompts e imagens")[0]

@@ -69,6 +69,12 @@ HOW_TO: dict[str, str] = {
         "última parte confirma o registro. Em seguida complete_task(task_id, resumo). Não aprove nem envie ao "
         "YouTube/Drive: a pessoa revisa no site. Siga o pedido em `instructions`."
     ),
+    TaskType.MAKE_THUMBNAIL.value: (
+        "Crie a THUMBNAIL do vídeo no seu sandbox (claude.ai com execução de código e rede liberada). Chame "
+        "get_thumbnail_package(video_id) e siga o `how_to` do manifesto: baixe as imagens das cenas pelos links "
+        "assinados, componha uma imagem 1280x720 (JPG/PNG, até 2 MB) com Pillow e envie para `upload.url`. "
+        "Depois complete_task(task_id, resumo). A pessoa revisa no site; nada é enviado ao YouTube por aqui."
+    ),
 }
 
 
@@ -205,11 +211,18 @@ def build_user_prompt(video_id: int, video_topic: str, channel_name: str, task_t
     """Texto pronto para o usuário colar no Claude Code (com o MCP `canais` conectado)."""
     topic = " ".join(video_topic.split())
     topic = topic if len(topic) <= 200 else topic[:197] + "..."
-    step2 = (
-        f"2. Chame get_edit_package({video_id}), baixe os arquivos pelos links no sandbox, edite o vídeo "
-        "e envie o MP4 para a upload.url do pacote (em partes de 90 MB).\n"
-        if task_type == TaskType.EDIT_VIDEO.value
-        else "2. Execute o trabalho e salve com a ferramenta de escrita indicada (ex.: save_script).\n"
+    step2 = {
+        TaskType.EDIT_VIDEO.value: (
+            f"2. Chame get_edit_package({video_id}), baixe os arquivos pelos links no sandbox, edite o vídeo "
+            "e envie o MP4 para a upload.url do pacote (em partes de 90 MB).\n"
+        ),
+        TaskType.MAKE_THUMBNAIL.value: (
+            f"2. Chame get_thumbnail_package({video_id}), baixe as imagens das cenas no sandbox, componha a "
+            "thumbnail 1280x720 e envie para a upload.url do pacote.\n"
+        ),
+    }.get(
+        task_type,
+        "2. Execute o trabalho e salve com a ferramenta de escrita indicada (ex.: save_script).\n",
     )
     return (
         f"Use o MCP `canais` para processar a tarefa `{task_type}` do vídeo #{video_id} "
