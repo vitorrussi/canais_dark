@@ -75,6 +75,8 @@ async def _login_and_allow(c: httpx.AsyncClient, token: str, consent_url: str) -
     page = await c.get(r.headers["location"])
     assert page.status_code == 200 and 'name="decision"' in page.text and "Claude" in page.text
     assert "Teste" in page.text and "Pendências do Claude" not in page.text  # tela isolada
+    # o htmx seguiria o redirect para claude.ai via XHR e o CORS bloquearia: o form NÃO pode ser boosted
+    assert 'hx-boost="false"' in page.text
     req = parse_qs(urlparse(r.headers["location"]).query)["req"][0]
     r = await c.post("/oauth/consent", data={"req": req, "decision": "allow"})
     assert r.status_code == 303

@@ -11,7 +11,7 @@
     <li>Escrever roteiros, prompts, timelines e metadados como <em>propostas</em> para você revisar.</li>
   </ul>
   <p class="help">Ele <strong>não</strong> aprova nada, não renderiza e não envia vídeos ao YouTube ou ao Drive. Você pode desconectar a qualquer momento em “Conectar Claude”.</p>
-  <form method="post" action="/oauth/consent">
+  <form method="post" action="/oauth/consent" hx-boost="false">
     <input type="hidden" name="req" value="{{ req }}">
     <div class="form-actions">
       <button name="decision" value="allow">{{ ic("check") }} Permitir</button>
