@@ -347,3 +347,9 @@ def test_privacy_page_is_public(client: TestClient) -> None:
     r = client.get("/privacy", follow_redirects=False)
     assert r.status_code == 200
     assert "drive.file" in r.text
+
+
+def test_tts_number_fields_accept_decimals(logged: TestClient) -> None:
+    html = logged.get("/channels/new").text
+    # o atributo step não pode sair escapado (&#34;), senão o navegador só aceita inteiros
+    assert 'step="0.05"' in html and "&#34;" not in html.split("tts_stability")[1][:400]
