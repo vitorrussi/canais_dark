@@ -293,3 +293,11 @@ async def test_registration_is_capped_and_expired_rows_are_purged(
         oauth.save_client(session, f"id{i}", {})
     with pytest.raises(LookupError):
         oauth.save_client(session, "one-more", {})
+
+
+async def test_issuer_has_no_trailing_slash(app: FastAPI, monkeypatch: pytest.MonkeyPatch) -> None:
+    async with app.router.lifespan_context(app), _client(app) as c:
+        meta = (await c.get("/.well-known/oauth-authorization-server")).json()
+        assert meta["issuer"] == "http://localhost:8123"
+        res = (await c.get("/.well-known/oauth-protected-resource/mcp")).json()
+        assert res["authorization_servers"] == ["http://localhost:8123"]

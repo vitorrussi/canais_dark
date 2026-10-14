@@ -57,3 +57,7 @@ Upload ao YouTube **não** é tool MCP (só site/REST). Regra: nenhuma tool bloq
 ## Auth e extensão
 `mcp/auth.py:BearerAuthMiddleware` valida o token e expõe o usuário em `mcp/context.py:current_user`.
 OAuth (conectores do Claude Desktop) é extensão futura: o `MCPServer` aceita `auth=`/`token_verifier=`.
+
+
+## Autenticação do `/mcp`
+`Authorization: Bearer cd_...` (token de API) **ou** access token OAuth de conector (ver `docs/connect-claude.md`). Sem credencial: `401` com `WWW-Authenticate: Bearer resource_metadata="…/.well-known/oauth-protected-resource/mcp"`.
