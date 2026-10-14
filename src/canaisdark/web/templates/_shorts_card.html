@@ -55,6 +55,7 @@
     <p class="muted">{{ "Aguardando o Claude." if s.open_task.status == "pending" else "Em andamento." }} Copie e cole no Claude Code:</p>
     <div id="shorts-claude-prompt" class="promptbox">{{ s.claude_prompt }}</div>
     <button type="button" data-copy="#shorts-claude-prompt">{{ ic("copy") }} Copiar prompt</button>
+    <a class="btn ghost sm" href="/videos/{{ v.id }}/claude/select_shorts">Sem conectar o Claude? Copiar/colar</a>
     <form method="post" action="/tasks/{{ s.open_task.id }}/cancel" style="display:inline"><button class="secondary sm" data-confirm="Cancelar esta tarefa?">Cancelar tarefa</button></form></div>
   {% else %}
   <details class="claude-fold" style="margin-top:.8rem"><summary class="btn secondary sm">{{ ic("sparkles") }} Pedir ao Claude para escolher os trechos</summary>

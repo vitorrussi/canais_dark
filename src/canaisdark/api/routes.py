@@ -5,6 +5,7 @@ from canaisdark.api import (
     drive,
     jobs,
     metadata,
+    offline,
     render,
     scenes,
     scripts,
@@ -36,3 +37,4 @@ router.include_router(metadata.router)
 router.include_router(shorts.router)
 router.include_router(youtube.router)
 router.include_router(drive.router)
+router.include_router(offline.router)

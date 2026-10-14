@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ic %}
+{% block title %}Copiar e colar — {{ label }}{% endblock %}
+{% block crumb %}Copiar e colar{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ label|capitalize }} com o Claude (sem conectar nada)</h1>
+  <p class="muted">Vídeo #{{ video.id }}. Funciona em qualquer conversa do Claude (site ou aplicativo): você copia o pedido, cola lá e traz a resposta de volta.</p></div>
+  <div class="actions"><a class="btn secondary" href="/videos/{{ video.id }}">Voltar ao vídeo</a></div></div>
+
+<div class="card step">
+  <header class="step-head"><span class="step-n">1</span><h3>Copie o pedido</h3></header>
+  <p class="muted">Abra uma conversa nova no Claude, cole o texto abaixo e envie.</p>
+  <div class="actions" style="margin:.4rem 0"><button type="button" data-copy="#offline-prompt">{{ ic("copy") }} Copiar pedido</button></div>
+  <details><summary class="btn ghost sm">Ver o texto</summary>
+    <div id="offline-prompt" class="promptbox" style="max-height:24rem;overflow:auto;white-space:pre-wrap">{{ prompt }}</div></details>
+  <textarea id="offline-prompt-src" hidden>{{ prompt }}</textarea>
+</div>
+
+<div class="card step {{ 'accent' if error }}">
+  <header class="step-head"><span class="step-n">2</span><h3>Cole a resposta</h3></header>
+  <p class="muted">Copie a resposta inteira do Claude (o bloco com chaves <code>{ }</code>) e cole aqui.</p>
+  {% if error %}<div class="alert" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="/videos/{{ video.id }}/claude/{{ task_type }}">
+    <div class="field"><label for="answer">Resposta do Claude</label>
+      <textarea id="answer" name="answer" rows="12" required placeholder='{"scenes": [...]}'>{{ answer }}</textarea>
+      <div class="help">Nada é aprovado nem enviado: o resultado entra como uma nova versão para você revisar no site.</div></div>
+    <div class="form-actions"><button>{{ ic("check") }} Aplicar resposta</button></div>
+  </form>
+</div>
+{% endblock %}

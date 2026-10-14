@@ -40,6 +40,7 @@
       <p class="muted" style="margin-top:.75rem">Copie e cole no Claude Code (com o MCP <code>canais</code> conectado):</p>
       <div id="claude-prompt" class="promptbox">{{ claude_prompt }}</div>
       <button type="button" data-copy="#claude-prompt">{{ ic("copy") }} Copiar prompt</button>
+      <a class="btn ghost sm" href="/videos/{{ video.id }}/claude/generate_script">Sem conectar o Claude? Copiar/colar</a>
       {% else %}
       <form method="post" action="/videos/{{ video.id }}/script/generate">
         <div class="field"><label for="instructions">Instruções extras (opcional)</label>
