@@ -30,6 +30,7 @@ from canaisdark.web.common import (
     error_text,
     redirect,
     render,
+    safe_next,
 )
 from canaisdark.web.drive import drive_ctx
 from canaisdark.web.narration import narration_ctx
@@ -144,9 +145,10 @@ def login(request: Request, session: SessionDep, token: Annotated[str, Form()]) 
         login_limiter.record_failure(ip)
         return render(request, "login.html", None, status=401, error="Token inválido")
     login_limiter.reset(ip)
+    destination = safe_next(request.session.get("next"))
     request.session.clear()
     request.session["user_id"] = user.id
-    return redirect("/")
+    return redirect(destination)
 
 
 @router.post("/logout")

@@ -2,15 +2,23 @@ from sqlmodel import Session
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from canaisdark.config import get_settings, oauth_issuer
 from canaisdark.db import get_engine
 from canaisdark.mcp.context import current_user
-from canaisdark.services import users
+from canaisdark.services import oauth, users
+
+
+def _challenge() -> str:
+    meta = f"{oauth_issuer(get_settings())}/.well-known/oauth-protected-resource/mcp"
+    return f'Bearer resource_metadata="{meta}"'
 
 
 class BearerAuthMiddleware:
     """Exige `Authorization: Bearer <token>` no endpoint MCP e expõe o usuário via contextvar.
 
-    Extensão futura: OAuth (conectores do Claude Desktop) entra aqui ou via `auth=` do MCPServer.
+    Aceita (1) o token de API `cd_...` (Claude Code) e (2) access token OAuth emitido pelo
+    fluxo de conector (Claude Desktop/claude.ai). Na falta de ambos, 401 com a dica de descoberta
+    do OAuth (RFC 9728) para o cliente iniciar o login sozinho.
     """
 
     def __init__(self, app: ASGIApp, path: str = "/mcp") -> None:
@@ -27,13 +35,15 @@ class BearerAuthMiddleware:
         if scheme.lower() == "bearer" and token:
             with Session(get_engine()) as session:
                 user = users.authenticate_token(session, token.strip())
+                if user is None:
+                    user = oauth.authenticate_access(session, token.strip())
                 if user is not None:
                     session.expunge(user)
         if user is None:
             response = JSONResponse(
                 {"detail": "Token ausente ou inválido"},
                 status_code=401,
-                headers={"WWW-Authenticate": "Bearer"},
+                headers={"WWW-Authenticate": _challenge()},
             )
             await response(scope, receive, send)
             return

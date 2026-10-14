@@ -30,11 +30,15 @@ def create_user(session: Session, name: str, email: str, is_admin: bool = False)
 
 
 def issue_token(session: Session, user: User) -> str:
-    """Gera um novo token (invalida o anterior). O valor em claro só é retornado aqui."""
+    """Gera um novo token (invalida o anterior e os conectores OAuth). O valor em claro só é retornado aqui."""
+    from canaisdark.services import oauth
+
     token = TOKEN_PREFIX + secrets.token_urlsafe(32)
     user.token_hash = hash_token(token)
     session.add(user)
     session.commit()
+    if user.id is not None:  # rotacionar = suspeita de vazamento: derruba também os conectores
+        oauth.revoke_for_user(session, user.id)
     return token
 
 

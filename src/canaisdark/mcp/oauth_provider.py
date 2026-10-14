@@ -10,6 +10,7 @@ from mcp.server.auth.provider import (
     AccessToken,
     AuthorizationCode,
     AuthorizationParams,
+    IdentityAssertionParams,
     RefreshToken,
     RegistrationError,
     TokenError,
@@ -141,3 +142,8 @@ class StudioOAuthProvider:
     async def revoke_token(self, token: AccessToken | RefreshToken) -> None:
         with Session(get_engine()) as s:
             oauth.revoke_by_raw(s, token.token)
+
+    async def exchange_identity_assertion(
+        self, client: OAuthClientInformationFull, params: IdentityAssertionParams
+    ) -> OAuthToken:
+        raise TokenError("unsupported_grant_type", "Concessão não suportada")

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ic %}
+{% block title %}Permitir acesso — Estúdio de Canais Dark{% endblock %}
+{% block bare %}
+<div class="card login-card">
+  <div class="brand" style="padding-left:0"><span class="logo">{{ ic("film") }}</span> Estúdio de Canais Dark</div>
+  <h2>Permitir acesso?</h2>
+  <p><strong>{{ pending.client_name }}</strong> quer usar o Estúdio de Canais Dark como <strong>{{ user.name }}</strong>.</p>
+  <ul class="muted">
+    <li>Ver seus canais, vídeos e roteiros;</li>
+    <li>Escrever roteiros, prompts, timelines e metadados como <em>propostas</em> para você revisar.</li>
+  </ul>
+  <p class="help">Ele <strong>não</strong> aprova nada, não renderiza e não envia vídeos ao YouTube ou ao Drive. Você pode desconectar a qualquer momento em “Conectar Claude”.</p>
+  <form method="post" action="/oauth/consent">
+    <input type="hidden" name="req" value="{{ req }}">
+    <div class="form-actions">
+      <button name="decision" value="allow">{{ ic("check") }} Permitir</button>
+      <button name="decision" value="deny" class="secondary">Cancelar</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

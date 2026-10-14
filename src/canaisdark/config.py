@@ -65,6 +65,11 @@ def get_settings() -> Settings:
 DEFAULT_SECRET = "dev-insecure-change-me"
 
 
+def oauth_issuer(settings: Settings) -> str:
+    """Base pública do servidor OAuth/MCP (em dev sem PUBLIC_URL: localhost)."""
+    return settings.public_url.rstrip("/") or "http://localhost:8123"
+
+
 def public_host(settings: Settings) -> str:
     """Host (com porta, se houver) de PUBLIC_URL, ou string vazia."""
     from urllib.parse import urlparse

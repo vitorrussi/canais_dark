@@ -47,8 +47,18 @@ def web_user(request: Request, session: SessionDep) -> User:
     user = session.get(User, user_id) if user_id else None
     if user is None or not user.is_active:
         request.session.clear()
+        if request.method == "GET" and "hx-request" not in request.headers:
+            query = f"?{request.url.query}" if request.url.query else ""
+            request.session["next"] = f"{request.url.path}{query}"
         raise NotLoggedIn
     return user
+
+
+def safe_next(value: object) -> str:
+    """Destino pós-login: só caminhos internos (evita open redirect)."""
+    text = str(value or "")
+    ok = text.startswith("/") and not text.startswith(("//", "/login", "/\\"))
+    return text if ok else "/"
 
 
 WebUser = Annotated[User, Depends(web_user)]
