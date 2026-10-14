@@ -61,7 +61,11 @@ say "Atualizando a versão para $ver"
 run sed -i -E "0,/^version = \".*\"/s//version = \"$ver\"/" pyproject.toml
 run uv lock
 run git add pyproject.toml uv.lock
-run git commit -m "chore(release): $tag"
+if [ "$dry" = 1 ] || ! git diff --cached --quiet; then
+  run git commit -m "chore(release): $tag"
+else
+  echo "pyproject.toml já está em $ver (nada a commitar)"
+fi
 
 say "Mesclando dev em main e criando a tag $tag"
 run git checkout main
