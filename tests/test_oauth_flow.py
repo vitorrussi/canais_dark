@@ -73,7 +73,8 @@ async def _login_and_allow(c: httpx.AsyncClient, token: str, consent_url: str) -
     r = await c.post("/login", data={"token": token})
     assert r.status_code == 303 and r.headers["location"].startswith("/oauth/consent?req=")
     page = await c.get(r.headers["location"])
-    assert page.status_code == 200 and "Permitir" in page.text and "Claude" in page.text
+    assert page.status_code == 200 and 'name="decision"' in page.text and "Claude" in page.text
+    assert "Teste" in page.text and "Pendências do Claude" not in page.text  # tela isolada
     req = parse_qs(urlparse(r.headers["location"]).query)["req"][0]
     r = await c.post("/oauth/consent", data={"req": req, "decision": "allow"})
     assert r.status_code == 303

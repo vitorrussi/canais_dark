@@ -27,7 +27,8 @@ def consent_page(request: Request, user: WebUser, session: SessionDep, req: str 
     pending = oauth.get_pending(session, req)
     if pending is None:
         return _expired(request, user)
-    return render(request, "oauth_consent.html", user, pending=pending, req=req)
+    # user=None: layout "sem menu" (tela isolada); o nome da pessoa vai em `person`
+    return render(request, "oauth_consent.html", None, pending=pending, req=req, person=user)
 
 
 @router.post("/oauth/consent")
