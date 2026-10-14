@@ -71,7 +71,9 @@
     const cp = e.target.closest("[data-copy]");
     if (cp) {
       const src = cp.dataset.copy.startsWith("#") ? document.querySelector(cp.dataset.copy) : null;
-      const text = src ? (src.value !== undefined && src.tagName !== "PRE" ? src.value : src.innerText) : cp.dataset.copy;
+      // innerText é "" em elementos ocultos (ex.: dentro de <details> fechado); textContent não depende disso
+      const text = src ? (src.value !== undefined && src.tagName !== "PRE" ? src.value : (src.innerText || src.textContent)) : cp.dataset.copy;
+      if (!text || !text.trim()) { toast("Não há texto para copiar", "error"); return; }
       try {
         if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(text);
         else { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }

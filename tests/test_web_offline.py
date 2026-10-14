@@ -76,3 +76,11 @@ def test_cards_link_to_offline_mode(ctx: dict[str, object]) -> None:
     c.get(f"/videos/{vid}/claude/generate_metadata")  # cria a tarefa aberta de metadados
     page = c.get(f"/videos/{vid}/youtube/card")
     assert f"/videos/{vid}/claude/generate_metadata" in page.text
+
+
+def test_copy_button_reads_a_hidden_textarea_with_the_full_prompt(ctx: dict[str, object]) -> None:
+    c: TestClient = ctx["c"]  # type: ignore[assignment]
+    page = c.get(f"/videos/{ctx['video_id']}/claude/generate_script").text
+    assert 'data-copy="#offline-prompt-src"' in page
+    area = page.split('id="offline-prompt-src"')[1].split("</textarea>")[0]
+    assert "Formato da resposta" in area and "Canal Teste" in area
