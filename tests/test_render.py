@@ -150,6 +150,29 @@ def test_real_render_cache_and_streams(
 
 
 @needs_ffmpeg
+def test_real_render_with_relative_data_dir(
+    session: Session,
+    user_token: tuple[User, str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """DATA_DIR relativo (./data/files, o padrão do .env) quebrava a lista do concat."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(get_settings(), "data_dir", Path("data/files"))
+    ids = setup_video(session, user_token[0], [2.0, 2.0], real_audio=True)
+    video = videos.get_video(session, ids["video_id"])
+    tl = timeline.build_default(session, video)
+    out_dir = render.render_dir(session, video)
+    res = render.execute(render.plan(session, video, tl, TINY), out_dir, "rel.mp4", workers=2)
+    assert res.path.exists() and res.segments_total == 2
+
+
+def test_concat_quote_is_absolute_and_escapes_quotes(tmp_path: Path) -> None:
+    out = render._concat_quote(tmp_path / "it's.mp4")
+    assert out.startswith("/") and "'\\''" in out
+
+
+@needs_ffmpeg
 def test_real_render_with_subtitles_texts_and_music(
     session: Session, user_token: tuple[User, str], cfg: Path
 ) -> None:

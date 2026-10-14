@@ -391,6 +391,11 @@ def overlay_ass(
     return "\n".join(lines) + "\n"
 
 
+def _concat_quote(path: Path | str) -> str:
+    """Caminho absoluto, com aspas simples escapadas, para a lista do demuxer concat."""
+    return str(Path(path).resolve()).replace("'", "'\\''")
+
+
 def _filter_path(path: Path) -> str:
     """Caminho dentro de um filtro ffmpeg (escapa `:`, `'` e `\\`)."""
     return str(path).replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
@@ -715,7 +720,9 @@ def execute(
     finally:
         pool.shutdown(wait=True, cancel_futures=True)
     listing = out_dir / f"{out_name}.segments.txt"
-    listing.write_text("".join(f"file '{p}'\n" for p in paths), encoding="utf-8")
+    # O demuxer concat resolve caminhos RELATIVOS a partir da pasta da lista, não do cwd:
+    # com DATA_DIR relativo (./data/files) o caminho dobrava. Sempre absoluto.
+    listing.write_text("".join(f"file '{_concat_quote(p)}'\n" for p in paths), encoding="utf-8")
     overlay_file: Path | None = None
     if plan_.overlay_texts:
         overlay_file = out_dir / f"{out_name}.overlay.ass"
