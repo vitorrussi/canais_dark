@@ -14,6 +14,7 @@ from canaisdark.db import get_session
 from canaisdark.logging import configure_logging
 from canaisdark.mcp.oauth_routes import oauth_routes
 from canaisdark.mcp.server import build_mcp_app, mcp
+from canaisdark.services import version
 from canaisdark.services.errors import Conflict, DomainError, Forbidden, InvalidState, NotFound
 from canaisdark.web.admin import router as web_admin_router
 from canaisdark.web.common import BASE as WEB_BASE
@@ -64,7 +65,7 @@ def create_app() -> FastAPI:
     @app.get("/health")
     def health(session: Annotated[Session, Depends(get_session)]) -> dict[str, str]:
         session.exec(text("SELECT 1"))  # type: ignore[call-overload]
-        return {"status": "ok", "db": "ok"}
+        return {"status": "ok", "db": "ok", "version": version.current().version}
 
     @app.exception_handler(DomainError)
     async def domain_error(request: Request, exc: DomainError) -> Response:
