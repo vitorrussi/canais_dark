@@ -233,3 +233,26 @@ def test_user_prompt_for_edit_video_mentions_package() -> None:
     text = task_context.build_user_prompt(5, "tema", "Canal", "edit_video")
     assert "get_edit_package(5)" in text and "upload.url" in text
     assert "save_script" in task_context.build_user_prompt(5, "t", "C", "generate_script")
+
+
+@needs_ffmpeg
+def test_failed_task_of_other_type_does_not_leak_into_script_card(
+    client: TestClient, session: Session, user_token: tuple[User, str], ids: dict[str, int]
+) -> None:
+    from canaisdark.models import TaskType
+    from canaisdark.services import tasks
+
+    vid = ids["video_id"]
+    user = user_token[0]
+    edit = tasks.create_task(session, vid, TaskType.EDIT_VIDEO, "x", user)
+    claimed = tasks.claim_next(session, user, TaskType.EDIT_VIDEO.value, vid)
+    assert claimed and claimed.id == edit.id and edit.id
+    tasks.fail_task(session, edit.id, user, "get_edit_package indisponível NO-VAZAMENTO")
+    tasks.create_task(session, vid, TaskType.SELECT_SHORTS, "3 trechos", user)
+    client.post("/login", data={"token": user_token[1]})
+    page = client.get(f"/videos/{vid}").text
+    script_card = page.split("Cenas, prompts e imagens")[0]
+    assert "Última tentativa falhou" not in script_card
+    assert "select_shorts" not in script_card.split("Narração")[0]
+    assert "A última tentativa de edição livre falhou" in page
+    assert page.count("NO-VAZAMENTO") == 1

@@ -69,6 +69,7 @@ Pedido: {{ r.edit_task.instructions }}{% endif %}</div>
         <button type="button" data-copy="#edit-claude-prompt">{{ ic("copy") }} Copiar prompt</button>
         <form method="post" action="/tasks/{{ r.edit_task.id }}/cancel" style="display:inline"><button class="secondary sm" data-confirm="Cancelar esta tarefa?">Cancelar tarefa</button></form></div>
       {% else %}
+      {% if r.edit_failed %}<div class="alert">A última tentativa de edição livre falhou: {{ r.edit_failed.error }}</div>{% endif %}
       <form method="post" action="/videos/{{ v.id }}/edit/request">
         <div class="field"><label for="edit-instr">O que você quer</label>
           <textarea id="edit-instr" name="instructions" rows="3" placeholder="Ex.: faixa azul-marinho de capítulo no início, selo com o ano quando a data for citada, zoom lento nas cenas"></textarea>

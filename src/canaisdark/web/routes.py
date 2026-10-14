@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import ValidationError
 from sqlmodel import Session, select
 
-from canaisdark.models import Channel, User, VideoStatus
+from canaisdark.models import Channel, TaskType, User, VideoStatus
 from canaisdark.schemas.channel import ChannelCreate, ChannelUpdate
 from canaisdark.schemas.video import VideoCreate, VideoUpdate
 from canaisdark.services import (
@@ -328,8 +328,14 @@ def video_page(
     selected = next((x for x in versions if x.number == v), None) if v else None
     if selected is None and versions:
         selected = next((x for x in versions if x.approved), versions[0])
-    open_tasks = tasks.list_tasks(session, video_id=video_id, open_only=True)
-    failed = [t for t in tasks.list_tasks(session, video_id=video_id, status="failed")][-1:]
+    # O cartão do roteiro só mostra tarefas de roteiro; as demais aparecem nos cartões das suas etapas.
+    script_tasks = [
+        t
+        for t in tasks.list_tasks(session, video_id=video_id)
+        if t.type == TaskType.GENERATE_SCRIPT.value
+    ]
+    open_tasks = [t for t in script_tasks if t.status in tasks.OPEN_STATUSES]
+    failed = [t for t in script_tasks[-1:] if t.status == "failed"]
     claimers = {u.id: u.name for u in session.exec(select(User))}
     channel = channels.get_channel(session, video.channel_id)
     claude_prompt = (

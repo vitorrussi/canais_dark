@@ -89,6 +89,12 @@ def render_ctx(session: Session, video: Video) -> dict[str, Any]:
             col(ClaudeTask.status).in_(["pending", "in_progress"]),
         )
     ).first()
+    last_edit = session.exec(
+        select(ClaudeTask)
+        .where(ClaudeTask.video_id == video.id, ClaudeTask.type == TaskType.EDIT_VIDEO.value)
+        .order_by(col(ClaudeTask.id).desc())
+    ).first()
+    edit_failed = last_edit if last_edit and last_edit.status == "failed" else None
     claude_prompt = (
         task_context.build_user_prompt(
             video.id,
@@ -102,6 +108,7 @@ def render_ctx(session: Session, video: Video) -> dict[str, Any]:
     return {
         "open_task": open_task,
         "edit_task": edit_task,
+        "edit_failed": edit_failed,
         "claude_prompt": claude_prompt,
         "video": video,
         "ffmpeg": _ffmpeg(),
