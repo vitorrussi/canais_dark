@@ -61,6 +61,14 @@ HOW_TO: dict[str, str] = {
         "tags, thumbnail_ideas, task_id) e depois complete_task(task_id, resumo). A pessoa revisa e aplica no site; "
         "nada é enviado ao YouTube por aqui."
     ),
+    TaskType.EDIT_VIDEO.value: (
+        "Edição LIVRE do vídeo no seu sandbox (claude.ai com execução de código e rede liberada). Chame "
+        "get_edit_package(video_id) e siga o `how_to` do manifesto: baixe os arquivos pelos links assinados, "
+        "edite com ffmpeg/Python (movimento de câmera, transições, faixas de capítulo, selos de data, textos "
+        "animados), mantenha a narração e a duração, e envie o MP4 em partes para `upload.url`. A resposta da "
+        "última parte confirma o registro. Em seguida complete_task(task_id, resumo). Não aprove nem envie ao "
+        "YouTube/Drive: a pessoa revisa no site. Siga o pedido em `instructions`."
+    ),
 }
 
 

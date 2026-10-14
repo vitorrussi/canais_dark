@@ -82,6 +82,13 @@ def render_ctx(session: Session, video: Video) -> dict[str, Any]:
             col(ClaudeTask.status).in_(["pending", "in_progress"]),
         )
     ).first()
+    edit_task = session.exec(
+        select(ClaudeTask).where(
+            ClaudeTask.video_id == video.id,
+            ClaudeTask.type == TaskType.EDIT_VIDEO.value,
+            col(ClaudeTask.status).in_(["pending", "in_progress"]),
+        )
+    ).first()
     claude_prompt = (
         task_context.build_user_prompt(
             video.id,
@@ -94,6 +101,7 @@ def render_ctx(session: Session, video: Video) -> dict[str, Any]:
     )
     return {
         "open_task": open_task,
+        "edit_task": edit_task,
         "claude_prompt": claude_prompt,
         "video": video,
         "ffmpeg": _ffmpeg(),
@@ -130,6 +138,8 @@ def _safe_hash(session: Session, video: Video) -> str | None:
 
 
 def _fresh(session: Session, video: Video, asset: Asset | None, tl_asset: Asset | None) -> bool:
+    if asset is not None and asset.meta.get("external"):
+        return asset.meta.get("inputs_hash") == _safe_hash(session, video)
     if asset is None or tl_asset is None:
         return False
     return asset.meta.get("timeline_asset_id") == tl_asset.id and asset.meta.get(
@@ -216,6 +226,25 @@ def timeline_request(
     except DomainError as e:
         return back(request, f"/videos/{video_id}", error=e)
     return back(request, f"/videos/{video_id}", ok="Tarefa de timeline enfileirada para o Claude.")
+
+
+@router.post("/videos/{video_id}/edit/request")
+def edit_request(
+    request: Request,
+    user: WebUser,
+    session: SessionDep,
+    video_id: int,
+    instructions: Annotated[str, Form()] = "",
+) -> Response:
+    """Pede a edição livre ao Claude (claude.ai com conector); o render nativo continua disponível."""
+    try:
+        timeline.collect_timing(session, videos.get_video(session, video_id))
+        tasks.create_task(session, video_id, TaskType.EDIT_VIDEO, instructions.strip(), user)
+    except DomainError as e:
+        return back(request, f"/videos/{video_id}", error=e)
+    return back(
+        request, f"/videos/{video_id}", ok="Pedido de edição livre enfileirado para o Claude."
+    )
 
 
 @router.post("/videos/{video_id}/timeline/auto")

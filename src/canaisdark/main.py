@@ -19,6 +19,7 @@ from canaisdark.web.admin import router as web_admin_router
 from canaisdark.web.common import BASE as WEB_BASE
 from canaisdark.web.common import NotLoggedIn, templates
 from canaisdark.web.drive import router as web_drive_router
+from canaisdark.web.edit_package import router as web_edit_package_router
 from canaisdark.web.narration import router as web_narration_router
 from canaisdark.web.oauth import router as web_oauth_router
 from canaisdark.web.offline import router as web_offline_router
@@ -96,6 +97,7 @@ def create_app() -> FastAPI:
     app.include_router(web_voices_router)
     app.include_router(web_admin_router)
     app.include_router(web_oauth_router)
+    app.include_router(web_edit_package_router)
     app.router.routes.extend(oauth_routes())
     # Último: o app MCP atende apenas /mcp; demais caminhos caem em 404.
     app.mount("/", build_mcp_app())

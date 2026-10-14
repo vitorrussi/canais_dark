@@ -12,6 +12,7 @@ class TaskType(StrEnum):
     GENERATE_TIMELINE = "generate_timeline"
     GENERATE_METADATA = "generate_metadata"
     SELECT_SHORTS = "select_shorts"
+    EDIT_VIDEO = "edit_video"
 
 
 class TaskStatus(StrEnum):

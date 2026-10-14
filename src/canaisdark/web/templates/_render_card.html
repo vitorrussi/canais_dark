@@ -58,6 +58,38 @@
       <button class="secondary sm">Enfileirar</button></form></details>
   {% endif %}
 
+  <details class="claude-fold" style="margin-bottom:.8rem" {{ "open" if r.edit_task }}><summary class="btn secondary sm">{{ ic("sparkles") }} Edição livre pelo Claude (claude.ai){% if r.edit_task %} · em andamento{% endif %}</summary>
+    <div style="margin-top:.6rem">
+      <p class="muted">O Claude baixa as imagens e a narração no ambiente dele, edita com efeitos livres (faixas, selos, textos animados) e devolve o MP4 pronto. Precisa do conector do Canais Dark e da rede liberada na execução de código do claude.ai (<a href="/connect">como conectar</a>).</p>
+      {% if r.edit_task %}
+      <div class="claude-box accent"><p class="muted">{{ "Aguardando o Claude." if r.edit_task.status == "pending" else "Em andamento." }} Cole no chat do claude.ai:</p>
+        <div id="edit-claude-prompt" class="promptbox">Use o conector do Canais Dark: chame claim_next_task(type="edit_video", video_id={{ v.id }}), leia o how_to e execute a tarefa chamando get_edit_package({{ v.id }}). Edite o vídeo no seu ambiente e envie o MP4 para a upload.url do pacote.{% if r.edit_task.instructions %}
+
+Pedido: {{ r.edit_task.instructions }}{% endif %}</div>
+        <button type="button" data-copy="#edit-claude-prompt">{{ ic("copy") }} Copiar prompt</button>
+        <form method="post" action="/tasks/{{ r.edit_task.id }}/cancel" style="display:inline"><button class="secondary sm" data-confirm="Cancelar esta tarefa?">Cancelar tarefa</button></form></div>
+      {% else %}
+      <form method="post" action="/videos/{{ v.id }}/edit/request">
+        <div class="field"><label for="edit-instr">O que você quer</label>
+          <textarea id="edit-instr" name="instructions" rows="3" placeholder="Ex.: faixa azul-marinho de capítulo no início, selo com o ano quando a data for citada, zoom lento nas cenas"></textarea>
+          <div class="help">Descreva o visual e os efeitos. O render nativo (botões acima) continua disponível.</div></div>
+        <button class="secondary sm">Pedir ao Claude</button>
+      </form>
+      {% endif %}
+      <hr>
+      <p class="muted">Sem rede no sandbox? Faça manualmente: baixe o pacote, anexe no chat do claude.ai, e envie aqui o MP4 que ele devolver.</p>
+      <div class="stack-inline">
+        <a class="btn secondary sm" href="/videos/{{ v.id }}/edit-package.zip" hx-boost="false">{{ ic("download") }} Baixar pacote (.zip)</a>
+      </div>
+      <form id="external-render-form" data-video="{{ v.id }}" class="row compact" style="margin-top:.6rem">
+        <input type="file" name="file" accept="video/mp4,.mp4" required style="max-width:100%">
+        <button class="secondary sm">{{ ic("upload") }} Usar vídeo editado externamente</button>
+        <span class="muted" id="external-render-status"></span>
+      </form>
+      <script src="/static/external_render.js?v={{ static_v("external_render.js") }}"></script>
+    </div>
+  </details>
+
   <form method="post" action="/videos/{{ v.id }}/render/start">
     <div class="field"><label for="rnd-subs">Legendas</label>
       <select id="rnd-subs" name="subtitles"><option value="default">Como na timeline ({{ "ligadas" if r.tl and r.tl.subtitles.enabled else "desligadas" }})</option><option value="on">Ligar neste render</option><option value="off">Desligar neste render</option></select></div>

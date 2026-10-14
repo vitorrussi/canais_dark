@@ -21,6 +21,7 @@ from canaisdark.schemas.shorts import ShortIn
 from canaisdark.schemas.timeline import Timeline
 from canaisdark.services import (
     channels,
+    edit_package,
     jobs,
     metadata,
     render,
@@ -366,6 +367,20 @@ def start_render(
     with _db() as (s, user):
         job = render.start(s, video_id, user, quality, subtitles, allow_missing)
         return {"job_id": job.id, "status": job.status, "quality": quality}
+
+
+@mcp.tool()
+@safe
+def get_edit_package(video_id: int, quality: str = "720p") -> dict[str, Any]:
+    """Pacote para EDIÇÃO LIVRE no seu sandbox (execução de código com rede liberada para o domínio do servidor).
+
+    Devolve o manifesto: cenas com tempos e palavras, alvo de render (resolução/fps/duração), links assinados
+    (3 h) para a narração, imagens, trilha e legendas (e um .zip com tudo) e a `upload.url` para devolver o MP4
+    em partes de até 90 MB. Siga o campo `how_to`. Quando o MP4 chega, o servidor valida e registra como render
+    final; a aprovação e o envio ao YouTube continuam com a pessoa. quality: "720p" (padrão) ou "1080p".
+    Exige roteiro aprovado e narração com tempos."""
+    with _db() as (s, user):
+        return edit_package.build_manifest(s, video_id, user, quality)
 
 
 # ----- Shorts (etapa OPCIONAL) -----
