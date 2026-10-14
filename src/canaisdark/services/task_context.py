@@ -205,11 +205,17 @@ def build_user_prompt(video_id: int, video_topic: str, channel_name: str, task_t
     """Texto pronto para o usuário colar no Claude Code (com o MCP `canais` conectado)."""
     topic = " ".join(video_topic.split())
     topic = topic if len(topic) <= 200 else topic[:197] + "..."
+    step2 = (
+        f"2. Chame get_edit_package({video_id}), baixe os arquivos pelos links no sandbox, edite o vídeo "
+        "e envie o MP4 para a upload.url do pacote (em partes de 90 MB).\n"
+        if task_type == TaskType.EDIT_VIDEO.value
+        else "2. Execute o trabalho e salve com a ferramenta de escrita indicada (ex.: save_script).\n"
+    )
     return (
         f"Use o MCP `canais` para processar a tarefa `{task_type}` do vídeo #{video_id} "
         f'(canal "{channel_name}"; tema: {topic}).\n'
         f"1. Chame claim_next_task(video_id={video_id}) e leia o contexto e o campo how_to.\n"
-        "2. Execute o trabalho e salve com a ferramenta de escrita indicada (ex.: save_script).\n"
-        "3. Chame complete_task com um resumo curto (ou fail_task se não for possível).\n"
+        + step2
+        + "3. Chame complete_task com um resumo curto (ou fail_task se não for possível).\n"
         "Não aprove nada: a aprovação é feita no site."
     )

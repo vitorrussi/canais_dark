@@ -225,3 +225,11 @@ def test_edit_video_not_in_offline_mode() -> None:
     from canaisdark.services import offline_tasks
 
     assert "edit_video" not in offline_tasks.SUPPORTED
+
+
+def test_user_prompt_for_edit_video_mentions_package() -> None:
+    from canaisdark.services import task_context
+
+    text = task_context.build_user_prompt(5, "tema", "Canal", "edit_video")
+    assert "get_edit_package(5)" in text and "upload.url" in text
+    assert "save_script" in task_context.build_user_prompt(5, "t", "C", "generate_script")
