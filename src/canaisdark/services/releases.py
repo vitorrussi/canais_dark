@@ -36,6 +36,15 @@ def _inline(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def rich(text: str) -> str:
+    """HTML seguro com **negrito** e `código` (o resto é escapado)."""
+    import html
+
+    out = html.escape(text, quote=False)
+    out = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", out)
+    return re.sub(r"`([^`]+)`", r"<code>\1</code>", out)
+
+
 def parse(text: str) -> Release:
     """Levanta ValueError se o front-matter estiver incompleto ou a versão for inválida."""
     match = re.match(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", text.strip(), flags=re.DOTALL)

@@ -13,7 +13,7 @@
   <header><h3>{{ latest.title }}</h3><span class="badge done">v{{ latest.version }} · {{ latest.date }}</span></header>
   {% for name, items in latest.sections %}
   <h4 class="subhead">{{ ic(icons.get(name, "file")) }} {{ name }}</h4>
-  <ul class="release-list">{% for it in items %}<li>{{ it }}</li>{% endfor %}</ul>
+  <ul class="release-list">{% for it in items %}<li>{{ it|rich }}</li>{% endfor %}</ul>
   {% endfor %}
 </div>
 
@@ -24,7 +24,7 @@
   <summary style="cursor:pointer"><strong>v{{ r.version }}</strong> · {{ r.title }} <span class="muted">· {{ r.date }}</span></summary>
   {% for name, items in r.sections %}
   <h4 class="subhead">{{ ic(icons.get(name, "file")) }} {{ name }}</h4>
-  <ul class="release-list">{% for it in items %}<li>{{ it }}</li>{% endfor %}</ul>
+  <ul class="release-list">{% for it in items %}<li>{{ it|rich }}</li>{% endfor %}</ul>
   {% endfor %}
 </details>
 {% endfor %}

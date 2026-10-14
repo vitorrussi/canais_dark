@@ -98,3 +98,9 @@ def test_novidades_without_notes_is_friendly(
 
 def test_novidades_requires_login(client: TestClient) -> None:
     assert client.get("/novidades", follow_redirects=False).status_code == 303
+
+
+def test_rich_formats_bold_and_code_and_escapes_html() -> None:
+    out = releases.rich("**Novo:** use `make serve` <script>alert(1)</script>")
+    assert "<strong>Novo:</strong>" in out and "<code>make serve</code>" in out
+    assert "<script>" not in out and "&lt;script&gt;" in out

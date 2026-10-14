@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup
 from pydantic import ValidationError
 from sqlmodel import Session
 
@@ -42,6 +43,15 @@ def _version_label() -> str:
 templates.env.globals["open_task_count"] = _open_task_count
 templates.env.globals["unseen_release"] = _unseen_release
 templates.env.globals["version_label"] = _version_label
+
+
+def _rich(text: str) -> Markup:
+    from canaisdark.services import releases
+
+    return Markup(releases.rich(text))  # noqa: S704 — escapa tudo e só reintroduz <strong>/<code>
+
+
+templates.env.filters["rich"] = _rich
 SessionDep = Annotated[Session, Depends(get_session)]
 
 STATE_LABELS = {
