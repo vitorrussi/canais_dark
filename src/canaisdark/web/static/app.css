@@ -229,3 +229,7 @@ details.pipeline-card > .progress { margin-top: .6rem; }
 .claude-box.accent { border-color: var(--accent); }
 details.claude-fold { margin-bottom: 1rem; } details.claude-fold[open] > summary { margin-bottom: .6rem; }
 details.claude-fold > .claude-box { margin-bottom: 0; }
+
+/* Novidades (notas de versão) */
+.release-list { margin: .25rem 0 1rem 1.1rem; padding: 0; }
+.release-list li { margin: .3rem 0; line-height: 1.5; }

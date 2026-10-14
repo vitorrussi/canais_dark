@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup
 from pydantic import ValidationError
 from sqlmodel import Session
 
@@ -23,7 +24,34 @@ def _open_task_count() -> int:
         return len(tasks.list_tasks(session, open_only=True))
 
 
+def _unseen_release(user: User | None) -> str:
+    """Versão das novidades que a pessoa ainda não abriu ('' se não há ou já viu)."""
+    from canaisdark.services import releases
+
+    newest = releases.latest()
+    if user is None or newest is None or user.last_seen_version == newest.version:
+        return ""
+    return newest.version
+
+
+def _version_label() -> str:
+    from canaisdark.services import version
+
+    return version.current().label
+
+
 templates.env.globals["open_task_count"] = _open_task_count
+templates.env.globals["unseen_release"] = _unseen_release
+templates.env.globals["version_label"] = _version_label
+
+
+def _rich(text: str) -> Markup:
+    from canaisdark.services import releases
+
+    return Markup(releases.rich(text))  # noqa: S704 — escapa tudo e só reintroduz <strong>/<code>
+
+
+templates.env.filters["rich"] = _rich
 SessionDep = Annotated[Session, Depends(get_session)]
 
 STATE_LABELS = {

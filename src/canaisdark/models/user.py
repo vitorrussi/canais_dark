@@ -10,4 +10,5 @@ class User(SQLModel, table=True):
     token_hash: str | None = Field(default=None, index=True)
     is_active: bool = True
     is_admin: bool = False
+    last_seen_version: str = ""  # última versão cujas novidades a pessoa abriu
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

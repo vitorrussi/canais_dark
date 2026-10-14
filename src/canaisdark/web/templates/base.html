@@ -25,10 +25,13 @@
       <a href="/tasks" class="{{ 'active' if nav == 'tasks' }}">{{ ic("inbox") }} Pendências do Claude {% if n %}<span class="count">{{ n }}</span>{% endif %}</a>
       <a href="/jobs" class="{{ 'active' if nav == 'jobs' }}">{{ ic("clock") }} Jobs</a>
       <a href="/connect" class="{{ 'active' if nav == 'connect' }}">{{ ic("plug") }} Conectar Claude</a>
+      {% set new_ver = unseen_release(user) %}
+      <a href="/novidades" class="{{ 'active' if nav == 'releases' }}">{{ ic("sparkles") }} Novidades {% if new_ver %}<span class="count" title="Versão {{ new_ver }}">Novo</span>{% endif %}</a>
       {% if user.is_admin %}<a href="/admin/users" class="{{ 'active' if nav == 'admin' }}">{{ ic("users") }} Usuários</a>{% endif %}
     </nav>
     <div class="spacer"></div>
     <p class="muted" style="font-size:.78rem;padding:0 .7rem" title="g c = canais · g p = pendências · g k = conectar · / = buscar · n = novo · ? = ajuda">Atalhos: <kbd>g</kbd> <kbd>c</kbd>/<kbd>p</kbd>/<kbd>k</kbd> · <kbd>/</kbd> · <kbd>n</kbd> · <kbd>?</kbd></p>
+    <p class="muted" style="font-size:.78rem;padding:0 .7rem"><a href="/novidades" style="color:inherit">{{ version_label() }}</a></p>
     <div class="userbox">
       <span class="avatar">{{ user.name[:1]|upper }}</span><span>{{ user.name }}{% if user.is_admin %} <small class="muted">(admin)</small>{% endif %}</span>
       <form method="post" action="/logout"><button class="ghost icon" title="Sair" aria-label="Sair">{{ ic("logout") }}</button></form>

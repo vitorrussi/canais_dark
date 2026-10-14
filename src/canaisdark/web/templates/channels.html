@@ -7,6 +7,12 @@
   <div><h1>Canais</h1><p class="muted">Cada canal tem sua voz, estilo visual e tom de roteiro próprios.</p></div>
   <div class="actions"><a class="btn ghost" href="/?archived={{ 0 if show_archived else 1 }}">{{ "Ocultar arquivados" if show_archived else "Mostrar arquivados" }}</a><a class="btn secondary" href="/import">{{ ic("upload") }} Importar</a><a class="btn" href="/channels/new" data-new>{{ ic("plus") }} Novo canal</a></div>
 </div>
+{% set new_ver = unseen_release(user) %}
+{% if new_ver %}
+<div class="card accent" style="margin-bottom:1.25rem"><div class="list-row" style="border:0;padding:0">
+  <div class="grow"><span class="title">{{ ic("sparkles") }} Novidades na versão {{ new_ver }}</span><small>Veja o que mudou no sistema.</small></div>
+  <a class="btn secondary sm" href="/novidades">Ver novidades</a></div></div>
+{% endif %}
 {% if attention %}
 <div class="card accent" style="margin-bottom:1.25rem">
   <header><h3>{{ ic("alert") }} Precisa da sua atenção</h3></header>

@@ -21,6 +21,9 @@
 `tests/conftest.py` fornece `session` (SQLite temporário), `client` (TestClient) e `user_token`.
 Integrações externas são sempre mockadas; nenhum teste usa rede.
 
+## Branches e versões
+Trabalhe em `dev`; `main` só recebe releases (`deploy/release.sh`). Ver `docs/releases.md`.
+
 ## Commits
 Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`), pequenos e com testes verdes.
 Segredos só em `.env` (ignorado pelo git).
