@@ -14,6 +14,14 @@
   <button type="button" data-copy="#token-box">{{ ic("copy") }} Copiar token</button>
 </div>
 {% endif %}
+{% if access_link %}
+<div class="card accent" style="margin-bottom:1rem">
+  <header><h3>Link de acesso de {{ access_link[0].name }}</h3></header>
+  <div class="alert" style="border-color:var(--warn);color:var(--warn);background:transparent">Quem tiver este link entra como {{ access_link[0].name }} por 7 dias. Envie por um canal privado. Gerar um novo token desta pessoa invalida o link.</div>
+  <div id="link-box" class="promptbox">{{ access_link[1] }}</div>
+  <button type="button" data-copy="#link-box">{{ ic("copy") }} Copiar link</button>
+</div>
+{% endif %}
 {% if error %}<div class="alert">{{ error }}</div>{% endif %}
 
 <div class="layout-2">
@@ -27,6 +35,7 @@
       <span class="badge {{ 'done' if u.is_active else 'failed' }}">{{ "ativo" if u.is_active else "desativado" }}</span>
       <div class="stack-inline">
         {% if u.is_active %}
+        <form method="post" action="/admin/users/{{ u.id }}/invite"><button class="secondary sm">Link de acesso</button></form>
         <form method="post" action="/admin/users/{{ u.id }}/token"><button class="secondary sm" data-confirm="Gerar novo token para {{ u.name }}? O token atual deixa de valer.">Novo token</button></form>
         {% endif %}
         <form method="post" action="/admin/users/{{ u.id }}/admin"><input type="hidden" name="make_admin" value="{{ 0 if u.is_admin else 1 }}"><button class="ghost sm">{{ "Remover admin" if u.is_admin else "Tornar admin" }}</button></form>

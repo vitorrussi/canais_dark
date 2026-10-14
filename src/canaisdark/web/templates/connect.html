@@ -6,10 +6,32 @@
 <div class="page-head"><div><h1>Conectar o Claude</h1>
   <p class="muted">O Claude Code acessa este estúdio pelo servidor MCP e executa as tarefas que o site cria. Cada pessoa usa o seu próprio token.</p></div></div>
 
+<div class="card accent" style="margin-bottom:1rem">
+  <header><h3>{{ ic("plug") }} Jeito mais simples: Claude Desktop (sem terminal)</h3></header>
+  <ol>
+    <li>No Claude Desktop (ou em claude.ai) abra <strong>Configurações → Conectores</strong> e clique em <strong>Adicionar conector personalizado</strong>.</li>
+    <li>Nome: <code>Estúdio de Canais Dark</code>. Endereço: <span id="mcp-url" class="promptbox" style="display:inline-block;padding:.1rem .5rem">{{ mcp_url }}</span>
+      <button type="button" class="secondary sm" data-copy="#mcp-url">{{ ic("copy") }} Copiar endereço</button></li>
+    <li>Uma janela abre pedindo para permitir o acesso: clique em <strong>Permitir</strong>. Se pedir login, use o seu link de acesso.</li>
+    <li>Pronto: converse com o Claude e peça, por exemplo, <em>“processe as tarefas pendentes do Estúdio de Canais Dark”</em>.</li>
+  </ol>
+  <p class="help">Não consegue usar conectores? Em cada etapa do vídeo há o botão <strong>Sem conectar o Claude? Copiar/colar</strong>, que funciona em qualquer conversa do Claude.</p>
+  {% if grants %}
+  <h4 class="subhead" style="margin-top:1rem">Conectores autorizados</h4>
+  {% for g in grants %}
+  <div class="list-row">
+    <div class="grow"><span class="title">{{ g.client_name }}</span>
+      <small>autorizado em {{ g.created_at.strftime("%d/%m/%Y") }}{% if g.last_used_at %} · último uso {{ g.last_used_at.strftime("%d/%m/%Y %H:%M") }}{% endif %}</small></div>
+    <form method="post" action="/connectors/{{ g.grant_id }}/revoke"><button class="danger sm" data-confirm="Desconectar este conector? Ele perde o acesso imediatamente.">Desconectar</button></form>
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+
 <div class="layout-2">
 <div class="stack">
   <div class="card {{ 'accent' if token }}">
-    <header><h3>1. Seu token de API</h3></header>
+    <header><h3>Claude Code (terminal): 1. Seu token de API</h3></header>
     {% if token %}
     <div class="alert" style="border-color:var(--warn);color:var(--warn);background:transparent">Copie agora: este token <strong>não será mostrado de novo</strong>. O token anterior parou de funcionar.</div>
     <div id="token-box" class="promptbox">{{ token }}</div>

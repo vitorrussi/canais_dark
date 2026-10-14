@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 
-from canaisdark.services import users
+from canaisdark.services import oauth, users
 from canaisdark.web.common import SessionDep, WebUser, render
 
 router = APIRouter(include_in_schema=False)
@@ -23,7 +23,13 @@ def public_base_url(request: Request) -> str:
     return f"{scheme}://{host}"
 
 
-def _page(request: Request, user: WebUser, token: str | None = None, status: int = 200) -> Response:
+def _page(
+    request: Request,
+    user: WebUser,
+    session: SessionDep,
+    token: str | None = None,
+    status: int = 200,
+) -> Response:
     base = public_base_url(request)
     shown = token or "<SEU_TOKEN>"
     return render(
@@ -36,15 +42,16 @@ def _page(request: Request, user: WebUser, token: str | None = None, status: int
         token=token,
         command=f'claude mcp add --transport http canais {base}/mcp --header "Authorization: Bearer {shown}"',
         process_all_prompt=PROCESS_ALL_PROMPT,
+        grants=oauth.list_grants(session, user.id or 0),
     )
 
 
 @router.get("/connect", response_class=HTMLResponse)
-def connect_page(request: Request, user: WebUser) -> Response:
-    return _page(request, user)
+def connect_page(request: Request, user: WebUser, session: SessionDep) -> Response:
+    return _page(request, user, session)
 
 
 @router.post("/connect/token", response_class=HTMLResponse)
 def new_token(request: Request, user: WebUser, session: SessionDep) -> Response:
     """Gera um novo token (o anterior deixa de valer). O valor só é exibido nesta resposta."""
-    return _page(request, user, token=users.issue_token(session, user))
+    return _page(request, user, session, token=users.issue_token(session, user))

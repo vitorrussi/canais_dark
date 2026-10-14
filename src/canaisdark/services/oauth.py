@@ -47,7 +47,13 @@ def _find(session: Session, raw: str) -> OAuthToken | None:
 # ----- clientes -----
 
 
+MAX_CLIENTS = 300  # /register é público: limita o lixo que um visitante pode gravar
+
+
 def save_client(session: Session, client_id: str, info: dict[str, Any]) -> None:
+    total = len(session.exec(select(OAuthClient.id)).all())
+    if total >= MAX_CLIENTS:
+        raise LookupError("limite de clientes registrados atingido")
     session.add(OAuthClient(client_id=client_id, info=info))
     session.commit()
 
@@ -64,6 +70,7 @@ def create_pending(
     session: Session, client_id: str, scopes: list[str], data: dict[str, Any]
 ) -> str:
     """Guarda o pedido validado pelo SDK e devolve o id que vai na URL de consentimento."""
+    _purge_expired(session)
     raw = _new_secret("req_")
     session.add(
         OAuthToken(
@@ -133,6 +140,20 @@ def deny(session: Session, req: str) -> tuple[str, str | None] | None:
     session.add(row)
     session.commit()
     return str(row.data["redirect_uri"]), row.data.get("state")
+
+
+def _purge_expired(session: Session) -> None:
+    """Apaga pedidos/códigos/access vencidos há mais de 1 dia (refresh fica para o histórico)."""
+    cutoff = utcnow() - timedelta(days=1)
+    stale = session.exec(
+        select(OAuthToken).where(
+            col(OAuthToken.expires_at) < cutoff, col(OAuthToken.kind) != "refresh"
+        )
+    ).all()
+    for row in stale:
+        session.delete(row)
+    if stale:
+        session.commit()
 
 
 # ----- troca de código / refresh -----

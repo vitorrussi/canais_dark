@@ -234,3 +234,62 @@ async def test_deactivated_user_loses_connector(
         auth = {**H, "Authorization": f"Bearer {tok['access_token']}"}
         users.deactivate_user(session, user_token[0])
         assert (await c.post("/mcp", json=INIT, headers=auth)).status_code == 401
+
+
+async def test_access_link_logs_in_and_is_invalidated_by_rotation(
+    app: FastAPI, user_token: tuple[User, str], session: Session
+) -> None:
+    from canaisdark.services import invites
+
+    signed = invites.make_link_token(user_token[0])
+    async with app.router.lifespan_context(app):
+        async with _client(app) as c:
+            r = await c.get(f"/invite/{signed}")
+            assert r.status_code == 303 and r.headers["location"] == "/"
+            assert (await c.get("/connect")).status_code == 200  # sessão criada
+        users.issue_token(session, user_token[0])  # novo token invalida o link
+        async with _client(app) as c:
+            r = await c.get(f"/invite/{signed}")
+            assert r.status_code == 401 and "expirou" in r.text
+            assert (await c.get("/invite/lixo")).status_code == 401
+
+
+async def test_connect_page_lists_and_revokes_connectors(
+    app: FastAPI, user_token: tuple[User, str], session: Session
+) -> None:
+    async with app.router.lifespan_context(app), _client(app) as c:
+        await _full_flow(c, user_token[1])
+        page = await c.get("/connect")
+        assert "Conectores autorizados" in page.text and "Claude" in page.text
+        grant = oauth.list_grants(session, user_token[0].id or 0)[0]
+        r = await c.post(f"/connectors/{grant.grant_id}/revoke")
+        assert r.status_code == 303
+        assert oauth.list_grants(session, user_token[0].id or 0) == []
+
+
+async def test_registration_is_capped_and_expired_rows_are_purged(
+    session: Session, user_token: tuple[User, str]
+) -> None:
+    from datetime import timedelta
+
+    from canaisdark.models import OAuthToken
+    from canaisdark.models.channel import utcnow
+
+    session.add(
+        OAuthToken(
+            kind="pending",
+            token_hash="old",
+            client_id="c",
+            expires_at=utcnow() - timedelta(days=3),
+        )
+    )
+    session.commit()
+    oauth.create_pending(session, "c", [], {"redirect_uri": REDIRECT})
+    from sqlmodel import select
+
+    hashes = {t.token_hash for t in session.exec(select(OAuthToken)).all()}
+    assert "old" not in hashes
+    for i in range(oauth.MAX_CLIENTS):
+        oauth.save_client(session, f"id{i}", {})
+    with pytest.raises(LookupError):
+        oauth.save_client(session, "one-more", {})

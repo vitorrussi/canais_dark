@@ -5,8 +5,10 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, Response
 
+from canaisdark.config import get_settings, oauth_issuer
 from canaisdark.models import User
-from canaisdark.services import users
+from canaisdark.services import invites, users
+from canaisdark.services.errors import DomainError
 from canaisdark.services.users import UserError
 from canaisdark.web.common import AdminUser, SessionDep, back, render
 
@@ -20,6 +22,7 @@ def _page(
     status: int = 200,
     new_token: tuple[User, str] | None = None,
     error: str | None = None,
+    access_link: tuple[User, str] | None = None,
 ) -> Response:
     return render(
         request,
@@ -29,6 +32,7 @@ def _page(
         nav="admin",
         users_list=users.list_users(session),
         new_token=new_token,
+        access_link=access_link,
         error=error,
         crumbs=[("Canais", "/")],
     )
@@ -64,6 +68,19 @@ def rotate_token(request: Request, admin: AdminUser, session: SessionDep, user_i
     except UserError as e:
         return _page(request, admin, session, status=422, error=str(e))
     return _page(request, admin, session, new_token=(user, users.issue_token(session, user)))
+
+
+@router.post("/admin/users/{user_id}/invite", response_class=HTMLResponse)
+def access_link(request: Request, admin: AdminUser, session: SessionDep, user_id: int) -> Response:
+    try:
+        user = users.get_user(session, user_id)
+        signed = invites.make_link_token(user)
+    except (UserError, DomainError) as e:
+        return _page(request, admin, session, status=422, error=str(e))
+    base = oauth_issuer(get_settings())
+    if not get_settings().public_url:
+        base = f"{request.url.scheme}://{request.headers.get('host', request.url.netloc)}"
+    return _page(request, admin, session, access_link=(user, f"{base}/invite/{signed}"))
 
 
 @router.post("/admin/users/{user_id}/active")

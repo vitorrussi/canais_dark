@@ -353,3 +353,15 @@ def test_tts_number_fields_accept_decimals(logged: TestClient) -> None:
     html = logged.get("/channels/new").text
     # o atributo step não pode sair escapado (&#34;), senão o navegador só aceita inteiros
     assert 'step="0.05"' in html and "&#34;" not in html.split("tts_stability")[1][:400]
+
+
+def test_login_returns_to_requested_page(client: TestClient, user_token: tuple[User, str]) -> None:
+    r = client.get("/connect", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/login"
+    r = client.post("/login", data={"token": user_token[1]}, follow_redirects=False)
+    assert r.headers["location"] == "/connect"
+    client.post("/logout")
+    # destino externo nunca é aceito
+    r = client.get("/login")
+    r = client.post("/login", data={"token": user_token[1]}, follow_redirects=False)
+    assert r.headers["location"] == "/"

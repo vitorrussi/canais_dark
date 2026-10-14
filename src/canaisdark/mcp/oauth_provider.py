@@ -38,7 +38,10 @@ class StudioOAuthProvider:
         if not client_info.client_id:
             raise RegistrationError("invalid_client_metadata", "client_id ausente")
         with Session(get_engine()) as s:
-            oauth.save_client(s, client_info.client_id, client_info.model_dump(mode="json"))
+            try:
+                oauth.save_client(s, client_info.client_id, client_info.model_dump(mode="json"))
+            except LookupError as e:
+                raise RegistrationError("invalid_client_metadata", str(e)) from e
 
     async def authorize(
         self, client: OAuthClientInformationFull, params: AuthorizationParams
