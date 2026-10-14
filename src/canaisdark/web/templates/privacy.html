@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ic %}
+{% block title %}Privacidade — Estúdio de Canais Dark{% endblock %}
+{% block bare %}
+<div class="card login-card" style="max-width:720px">
+  <div class="brand" style="padding-left:0"><span class="logo">{{ ic("film") }}</span> Estúdio de Canais Dark</div>
+  <h2>Política de privacidade</h2>
+  <p class="muted">Este é um sistema de uso pessoal para gerenciar canais do YouTube. Não é um serviço
+    aberto ao público e não coleta dados de visitantes.</p>
+  <h3>Dados acessados</h3>
+  <ul>
+    <li><strong>YouTube:</strong> ao conectar um canal, o sistema usa a permissão para enviar vídeos
+      (sempre como privados) e ler o nome do canal conectado.</li>
+    <li><strong>Google Drive:</strong> usa apenas a permissão <code>drive.file</code>, que dá acesso somente aos
+      arquivos e pastas criados pelo próprio sistema. Não lê o restante do seu Drive.</li>
+  </ul>
+  <h3>Armazenamento</h3>
+  <p>Os tokens de acesso ficam criptografados no servidor do próprio dono do sistema. Nenhum dado do Google
+    é vendido, compartilhado com terceiros ou usado para publicidade.</p>
+  <h3>Revogação</h3>
+  <p>A conexão pode ser removida a qualquer momento no sistema ou em
+    <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</p>
+  <p><a href="/login">Voltar</a></p>
+</div>
+{% endblock %}

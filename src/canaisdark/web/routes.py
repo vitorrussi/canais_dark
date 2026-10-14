@@ -116,6 +116,11 @@ def login_page(request: Request) -> Response:
     return render(request, "login.html", None)
 
 
+@router.get("/privacy", response_class=HTMLResponse)
+def privacy_page(request: Request) -> Response:
+    return render(request, "privacy.html", None)
+
+
 def client_ip(request: Request) -> str:
     """IP real do cliente (Cloudflare envia CF-Connecting-IP; fallback para o socket)."""
     return request.headers.get("cf-connecting-ip") or (

@@ -341,3 +341,9 @@ def test_static_assets_are_cache_busted(logged: TestClient) -> None:
         r"/static/app\.js\?v=\d+", html
     )
     assert logged.get("/static/app.css?v=123").status_code == 200
+
+
+def test_privacy_page_is_public(client: TestClient) -> None:
+    r = client.get("/privacy", follow_redirects=False)
+    assert r.status_code == 200
+    assert "drive.file" in r.text
