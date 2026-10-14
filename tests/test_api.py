@@ -8,7 +8,8 @@ from canaisdark.services import users
 def test_health(client: TestClient) -> None:
     r = client.get("/health")
     assert r.status_code == 200
-    assert r.json() == {"status": "ok", "db": "ok"}
+    body = r.json()
+    assert body["status"] == "ok" and body["db"] == "ok" and body["version"]
 
 
 def test_me_requires_token(client: TestClient) -> None:
