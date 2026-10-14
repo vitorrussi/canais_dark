@@ -3,6 +3,7 @@ from canaisdark.models.channel import Channel
 from canaisdark.models.claude_task import ClaudeTask, TaskStatus, TaskType
 from canaisdark.models.drive import DriveAccount
 from canaisdark.models.job import Job, JobStatus, JobType
+from canaisdark.models.oauth import OAuthClient, OAuthToken
 from canaisdark.models.script import Scene, ScriptVersion
 from canaisdark.models.user import User
 from canaisdark.models.video import Video, VideoStatus
@@ -17,6 +18,8 @@ __all__ = [
     "Job",
     "JobStatus",
     "JobType",
+    "OAuthClient",
+    "OAuthToken",
     "Scene",
     "ScriptVersion",
     "TaskStatus",

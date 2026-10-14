@@ -94,3 +94,25 @@ def test_drive_migration_keeps_videos_and_adds_folder_column(
     assert con.execute("select drive_folder_id from video").fetchall() == [("",)]
     assert con.execute("select count(*) from drive_account").fetchone() == (0,)
     con.close()
+
+
+def test_oauth_migration_is_additive(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "oauth.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{path}")
+    get_settings.cache_clear()
+    monkeypatch.setattr(db, "_engine", None)
+    cfg = Config("alembic.ini")
+    command.upgrade(cfg, "a3537d2b8582")
+    con = sqlite3.connect(path)
+    con.execute(
+        "insert into user(name,email,is_active,created_at,is_admin) values ('A','a@a.com',1,'2026-01-01',1)"
+    )
+    con.commit()
+    con.close()
+    command.upgrade(cfg, "head")
+    con = sqlite3.connect(path)
+    assert con.execute("select count(*) from user").fetchone() == (1,)
+    assert con.execute("select count(*) from oauth_token").fetchone() == (0,)
+    assert con.execute("select count(*) from oauth_client").fetchone() == (0,)
+    con.close()
+    command.downgrade(cfg, "a3537d2b8582")
