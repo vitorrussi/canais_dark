@@ -63,6 +63,9 @@ Cancelamento/desfazer: `Job.run_after` (janela `NARRATION_UNDO_SECONDS`), TTS po
 static vendorizado), `main.py` (`create_app()`), `cli.py`. `mcp/` (server.py tools, auth.py, context.py), `services/tasks.py`/`scripts.py`/`task_context.py`.
 Previstos: `worker/`, `integrations/`. Migrações em `migrations/`. Testes em `tests/`.
 
+## Branches e versões
+`main` = última versão lançada (servidor), `dev` = integração/testes (trabalho diário), tags `vX.Y.Z`; notas em `releases/vX.Y.Z.md` (português simples) exibidas em `/novidades`. Detalhes e fluxo de release: `docs/releases.md`. Push só quando o usuário mandar.
+
 ## Convenções
 - **Regra de ouro:** lógica só em `services/`; REST/MCP/web/worker/CLI são cascas finas.
   Services recebem `Session` explícita e não importam FastAPI/MCP.
