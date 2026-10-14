@@ -79,6 +79,7 @@ run sudo systemctl daemon-reload
 run sudo systemctl enable canaisdark-web canaisdark-worker
 run sudo systemctl restart canaisdark-web canaisdark-worker
 
+say "Versão instalada: $(uv run canaisdark version 2>/dev/null || echo desconhecida)"
 say "Verificando"
 if [ "$dry" = 0 ]; then
   for _ in $(seq 1 20); do
@@ -93,7 +94,7 @@ fi
 cat <<MSG
 
 Pronto. Logs:  journalctl -u canaisdark-web -f   |   journalctl -u canaisdark-worker -f
-Atualizar:     git pull && deploy/install.sh
+Atualizar:     deploy/update.sh   (ou git pull && deploy/install.sh)
 Falta (manual): subir o túnel do Cloudflare neste servidor com o MESMO token
 (rota canaisdark.russi.app -> http://localhost:8123) e desligar o do PC antigo.
 MSG

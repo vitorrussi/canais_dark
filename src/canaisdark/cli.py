@@ -38,6 +38,17 @@ def rotate_token(email: Annotated[str, typer.Option(help="E-mail do usuário")])
         typer.echo(users.issue_token(session, user))
 
 
+@app.command("version")
+def show_version() -> None:
+    """Mostra a versão instalada (e se é release ou desenvolvimento)."""
+    from canaisdark.services import version
+
+    info = version.current()
+    typer.echo(
+        f"{info.label} ({info.commit or 'sem git'}{', alterações locais' if info.dirty else ''})"
+    )
+
+
 @app.command("db-upgrade")
 def db_upgrade() -> None:
     """Aplica as migrações Alembic (equivale a `alembic upgrade head`)."""

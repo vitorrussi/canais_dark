@@ -1,4 +1,4 @@
-.PHONY: dev serve test lint fmt migrate worker
+.PHONY: dev serve test lint fmt migrate worker release-notes
 
 dev:
 	uv run uvicorn canaisdark.main:create_app --reload --factory --port 8123 --proxy-headers --forwarded-allow-ips=127.0.0.1
@@ -21,3 +21,12 @@ migrate:
 
 worker:
 	uv run canaisdark worker
+
+# Rascunho bruto das notas: commits desde a última tag, agrupados por tipo (o Claude traduz para linguagem simples)
+release-notes:
+	@last=$$(git tag --list 'v*' --sort=-v:refname | head -1); \
+	range=$${last:+$$last..}HEAD; echo "# Commits em $$range"; \
+	for t in feat fix perf refactor docs chore test; do \
+	  out=$$(git log --no-merges --pretty='- %s' $$range --grep="^$$t[(:!]" -E); \
+	  [ -z "$$out" ] || printf '\n## %s\n%s\n' "$$t" "$$out"; \
+	done

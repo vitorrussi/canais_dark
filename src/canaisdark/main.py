@@ -14,6 +14,7 @@ from canaisdark.db import get_session
 from canaisdark.logging import configure_logging
 from canaisdark.mcp.oauth_routes import oauth_routes
 from canaisdark.mcp.server import build_mcp_app, mcp
+from canaisdark.services import version
 from canaisdark.services.errors import Conflict, DomainError, Forbidden, InvalidState, NotFound
 from canaisdark.web.admin import router as web_admin_router
 from canaisdark.web.common import BASE as WEB_BASE
@@ -23,6 +24,7 @@ from canaisdark.web.edit_package import router as web_edit_package_router
 from canaisdark.web.narration import router as web_narration_router
 from canaisdark.web.oauth import router as web_oauth_router
 from canaisdark.web.offline import router as web_offline_router
+from canaisdark.web.releases import router as web_releases_router
 from canaisdark.web.render import router as web_render_router
 from canaisdark.web.routes import router as web_router
 from canaisdark.web.scenes import router as web_scenes_router
@@ -64,7 +66,7 @@ def create_app() -> FastAPI:
     @app.get("/health")
     def health(session: Annotated[Session, Depends(get_session)]) -> dict[str, str]:
         session.exec(text("SELECT 1"))  # type: ignore[call-overload]
-        return {"status": "ok", "db": "ok"}
+        return {"status": "ok", "db": "ok", "version": version.current().version}
 
     @app.exception_handler(DomainError)
     async def domain_error(request: Request, exc: DomainError) -> Response:
@@ -98,6 +100,7 @@ def create_app() -> FastAPI:
     app.include_router(web_admin_router)
     app.include_router(web_oauth_router)
     app.include_router(web_edit_package_router)
+    app.include_router(web_releases_router)
     app.router.routes.extend(oauth_routes())
     # Último: o app MCP atende apenas /mcp; demais caminhos caem em 404.
     app.mount("/", build_mcp_app())
