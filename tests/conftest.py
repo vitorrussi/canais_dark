@@ -27,6 +27,11 @@ def hermetic_settings(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         "ELEVENLABS_MAX_CHARS_PER_JOB": "2500",
         "TTS_CHUNK_CHARS": "2500",
         "NARRATION_UNDO_SECONDS": "0",
+        "GOOGLE_CLIENT_ID": "",
+        "GOOGLE_CLIENT_SECRET": "",
+        "FERNET_KEY": "",
+        "YOUTUBE_FAKE": "false",
+        "DRIVE_FAKE": "false",
     }.items():
         monkeypatch.setenv(key, value)
     get_settings.cache_clear()
