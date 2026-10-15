@@ -62,3 +62,11 @@ def user_token(session: Session) -> tuple[User, str]:
 @pytest.fixture
 def anyio_backend() -> str:
     return "asyncio"
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Testes que dependem do ffmpeg real recebem o marcador `ffmpeg` (fora da execução padrão)."""
+    for item in items:
+        for mark in item.iter_markers("skipif"):
+            if "ffmpeg" in str(mark.kwargs.get("reason", "")):
+                item.add_marker(pytest.mark.ffmpeg)

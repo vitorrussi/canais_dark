@@ -21,7 +21,13 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.6", "mypy>=1.11"]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pytest-cov>=7.1.0",
+]
 
 [project.scripts]
 canaisdark = "canaisdark.cli:app"
@@ -35,6 +41,13 @@ packages = ["src/canaisdark"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Padrão: sem os testes que rodam o ffmpeg de verdade (`make test-ffmpeg` roda só eles)
+addopts = "-m 'not ffmpeg' --strict-markers"
+markers = [
+    "ffmpeg: usa o ffmpeg/ffprobe reais (fora da execução padrão)",
+    "e2e: fluxo de ponta a ponta com provedores falsos",
+    "regression: teste que protege uma correção de bug",
+]
 
 [tool.ruff]
 line-length = 100

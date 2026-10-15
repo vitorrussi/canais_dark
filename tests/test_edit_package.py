@@ -25,7 +25,7 @@ def ids(
     session: Session, user_token: tuple[User, str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> dict[str, int]:
     monkeypatch.setattr(get_settings(), "data_dir", tmp_path / "files")
-    return setup_video(session, user_token[0], [2.0, 3.0], real_audio=have_ffmpeg())
+    return setup_video(session, user_token[0], [2.0, 3.0], real_audio=False)
 
 
 def _make_mp4(path: Path, seconds: float, audio: bool = True, size: str = "1280x720") -> Path:
@@ -44,7 +44,6 @@ def _token_of(url: str) -> str:
     return url.split("/x/")[1].split("/")[0]
 
 
-@needs_ffmpeg
 def test_manifest_lists_files_scenes_and_signed_links(
     session: Session, user_token: tuple[User, str], ids: dict[str, int]
 ) -> None:
@@ -63,7 +62,6 @@ def test_manifest_lists_files_scenes_and_signed_links(
         edit_package.build_manifest(session, ids["video_id"], user_token[0], "4k")
 
 
-@needs_ffmpeg
 def test_signed_link_scopes_expiry_and_token_rotation(
     session: Session, user_token: tuple[User, str], ids: dict[str, int]
 ) -> None:
@@ -81,7 +79,6 @@ def test_signed_link_scopes_expiry_and_token_rotation(
         edit_package.verify(session, signed)
 
 
-@needs_ffmpeg
 def test_find_file_rejects_unknown_and_traversal(session: Session, ids: dict[str, int]) -> None:
     video = videos.get_video(session, ids["video_id"])
     assert edit_package.find_file(session, video, "scenes/001_main.jpg").path.is_file()
@@ -90,7 +87,6 @@ def test_find_file_rejects_unknown_and_traversal(session: Session, ids: dict[str
             edit_package.find_file(session, video, bad)
 
 
-@needs_ffmpeg
 def test_download_zip_and_files_over_http_without_session(
     client: TestClient, session: Session, user_token: tuple[User, str], ids: dict[str, int]
 ) -> None:
@@ -190,7 +186,6 @@ def test_upload_rejects_bad_params_empty_body_and_non_video(
     assert client.post(f"{dl}/upload?part=1&total=1", content=b"x").status_code == 403
 
 
-@needs_ffmpeg
 def test_session_fallback_zip_link_and_card(
     client: TestClient, user_token: tuple[User, str], ids: dict[str, int]
 ) -> None:
@@ -210,7 +205,6 @@ def test_session_fallback_zip_link_and_card(
 
 
 @pytest.mark.anyio
-@needs_ffmpeg
 async def test_mcp_get_edit_package_and_task_type(
     session: Session, user_token: tuple[User, str], ids: dict[str, int]
 ) -> None:
@@ -238,7 +232,6 @@ def test_user_prompt_for_edit_video_mentions_package() -> None:
     assert "save_script" in task_context.build_user_prompt(5, "t", "C", "generate_script")
 
 
-@needs_ffmpeg
 def test_failed_task_of_other_type_does_not_leak_into_script_card(
     client: TestClient, session: Session, user_token: tuple[User, str], ids: dict[str, int]
 ) -> None:
