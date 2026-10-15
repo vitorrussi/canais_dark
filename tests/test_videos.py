@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from canaisdark.config import get_settings
 from canaisdark.models import User, Video, VideoStatus
@@ -73,3 +73,22 @@ def test_stages_all_not_started(session: Session, user_token: tuple[User, str]) 
     states = {s.key: s.state for s in stages}
     assert states["script"] == "pending"  # criar vídeo já enfileira a tarefa de roteiro
     assert {k for k, v in states.items() if v != "not_started"} == {"script"}
+
+
+@pytest.mark.regression
+def test_delete_draft_with_script_assets_and_jobs_does_not_violate_fks(
+    session: Session, user_token: tuple[User, str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regressão: apagar rascunho com roteiro aprovado, imagens e jobs falhava com FOREIGN KEY."""
+    from canaisdark.models import Asset, Job, Scene
+    from tests.media import setup_video
+
+    monkeypatch.setattr(get_settings(), "data_dir", tmp_path / "files")
+    ids = setup_video(session, user_token[0], [2.0, 3.0])
+    vid = ids["video_id"]
+    videos.delete_video(session, vid)
+    session.expire_all()
+    assert session.get(Video, vid) is None
+    assert not session.exec(select(Asset).where(Asset.video_id == vid)).all()
+    assert not session.exec(select(Scene).where(Scene.video_id == vid)).all()
+    assert not session.exec(select(Job).where(Job.video_id == vid)).all()

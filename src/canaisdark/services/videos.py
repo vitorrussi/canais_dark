@@ -2,7 +2,17 @@ import shutil
 
 from sqlmodel import Session, col, delete, or_, select
 
-from canaisdark.models import ClaudeTask, Scene, ScriptVersion, TaskType, User, Video, VideoStatus
+from canaisdark.models import (
+    Asset,
+    ClaudeTask,
+    Job,
+    Scene,
+    ScriptVersion,
+    TaskType,
+    User,
+    Video,
+    VideoStatus,
+)
 from canaisdark.models.channel import utcnow
 from canaisdark.schemas.video import VideoCreate, VideoUpdate
 from canaisdark.services import channels, storage, tasks
@@ -75,7 +85,12 @@ def delete_video(session: Session, video_id: int) -> None:
     if video.status != VideoStatus.DRAFT:
         raise InvalidState("Só é possível apagar vídeos em rascunho")
     channel = channels.get_channel(session, video.channel_id)
-    # Ordem respeita as FKs: cenas → versões de roteiro → tarefas
+    # Ordem respeita as FKs: ativos → jobs → cenas → versões de roteiro → tarefas
+    video.approved_script_version_id = None
+    session.add(video)
+    session.flush()
+    session.exec(delete(Asset).where(col(Asset.video_id) == video_id))
+    session.exec(delete(Job).where(col(Job.video_id) == video_id))
     session.exec(delete(Scene).where(col(Scene.video_id) == video_id))
     session.exec(delete(ScriptVersion).where(col(ScriptVersion.video_id) == video_id))
     session.exec(delete(ClaudeTask).where(col(ClaudeTask.video_id) == video_id))
