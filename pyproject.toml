@@ -61,3 +61,12 @@ ignore = ["E501"]  # o formatter cuida do código; strings longas (prompts) são
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
+
+[tool.coverage.run]
+source = ["canaisdark"]
+omit = ["*/migrations/*"]
+
+[tool.coverage.report]
+# Piso medido na suíte padrão (sem ffmpeg) menos margem; suba aos poucos, nunca baixe sem motivo.
+fail_under = 88
+show_missing = false

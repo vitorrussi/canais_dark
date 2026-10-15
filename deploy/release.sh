@@ -50,6 +50,9 @@ if not r.sections:
 print(f"ok: {r.title} ({r.date}), seções: {', '.join(n for n, _ in r.sections)}")
 PY
 
+say "Conferindo testes de regressão das correções"
+deploy/check_regressions.sh "${last:+$last..}HEAD"
+
 if [ "$skip_tests" = 0 ]; then
   say "ruff, mypy e testes"
   uv run ruff check src tests

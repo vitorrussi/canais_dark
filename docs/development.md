@@ -18,6 +18,8 @@
 4. Atualizar `AGENTS.md`, `docs/roadmap.md` e docs afetados.
 
 ## Testes
+Veja `docs/testing.md` (comandos, guardas e a regra de regressão obrigatória).
+
 `tests/conftest.py` fornece `session` (SQLite temporário), `client` (TestClient) e `user_token`.
 Integrações externas são sempre mockadas; nenhum teste usa rede.
 

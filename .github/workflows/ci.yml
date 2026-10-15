@@ -12,8 +12,16 @@ jobs:
         with:
           fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: uv sync --frozen
       - run: uv run ruff check src tests
       - run: uv run mypy src
       - run: uv run pytest -q
+      - name: Regressão obrigatória nas correções
+        env:
+          BEFORE: ${{ github.event.before }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ -n "$BASE" ]; then range="$BASE..HEAD"
+          elif [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then range="$BEFORE..HEAD"
+          else range="HEAD~1..HEAD"; fi
+          deploy/check_regressions.sh "$range"

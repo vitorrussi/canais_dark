@@ -39,6 +39,21 @@ def hermetic_settings(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     get_settings.cache_clear()
 
 
+@pytest.fixture(autouse=True)
+def fresh_global_state() -> Iterator[None]:
+    """Estado global do processo (limitador de logins, saldo do ElevenLabs) não vaza entre testes."""
+    from canaisdark.services import credits
+    from canaisdark.services.ratelimit import login_limiter
+
+    login_limiter._failures.clear()
+    credits.set_client_factory(None)  # saldo em cache/atualização em andamento de outro teste
+    credits._refreshing = False
+    yield
+    login_limiter._failures.clear()
+    credits.set_client_factory(None)
+    credits._refreshing = False
+
+
 @pytest.fixture
 def session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Session]:
     engine = db.make_engine(f"sqlite:///{tmp_path / 'test.db'}")

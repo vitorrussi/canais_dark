@@ -66,6 +66,9 @@ Previstos: `worker/`, `integrations/`. Migrações em `migrations/`. Testes em `
 ## Branches e versões
 `main` = última versão lançada (servidor), `dev` = integração/testes (trabalho diário), tags `vX.Y.Z`; notas em `releases/vX.Y.Z.md` (português simples) exibidas em `/novidades`. Detalhes e fluxo de release: `docs/releases.md`. Push só quando o usuário mandar.
 
+## Testes
+Suíte padrão **sem ffmpeg real** (`make test`; os que usam ffmpeg ficam no marcador `ffmpeg`, `make test-ffmpeg`). Guardas automáticas de rotas, tools MCP, jobs e migrações + ponta a ponta com provedores falsos. **Todo bug corrigido leva teste de regressão no mesmo commit** (`deploy/check_regressions.sh`; exceção `[no-test: motivo]`). Detalhes: `docs/testing.md`.
+
 ## Convenções
 - **Regra de ouro:** lógica só em `services/`; REST/MCP/web/worker/CLI são cascas finas.
   Services recebem `Session` explícita e não importam FastAPI/MCP.
